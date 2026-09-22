@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import { Press_Start_2P } from "next/font/google";
-import Script from "next/script"; // <--- IMPORT THIS
+import { Press_Start_2P, Orbitron } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 
@@ -8,6 +7,12 @@ const pixelFont = Press_Start_2P({
   weight: "400",
   subsets: ["latin"],
   variable: "--font-pixel",
+});
+
+const hudFont = Orbitron({
+  weight: ["400", "700", "900"],
+  subsets: ["latin"],
+  variable: "--font-hud",
 });
 
 export const metadata: Metadata = {
@@ -27,7 +32,8 @@ export default function RootLayout({
       </head>
       <body className={cn(
         pixelFont.variable,
-        "bg-retro-purple text-white font-pixel antialiased min-h-screen selection:bg-retro-green selection:text-black"
+        hudFont.variable,
+        "bg-casino-void text-white font-pixel antialiased min-h-screen selection:bg-retro-green selection:text-black"
       )}>
         <main className="flex flex-col items-center justify-center min-h-screen w-full">
           {children}

@@ -41,7 +41,7 @@ export interface Database {
       question_bank: {
         Row: {
           id: string
-          game_type: 'SLOTS' | 'ROULETTE' | 'BLACKJACK' | 'HOLDEM' | 'CRAPS'
+          game_type: 'SLOTS' | 'ROULETTE' | 'BLACKJACK' | 'CRAPS' | 'POKER' | 'BACCARAT' | 'DICE' | 'HIGHCARD' | 'COINFLIP' | 'VAULT'
           difficulty: 'STANDARD' | 'HIGH'
           title: string
           problem_statement: string
@@ -52,7 +52,7 @@ export interface Database {
         }
         Insert: {
           id?: string
-          game_type: 'SLOTS' | 'ROULETTE' | 'BLACKJACK' | 'HOLDEM' | 'CRAPS'
+          game_type: 'SLOTS' | 'ROULETTE' | 'BLACKJACK' | 'CRAPS' | 'POKER' | 'BACCARAT' | 'DICE' | 'HIGHCARD' | 'COINFLIP' | 'VAULT'
           difficulty: 'STANDARD' | 'HIGH'
           title: string
           problem_statement: string
@@ -63,7 +63,7 @@ export interface Database {
         }
         Update: {
           id?: string
-          game_type?: 'SLOTS' | 'ROULETTE' | 'BLACKJACK' | 'HOLDEM' | 'CRAPS'
+          game_type?: 'SLOTS' | 'ROULETTE' | 'BLACKJACK' | 'CRAPS' | 'POKER' | 'BACCARAT' | 'DICE' | 'HIGHCARD' | 'COINFLIP' | 'VAULT'
           difficulty?: 'STANDARD' | 'HIGH'
           title?: string
           problem_statement?: string

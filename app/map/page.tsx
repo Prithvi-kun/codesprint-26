@@ -15,8 +15,7 @@ export default async function MapPage() {
   // 2. Fetch the Team Data from DB
   const { data: team, error } = await supabaseAdmin
     .from('teams')
-    // @ts-ignore: Next.js hasn't synced the new Supabase schema type for in_round_2 yet.
-    .select('id, wallet_balance, avatar_id, in_round_2')
+    .select('id, access_code, wallet_balance, avatar_id, in_round_2')
     .eq('id', teamId)
     .single()
 

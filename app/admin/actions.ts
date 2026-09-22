@@ -16,7 +16,6 @@ function isAdminAuthenticated(): boolean {
 export async function toggleRound2Portal(isOpen: boolean) {
     if (!isAdminAuthenticated()) return { error: 'UNAUTHORIZED' }
 
-    // @ts-ignore
     const payload: any = { round_2_open: isOpen }
     const { error } = await supabaseAdmin
         .from('event_control')
@@ -148,6 +147,7 @@ export async function setCurrentRound(roundName: string) {
     return { success: true }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function startTableRound(gameId: string, durationMins: number = 16) {
     if (!isAdminAuthenticated()) return { error: 'UNAUTHORIZED' }
 
@@ -275,7 +275,7 @@ export async function getEventState() {
         .select('game_id, entry_pin')
 
     if (control && control.table_timers && gameStates) {
-        let clonedTimers = { ...control.table_timers }
+        const clonedTimers = { ...control.table_timers }
         gameStates.forEach((gs: any) => {
             if (gs.game_id && gs.entry_pin) {
                 clonedTimers[`${gs.game_id}_pin`] = gs.entry_pin

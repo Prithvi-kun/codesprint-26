@@ -40,9 +40,10 @@ export async function loginAction(prevState: any, formData: FormData) {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const payload: any = { is_logged_in: true };
+  const payload = { is_logged_in: true } as any;
   await supabaseAdmin
     .from('teams')
+    // @ts-expect-error: Suppress Next.js/Supabase inference bug
     .update(payload)
     .eq('id', team.id)
 
@@ -59,9 +60,10 @@ export async function loginAction(prevState: any, formData: FormData) {
 
 export async function logoutAction(teamId: string) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const payload: any = { is_logged_in: false };
+  const payload = { is_logged_in: false } as any;
   await supabaseAdmin
     .from('teams')
+    // @ts-expect-error: Suppress Next.js/Supabase inference bug
     .update(payload)
     .eq('id', teamId)
 
@@ -228,21 +230,21 @@ export async function fetchTeamHistory(teamId: string) {
 // --- NEW: ROUND 2 PORTAL & BETTING LOGIC ---
 export async function updateRound2Status(teamId: string, inRound2: boolean = true) {
   const payload: any = { in_round_2: inRound2 }
-  // @ts-ignore
+  // @ts-expect-error: Next.js/Supabase inference bug
   await supabaseAdmin.from('teams').update(payload).eq('id', teamId)
 }
 
 export async function submitFinalBet(teamId: string, amount: number) {
   // 1. Deduct from wallet_balance
   // 2. Add round_2_bet
-  // @ts-ignore
-  const { data: team } = await supabaseAdmin.from('teams').select('wallet_balance').eq('id', teamId).single()
+  const { data } = await supabaseAdmin.from('teams').select('wallet_balance').eq('id', teamId).single()
+  const team = data as any
   if (!team) return { error: 'Team not found' }
   const newBalance = (team.wallet_balance || 0) - amount
   if (newBalance < 0) return { error: 'Insufficient funds' }
 
   const payload: any = { wallet_balance: newBalance, round_2_bet: amount }
-  // @ts-ignore
+  // @ts-expect-error: Next.js/Supabase inference bug
   await supabaseAdmin.from('teams').update(payload).eq('id', teamId)
 
   // Log transaction
@@ -251,6 +253,5 @@ export async function submitFinalBet(teamId: string, amount: number) {
     amount: -Math.abs(amount),
     description: `Placed Final Round Wager: ALL IN`
   }
-  // @ts-ignore
   await supabaseAdmin.from('transactions').insert(txPayload)
 }

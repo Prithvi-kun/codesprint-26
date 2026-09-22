@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 import { supabaseAdmin } from '@/lib/supabase/server'
 import { AVATAR_LIST, getAvatarUrl } from '@/lib/avatars'
 import { selectAvatarAction } from './actions'
