@@ -9,8 +9,12 @@ import { AVATAR_LIST, getAvatarUrl } from '@/lib/avatars'
 import LogoutButton from '@/components/LogoutButton'
 
 // --- CONFIGURATION ---
-const GRID_W = 34
-const GRID_H = 64
+const LOBBY_W = 20
+const LOBBY_H = 20
+const WING_W = 34
+const WING_H = 34
+
+export type Scene = 'LOBBY' | 'WING_1' | 'WING_2' | 'VIP_ROOM'
 
 // --- ASSETS ---
 const DEALER_AVATAR = `https://api.dicebear.com/9.x/pixel-art/svg?seed=DEALER&backgroundColor=ffdfbf`
@@ -25,57 +29,48 @@ const TABLE_COLOR: Record<string, string> = {
   baccarat: '#3A2E39', dice: '#5C3A21', highcard: '#1F3C4D', coinflip: '#8C6C3F', vault: '#2A303C', final: '#B5A642',
 }
 
-// ========================================================
-// ROOM DEFINITIONS — Each table gets a walled room
-// ========================================================
-const ROOMS = [
-  // Row 1
-  { id: 'slots-room', x: 2, y: 2, w: 10, h: 8, floor: 'floor-felt', label: '🎰 SLOTS', wallType: 'wall-wood' },
-  { id: 'roulette-room', x: 22, y: 2, w: 10, h: 8, floor: 'floor-felt', label: '🎯 ROULETTE', wallType: 'wall-wood' },
-  // Row 2
-  { id: 'blackjack-room', x: 2, y: 14, w: 10, h: 8, floor: 'floor-felt', label: '🃏 BLACKJACK', wallType: 'wall-walnut' },
-  { id: 'craps-room', x: 22, y: 14, w: 10, h: 8, floor: 'floor-felt', label: '🎲 CRAPS', wallType: 'wall-walnut' },
-  // Row 3
-  { id: 'poker-room', x: 2, y: 26, w: 10, h: 8, floor: 'floor-felt', label: '🕵️ POKER', wallType: 'wall-wood' },
-  { id: 'baccarat-room', x: 22, y: 26, w: 10, h: 8, floor: 'floor-felt', label: '🏦 BACCARAT', wallType: 'wall-wood' },
-  // Row 4
-  { id: 'dice-room', x: 2, y: 38, w: 10, h: 8, floor: 'floor-felt', label: '🎲 DICE', wallType: 'wall-walnut' },
-  { id: 'highcard-room', x: 22, y: 38, w: 10, h: 8, floor: 'floor-felt', label: '🃏 HIGH CARD', wallType: 'wall-walnut' },
-  // Row 5
-  { id: 'coinflip-room', x: 2, y: 50, w: 10, h: 8, floor: 'floor-felt', label: '🪙 COIN FLIP', wallType: 'wall-wood' },
-  { id: 'vault-room', x: 22, y: 50, w: 10, h: 8, floor: 'floor-felt', label: '🔐 THE VAULT', wallType: 'wall-wood' },
-]
-
-const FINAL_ROOMS = [
-  { id: 'showdown-room', x: 8, y: 4, w: 18, h: 14, floor: 'floor-royal', label: '🏆 FINAL SHOWDOWN', wallType: 'wall-walnut' },
-]
-
-// Helper: generate wall tiles for a room (perimeter with door gap)
-function generateRoomWalls(room: typeof ROOMS[0], doorSide: 'bottom' | 'right' | 'left' | 'top', doorOffset: number, doorWidth: number): { x: number, y: number }[] {
+// Helper to generate room walls with doors
+function generatePerimeter(doorLeft: boolean, doorRight: boolean, doorTop: boolean, doorBottom: boolean, w: number, h: number): { x: number, y: number }[] {
   const walls: { x: number, y: number }[] = []
-  for (let x = room.x; x < room.x + room.w; x++) {
-    for (let y = room.y; y < room.y + room.h; y++) {
-      const isTop = y === room.y
-      const isBottom = y === room.y + room.h - 1
-      const isLeft = x === room.x
-      const isRight = x === room.x + room.w - 1
-      const isPerimeter = isTop || isBottom || isLeft || isRight
+  for (let x = 0; x < w; x++) {
+    for (let y = 0; y < h; y++) {
+      const isTop = y === 0
+      const isBottom = y === h - 1
+      const isLeft = x === 0
+      const isRight = x === w - 1
+      if (!isTop && !isBottom && !isLeft && !isRight) continue
 
-      if (!isPerimeter) continue
-
-      // Check if this is the door gap
       let isDoor = false
-      if (doorSide === 'bottom' && isBottom) {
-        isDoor = x >= room.x + doorOffset && x < room.x + doorOffset + doorWidth
-      } else if (doorSide === 'top' && isTop) {
-        isDoor = x >= room.x + doorOffset && x < room.x + doorOffset + doorWidth
-      } else if (doorSide === 'left' && isLeft) {
-        isDoor = y >= room.y + doorOffset && y < room.y + doorOffset + doorWidth
-      } else if (doorSide === 'right' && isRight) {
-        isDoor = y >= room.y + doorOffset && y < room.y + doorOffset + doorWidth
-      }
+      const midX = Math.floor(w / 2)
+      const midY = Math.floor(h / 2)
+      if (doorTop && isTop && x >= midX - 2 && x <= midX + 1) isDoor = true
+      if (doorBottom && isBottom && x >= midX - 2 && x <= midX + 1) isDoor = true
+      if (doorLeft && isLeft && y >= midY - 2 && y <= midY + 1) isDoor = true
+      if (doorRight && isRight && y >= midY - 2 && y <= midY + 1) isDoor = true
 
-      if (!isDoor) {
+      if (!isDoor) walls.push({ x, y })
+    }
+  }
+  return walls
+}
+
+// Generate walls for cabins
+function generateCabins(tables: any[]): { x: number, y: number }[] {
+  const walls: { x: number, y: number }[] = []
+  for (const t of tables) {
+    const cx = t.x - 3
+    const cy = t.y - 3
+    for (let x = cx; x <= cx + 8; x++) {
+      for (let y = cy; y <= cy + 8; y++) {
+        const isTop = y === cy
+        const isBottom = y === cy + 8
+        const isLeft = x === cx
+        const isRight = x === cx + 8
+        if (!isTop && !isBottom && !isLeft && !isRight) continue
+        
+        // Doorway on the bottom wall
+        if (isBottom && x >= t.x && x <= t.x + 2) continue
+
         walls.push({ x, y })
       }
     }
@@ -83,113 +78,39 @@ function generateRoomWalls(room: typeof ROOMS[0], doorSide: 'bottom' | 'right' |
   return walls
 }
 
-// Generate all walls for Round 1
-const ALL_WALLS_R1 = [
-  // Border walls (top and bottom of entire map)
-  ...Array.from({ length: GRID_W }, (_, x) => ({ x, y: 0 })),
-  ...Array.from({ length: GRID_W }, (_, x) => ({ x, y: GRID_H - 1 })),
-  ...Array.from({ length: GRID_H }, (_, y) => ({ x: 0, y })),
-  ...Array.from({ length: GRID_H }, (_, y) => ({ x: GRID_W - 1, y })),
-  // Room walls with doors
-  ...generateRoomWalls(ROOMS[0], 'right', 3, 2),
-  ...generateRoomWalls(ROOMS[1], 'left', 3, 2),
-  ...generateRoomWalls(ROOMS[2], 'right', 3, 2),
-  ...generateRoomWalls(ROOMS[3], 'left', 3, 2),
-  ...generateRoomWalls(ROOMS[4], 'right', 3, 2),
-  ...generateRoomWalls(ROOMS[5], 'left', 3, 2),
-  ...generateRoomWalls(ROOMS[6], 'right', 3, 2),
-  ...generateRoomWalls(ROOMS[7], 'left', 3, 2),
-  ...generateRoomWalls(ROOMS[8], 'right', 3, 2),
-  ...generateRoomWalls(ROOMS[9], 'left', 3, 2),
+const WING_1_TABLES = [
+  { id: 'T1', label: 'SLOTS', sublabel: 'Bug Bounty', route: 'slots', x: 6, y: 6, chairs: [{ id: 'c1', x: 5, y: 7 }, { id: 'c2', x: 9, y: 7 }, { id: 'c3', x: 7, y: 8 }], dealers: [{ x: 7, y: 5 }, { x: 8, y: 5 }] },
+  { id: 'T2', label: 'ROULETTE', sublabel: 'Output Oracle', route: 'roulette', x: 24, y: 6, chairs: [{ id: 'c1', x: 23, y: 7 }, { id: 'c2', x: 27, y: 7 }, { id: 'c3', x: 25, y: 8 }], dealers: [{ x: 25, y: 5 }, { x: 26, y: 5 }] },
+  { id: 'T3', label: 'BLACKJACK', sublabel: 'Code Relay', route: 'blackjack', x: 15, y: 15, chairs: [{ id: 'c1', x: 14, y: 16 }, { id: 'c2', x: 18, y: 16 }, { id: 'c3', x: 16, y: 17 }], dealers: [{ x: 16, y: 14 }, { x: 17, y: 14 }] },
+  { id: 'T4', label: 'CRAPS', sublabel: 'Debug Detective', route: 'craps', x: 6, y: 24, chairs: [{ id: 'c1', x: 5, y: 25 }, { id: 'c2', x: 9, y: 25 }, { id: 'c3', x: 7, y: 26 }], dealers: [{ x: 7, y: 23 }, { x: 8, y: 23 }] },
+  { id: 'T5', label: 'POKER', sublabel: 'Cipher Crack', route: 'poker', x: 24, y: 24, chairs: [{ id: 'c1', x: 23, y: 25 }, { id: 'c2', x: 27, y: 25 }, { id: 'c3', x: 25, y: 26 }], dealers: [{ x: 25, y: 23 }, { x: 26, y: 23 }] },
 ]
 
-// Generate walls for Round 2 (Final Showdown)
-const ALL_WALLS_R2 = [
-  ...Array.from({ length: GRID_W }, (_, x) => ({ x, y: 0 })),
-  ...Array.from({ length: GRID_W }, (_, x) => ({ x, y: GRID_H - 1 })),
-  ...Array.from({ length: GRID_H }, (_, y) => ({ x: 0, y })),
-  ...Array.from({ length: GRID_H }, (_, y) => ({ x: GRID_W - 1, y })),
-  ...generateRoomWalls(FINAL_ROOMS[0], 'bottom', 8, 2), // Grand door at bottom-center
+const WING_2_TABLES = [
+  { id: 'T6', label: 'BACCARAT', sublabel: 'SQL Heist', route: 'baccarat', x: 6, y: 6, chairs: [{ id: 'c1', x: 5, y: 7 }, { id: 'c2', x: 9, y: 7 }, { id: 'c3', x: 7, y: 8 }], dealers: [{ x: 7, y: 5 }, { x: 8, y: 5 }] },
+  { id: 'T7', label: 'DICE', sublabel: 'Stack Attack', route: 'dice', x: 24, y: 6, chairs: [{ id: 'c1', x: 23, y: 7 }, { id: 'c2', x: 27, y: 7 }, { id: 'c3', x: 25, y: 8 }], dealers: [{ x: 25, y: 5 }, { x: 26, y: 5 }] },
+  { id: 'T8', label: 'HIGH CARD', sublabel: 'Complexity Clash', route: 'highcard', x: 15, y: 15, chairs: [{ id: 'c1', x: 14, y: 16 }, { id: 'c2', x: 18, y: 16 }, { id: 'c3', x: 16, y: 17 }], dealers: [{ x: 16, y: 14 }, { x: 17, y: 14 }] },
+  { id: 'T9', label: 'COIN FLIP', sublabel: 'Algorithm Auction', route: 'coinflip', x: 6, y: 24, chairs: [{ id: 'c1', x: 5, y: 25 }, { id: 'c2', x: 9, y: 25 }, { id: 'c3', x: 7, y: 26 }], dealers: [{ x: 7, y: 23 }, { x: 8, y: 23 }] },
+  { id: 'T10', label: 'THE VAULT', sublabel: 'DSA Challenge', route: 'vault', x: 24, y: 24, chairs: [{ id: 'c1', x: 23, y: 25 }, { id: 'c2', x: 27, y: 25 }, { id: 'c3', x: 25, y: 26 }], dealers: [{ x: 25, y: 23 }, { x: 26, y: 23 }] },
 ]
 
-// Wall set for fast lookup
-const wallSetR1 = new Set(ALL_WALLS_R1.map(w => `${w.x},${w.y}`))
-const wallSetR2 = new Set(ALL_WALLS_R2.map(w => `${w.x},${w.y}`))
+const LOBBY_WALLS = generatePerimeter(true, true, true, true, LOBBY_W, LOBBY_H)
+const WING_1_WALLS = [...generatePerimeter(false, false, false, true, WING_W, WING_H), ...generateCabins(WING_1_TABLES)]
+const WING_2_WALLS = [...generatePerimeter(false, false, false, true, WING_W, WING_H), ...generateCabins(WING_2_TABLES)]
+const VIP_WALLS = generatePerimeter(false, false, false, true, WING_W, WING_H)
 
-const TABLES = [
-  // Row 1
-  {
-    id: 'T1', label: 'SLOTS', sublabel: 'Bug Bounty', route: 'slots', x: 5, y: 5,
-    chairs: [{ id: 'c1', x: 4, y: 6 }, { id: 'c2', x: 8, y: 6 }, { id: 'c3', x: 6, y: 7 }],
-    dealers: [{ x: 6, y: 4 }, { x: 7, y: 4 }]
-  },
-  {
-    id: 'T2', label: 'ROULETTE', sublabel: 'Output Oracle', route: 'roulette', x: 25, y: 5,
-    chairs: [{ id: 'c1', x: 24, y: 6 }, { id: 'c2', x: 28, y: 6 }, { id: 'c3', x: 26, y: 7 }],
-    dealers: [{ x: 26, y: 4 }, { x: 27, y: 4 }]
-  },
-  // Row 2
-  {
-    id: 'T3', label: 'BLACKJACK', sublabel: 'Code Relay', route: 'blackjack', x: 5, y: 17,
-    chairs: [{ id: 'c1', x: 4, y: 18 }, { id: 'c2', x: 8, y: 18 }, { id: 'c3', x: 6, y: 19 }],
-    dealers: [{ x: 6, y: 16 }, { x: 7, y: 16 }]
-  },
-  {
-    id: 'T4', label: 'CRAPS', sublabel: 'Debug Detective', route: 'craps', x: 25, y: 17,
-    chairs: [{ id: 'c1', x: 24, y: 18 }, { id: 'c2', x: 28, y: 18 }, { id: 'c3', x: 26, y: 19 }],
-    dealers: [{ x: 26, y: 16 }, { x: 27, y: 16 }]
-  },
-  // Row 3
-  {
-    id: 'T5', label: 'POKER', sublabel: 'Cipher Crack', route: 'poker', x: 5, y: 29,
-    chairs: [{ id: 'c1', x: 4, y: 30 }, { id: 'c2', x: 8, y: 30 }, { id: 'c3', x: 6, y: 31 }],
-    dealers: [{ x: 6, y: 28 }, { x: 7, y: 28 }]
-  },
-  {
-    id: 'T6', label: 'BACCARAT', sublabel: 'SQL Heist', route: 'baccarat', x: 25, y: 29,
-    chairs: [{ id: 'c1', x: 24, y: 30 }, { id: 'c2', x: 28, y: 30 }, { id: 'c3', x: 26, y: 31 }],
-    dealers: [{ x: 26, y: 28 }, { x: 27, y: 28 }]
-  },
-  // Row 4
-  {
-    id: 'T7', label: 'DICE', sublabel: 'Stack Attack', route: 'dice', x: 5, y: 41,
-    chairs: [{ id: 'c1', x: 4, y: 42 }, { id: 'c2', x: 8, y: 42 }, { id: 'c3', x: 6, y: 43 }],
-    dealers: [{ x: 6, y: 40 }, { x: 7, y: 40 }]
-  },
-  {
-    id: 'T8', label: 'HIGH CARD', sublabel: 'Complexity Clash', route: 'highcard', x: 25, y: 41,
-    chairs: [{ id: 'c1', x: 24, y: 42 }, { id: 'c2', x: 28, y: 42 }, { id: 'c3', x: 26, y: 43 }],
-    dealers: [{ x: 26, y: 40 }, { x: 27, y: 40 }]
-  },
-  // Row 5
-  {
-    id: 'T9', label: 'COIN FLIP', sublabel: 'Algorithm Auction', route: 'coinflip', x: 5, y: 53,
-    chairs: [{ id: 'c1', x: 4, y: 54 }, { id: 'c2', x: 8, y: 54 }, { id: 'c3', x: 6, y: 55 }],
-    dealers: [{ x: 6, y: 52 }, { x: 7, y: 52 }]
-  },
-  {
-    id: 'T10', label: 'THE VAULT', sublabel: 'DSA Challenge', route: 'vault', x: 25, y: 53,
-    chairs: [{ id: 'c1', x: 24, y: 54 }, { id: 'c2', x: 28, y: 54 }, { id: 'c3', x: 26, y: 55 }],
-    dealers: [{ x: 26, y: 52 }, { x: 27, y: 52 }]
-  },
+const LOBBY_ROOM = [{ id: 'lobby', x: 1, y: 1, w: LOBBY_W-2, h: LOBBY_H-2, floor: 'floor-playing-cards', label: 'THE GRAND LOBBY', wallType: 'wall-walnut' }]
+const WING_1_ROOM = [{ id: 'w1', x: 1, y: 1, w: WING_W-2, h: WING_H-2, floor: 'floor-felt', label: '♦ WING 1', wallType: 'wall-wood' }]
+const WING_2_ROOM = [{ id: 'w2', x: 1, y: 1, w: WING_W-2, h: WING_H-2, floor: 'floor-felt', label: '♣ WING 2', wallType: 'wall-wood' }]
+const VIP_ROOM = [{ id: 'vip', x: 1, y: 1, w: WING_W-2, h: WING_H-2, floor: 'floor-royal', label: '🏆 VIP PENTHOUSE', wallType: 'wall-walnut' }]
+
+
+
+const VIP_TABLES = [
+  { id: 'FINAL', label: 'FINAL SHOWDOWN', sublabel: 'All In', route: 'final', x: 15, y: 15, chairs: [{ id: 'c1', x: 14, y: 16 }, { id: 'c2', x: 14, y: 17 }, { id: 'c3', x: 15, y: 18 }, { id: 'c4', x: 16, y: 18 }, { id: 'c5', x: 17, y: 18 }, { id: 'c6', x: 18, y: 16 }, { id: 'c7', x: 18, y: 17 }], dealers: [{ x: 16, y: 14 }, { x: 17, y: 14 }] }
 ]
 
-const FINAL_TABLE = {
-  id: 'FINAL', label: 'FINAL SHOWDOWN', sublabel: 'All In',
-  route: 'final',
-  x: 15, y: 9,
-  chairs: [
-    { id: 'c1', x: 14, y: 9 }, { id: 'c2', x: 14, y: 10 },
-    { id: 'c3', x: 15, y: 12 }, { id: 'c4', x: 16, y: 12 }, { id: 'c5', x: 17, y: 12 },
-    { id: 'c6', x: 18, y: 9 }, { id: 'c7', x: 18, y: 10 },
-  ],
-  dealers: [{ x: 16, y: 8 }, { x: 17, y: 8 }]
-}
-
-// --- DECORATIONS — Emoji furniture & plants ---
-const DECORATIONS_R1: any[] = []
-
-const DECORATIONS_R2: any[] = []
+const LOBBY_DECORATIONS: any[] = []
 
 interface MapClientProps {
   userData: {
@@ -206,12 +127,14 @@ type Player = {
   x: number
   y: number
   avatar_id: number
+  scene: Scene
 }
 
 export default function MapClient({ userData }: MapClientProps) {
   const router = useRouter()
   const [CELL, setCELL] = useState(40)
-  const [position, setPosition] = useState({ x: 17, y: 58 })
+  const [scene, setScene] = useState<Scene>('LOBBY')
+  const [position, setPosition] = useState({ x: 9, y: 9 })
   const [direction, setDirection] = useState<'left' | 'right'>('right')
   const [otherPlayers, setOtherPlayers] = useState<Record<string, Player>>({})
   const [nearTable, setNearTable] = useState<string | null>(null)
@@ -235,11 +158,16 @@ export default function MapClient({ userData }: MapClientProps) {
   const [broadcastMessage, setBroadcastMessage] = useState<string | null>(null)
 
   // --- STATE REFS FOR EVENT LISTENERS ---
+  const sceneRef = useRef(scene)
   const posRef = useRef(position)
   const dirRef = useRef(direction)
   const nearTableRef = useRef(nearTable)
   const inRound2Ref = useRef(inRound2)
   const isRound2OpenRef = useRef(isRound2Open)
+  const stampsRef = useRef(stamps)
+
+  useEffect(() => { sceneRef.current = scene }, [scene])
+  useEffect(() => { stampsRef.current = stamps }, [stamps])
 
   useEffect(() => { posRef.current = position }, [position])
   useEffect(() => { dirRef.current = direction }, [direction])
@@ -256,13 +184,14 @@ export default function MapClient({ userData }: MapClientProps) {
     const updateSize = () => {
       if (typeof window !== 'undefined') {
         const vw = window.innerWidth
-        setCELL(vw / GRID_W)
+        const currentGridW = scene === 'LOBBY' ? LOBBY_W : WING_W
+        setCELL(vw / currentGridW)
       }
     }
     updateSize()
     window.addEventListener('resize', updateSize)
     return () => window.removeEventListener('resize', updateSize)
-  }, [])
+  }, [scene])
 
   // --- CAMERA FOLLOW ---
   useEffect(() => {
@@ -285,13 +214,16 @@ export default function MapClient({ userData }: MapClientProps) {
 
   // --- COLLISION LOGIC (uses refs for always-fresh state) ---
   const isBlocked = (x: number, y: number) => {
-    const r2 = inRound2Ref.current
-    if (x < 0 || x >= GRID_W || y < 0 || y >= GRID_H) return true
+    const gridW = sceneRef.current === 'LOBBY' ? LOBBY_W : WING_W
+    const gridH = sceneRef.current === 'LOBBY' ? LOBBY_H : WING_H
 
-    const wallSet = r2 ? wallSetR2 : wallSetR1
+    if (x < 0 || x >= gridW || y < 0 || y >= gridH) return true
+
+    const activeWalls = sceneRef.current === 'LOBBY' ? LOBBY_WALLS : sceneRef.current === 'WING_1' ? WING_1_WALLS : sceneRef.current === 'WING_2' ? WING_2_WALLS : VIP_WALLS
+    const wallSet = new Set(activeWalls.map(w => `${w.x},${w.y}`))
     if (wallSet.has(`${x},${y}`)) return true
 
-    const activeTables = r2 ? [FINAL_TABLE] : TABLES
+    const activeTables = sceneRef.current === 'WING_1' ? WING_1_TABLES : sceneRef.current === 'WING_2' ? WING_2_TABLES : sceneRef.current === 'VIP_ROOM' ? VIP_TABLES : []
     for (const t of activeTables) {
       if (x >= t.x && x <= t.x + 2 && y >= t.y && y <= t.y + 1) return true
     }
@@ -301,25 +233,24 @@ export default function MapClient({ userData }: MapClientProps) {
       }
     }
 
-    // Block decorations
-    const decos = r2 ? DECORATIONS_R2 : DECORATIONS_R1
-    for (const d of decos) {
-      if (x === d.x && y === d.y) return true
+    const activeDecos = sceneRef.current === 'LOBBY' ? LOBBY_DECORATIONS : []
+    for (const d of activeDecos) {
+      if (x >= d.x && x < d.x + (d.w || 1) && y >= d.y && y < d.y + (d.h || 1)) return true
     }
 
     return false
   }
 
   const handleTeleportToRound2 = async () => {
-    setInRound2(true)
-    setPosition({ x: 17, y: 5 })
+    setScene('VIP_ROOM')
+    setPosition({ x: 17, y: 30 })
     const { updateRound2Status } = await import('@/app/actions')
     await updateRound2Status(userData.id, true)
   }
 
   const handleTeleportToRound1 = async () => {
-    setInRound2(false)
-    setPosition({ x: 17, y: 58 })
+    setScene('LOBBY')
+    setPosition({ x: 9, y: 2 })
     const { updateRound2Status } = await import('@/app/actions')
     await updateRound2Status(userData.id, false)
   }
@@ -430,7 +361,7 @@ export default function MapClient({ userData }: MapClientProps) {
 
       const currentPos = posRef.current
       const currentDir = dirRef.current
-      const r2 = inRound2Ref.current
+      const currentScene = sceneRef.current
       const r2open = isRound2OpenRef.current
       const newPos = { ...currentPos }
       let newDir = currentDir
@@ -454,24 +385,53 @@ export default function MapClient({ userData }: MapClientProps) {
       if (moveTimeout.current) clearTimeout(moveTimeout.current)
       moveTimeout.current = setTimeout(() => setIsMoving(false), 200)
 
-      // Check for Chair "Snapping"
+      // Check for Chair "Snapping" or Interaction zones
       let foundTableRoute = null
-      const activeTables = r2 ? [FINAL_TABLE] : TABLES
+      let foundInteract = null
+      const activeTables = currentScene === 'WING_1' ? WING_1_TABLES : currentScene === 'WING_2' ? WING_2_TABLES : currentScene === 'VIP_ROOM' ? VIP_TABLES : []
       for (const t of activeTables) {
         if (t.chairs.some(c => c.x === newPos.x && c.y === newPos.y)) {
           foundTableRoute = t.route
         }
       }
-      setNearTable(foundTableRoute)
+      
+      const activeDecos = currentScene === 'LOBBY' ? LOBBY_DECORATIONS : []
+      for (const d of activeDecos) {
+        if (d.interact) {
+          // Check if player is adjacent to interactable deco
+          if (newPos.x >= d.x - 1 && newPos.x <= d.x + (d.w || 1) && newPos.y >= d.y - 1 && newPos.y <= d.y + (d.h || 1)) {
+            foundInteract = d.interact
+          }
+        }
+      }
+
+      setNearTable(foundTableRoute || foundInteract)
 
       // Portal Logic
-      if (!r2 && newPos.x >= 15 && newPos.x <= 18 && newPos.y >= 60 && newPos.y <= 61) {
-        if (r2open) handleTeleportToRound2()
-        return
-      }
-      if (r2 && newPos.x >= 15 && newPos.x <= 18 && newPos.y >= 2 && newPos.y <= 3) {
-        if (r2open) handleTeleportToRound1()
-        return
+      if (currentScene === 'LOBBY') {
+        if (newPos.x <= 0) { setScene('WING_1'); setPosition({ x: 31, y: 17 }); return }
+        if (newPos.x >= LOBBY_W - 1) { setScene('WING_2'); setPosition({ x: 2, y: 17 }); return }
+        if (newPos.y <= 0) { 
+          if (r2open) {
+            // Check badges for VIP room
+            const bCount = Object.values(stampsRef.current).filter(Boolean).length
+            if (bCount < 10) {
+              setBroadcastMessage("BOUNCER: Sorry pal, you need 10 badges to get in here.")
+              setPosition({ x: newPos.x, y: 1 })
+              return
+            }
+            handleTeleportToRound2()
+          }
+          return 
+        }
+      } else if (currentScene === 'WING_1') {
+        if (newPos.x >= WING_W - 1) { setScene('LOBBY'); setPosition({ x: 2, y: 9 }); return }
+        if (newPos.y >= WING_H - 1) { setScene('LOBBY'); setPosition({ x: 9, y: 17 }); return }
+      } else if (currentScene === 'WING_2') {
+        if (newPos.x <= 0) { setScene('LOBBY'); setPosition({ x: LOBBY_W - 3, y: 9 }); return }
+        if (newPos.y >= WING_H - 1) { setScene('LOBBY'); setPosition({ x: 9, y: 17 }); return }
+      } else if (currentScene === 'VIP_ROOM') {
+        if (newPos.y >= WING_H - 1) { handleTeleportToRound1(); return }
       }
 
       // Broadcast Position
@@ -479,16 +439,19 @@ export default function MapClient({ userData }: MapClientProps) {
       if (now - lastUpdate.current > 50) {
         supabase.channel('room_1').send({
           type: 'broadcast', event: 'pos',
-          payload: { id: userData.id, x: newPos.x, y: newPos.y, avatar_id: userData.avatar_id }
+          payload: { id: userData.id, x: newPos.x, y: newPos.y, avatar_id: userData.avatar_id, scene: currentScene }
         })
         lastUpdate.current = now
       }
 
-      if (e.key === 'Enter' && foundTableRoute) {
-        if (foundTableRoute === 'final') {
-          setShowBetModal(true)
-        } else {
-          router.push(`/game/${foundTableRoute}`)
+      if (e.key === 'Enter') {
+        const routeOrAction = foundTableRoute || foundInteract
+        if (routeOrAction) {
+          if (routeOrAction === 'final') {
+            setShowBetModal(true)
+          } else {
+            router.push(`/game/${routeOrAction}`)
+          }
         }
       }
     }
@@ -503,10 +466,12 @@ export default function MapClient({ userData }: MapClientProps) {
   const badgeCount = Object.values(stamps).filter(Boolean).length
 
   // Active data
-  const activeRooms = inRound2 ? FINAL_ROOMS : ROOMS
-  const activeWalls = inRound2 ? ALL_WALLS_R2 : ALL_WALLS_R1
-  const activeTables = inRound2 ? [FINAL_TABLE] : TABLES
-  const activeDecos = inRound2 ? DECORATIONS_R2 : DECORATIONS_R1
+  const gridW = scene === 'LOBBY' ? LOBBY_W : WING_W
+  const gridH = scene === 'LOBBY' ? LOBBY_H : WING_H
+  const activeRooms = scene === 'LOBBY' ? LOBBY_ROOM : scene === 'WING_1' ? WING_1_ROOM : scene === 'WING_2' ? WING_2_ROOM : VIP_ROOM
+  const activeWalls = scene === 'LOBBY' ? LOBBY_WALLS : scene === 'WING_1' ? WING_1_WALLS : scene === 'WING_2' ? WING_2_WALLS : VIP_WALLS
+  const activeTables = scene === 'WING_1' ? WING_1_TABLES : scene === 'WING_2' ? WING_2_TABLES : scene === 'VIP_ROOM' ? VIP_TABLES : []
+  const activeDecos = scene === 'LOBBY' ? LOBBY_DECORATIONS : []
 
   // Collect all Y-sortable entities for depth rendering
   const allEntities: { type: string, y: number, key: string, data: any }[] = []
@@ -533,7 +498,9 @@ export default function MapClient({ userData }: MapClientProps) {
   })
   // Other players
   Object.values(otherPlayers).forEach(p => {
-    allEntities.push({ type: 'other-player', y: p.y, key: `player-${p.id}`, data: p })
+    if (p.scene === scene) {
+      allEntities.push({ type: 'other-player', y: p.y, key: `player-${p.id}`, data: p })
+    }
   })
   // My player
   allEntities.push({ type: 'my-player', y: position.y, key: 'me', data: position })
@@ -602,6 +569,7 @@ export default function MapClient({ userData }: MapClientProps) {
         )}
       </AnimatePresence>
 
+
       {/* BROADCAST TOAST */}
       <AnimatePresence>
         {broadcastMessage && broadcastMessage.trim() !== '' && (
@@ -623,10 +591,10 @@ export default function MapClient({ userData }: MapClientProps) {
         <div
           className="relative floor-wood mx-auto shadow-2xl"
           style={{ 
-            width: GRID_W * CELL, 
-            height: GRID_H * CELL, 
-            minWidth: GRID_W * CELL, 
-            minHeight: GRID_H * CELL,
+            width: gridW * CELL, 
+            height: gridH * CELL, 
+            minWidth: gridW * CELL, 
+            minHeight: gridH * CELL,
             backgroundSize: `${CELL}px ${CELL}px`
           }}
         >
@@ -664,30 +632,35 @@ export default function MapClient({ userData }: MapClientProps) {
             />
           ))}
 
-          {/* PORTAL (Round 1 → Round 2) */}
-          {!inRound2 && (
-            <div className={`absolute z-[40] transition-all overflow-hidden rounded
-              ${isRound2Open ? 'stairs-up cursor-pointer' : 'stairs-up opacity-70'}`}
-              style={{ left: 15 * CELL, top: 60 * CELL, width: CELL * 4, height: CELL * 2 }}>
-              <div className="w-full h-full flex flex-col items-center justify-center gap-1">
-                {!isRound2Open && <span className="text-3xl drop-shadow-xl z-10">🔒</span>}
-                <div className={`font-pixel text-[8px] whitespace-nowrap tracking-widest bg-black/60 px-2 py-1 rounded border border-white/10 shadow-lg z-10
-                  ${isRound2Open ? 'text-retro-gold font-bold animate-pulse' : 'text-gray-500'}`}>
-                  {isRound2Open ? 'STAIRS TO ROUND 2' : 'LOCKED'}
+          {/* LOBBY PORTALS */}
+          {scene === 'LOBBY' && (
+            <>
+              {/* VIP Door */}
+              <div className={`absolute z-[40] transition-all overflow-hidden rounded ${isRound2Open ? 'stairs-up cursor-pointer' : 'stairs-up opacity-70'}`} style={{ left: (LOBBY_W/2 - 2) * CELL, top: 0, width: CELL * 4, height: CELL }}>
+                <div className="w-full h-full flex flex-col items-center justify-center">
+                  {!isRound2Open ? <span className="text-xl">🔒</span> : <div className="font-pixel text-[6px] bg-black/60 px-1 py-0.5 rounded text-retro-gold animate-pulse">VIP ENTRY</div>}
                 </div>
               </div>
-            </div>
+              {/* WING 1 Door */}
+              <div className="absolute z-[40] stairs-up" style={{ left: 0, top: (LOBBY_H/2 - 2) * CELL, width: CELL, height: CELL * 4 }}>
+                <div className="w-full h-full flex items-center justify-center">
+                  <div className="-rotate-90 font-pixel text-[6px] bg-black/60 px-1 py-0.5 rounded text-retro-cream whitespace-nowrap">WING 1</div>
+                </div>
+              </div>
+              {/* WING 2 Door */}
+              <div className="absolute z-[40] stairs-up" style={{ left: (LOBBY_W - 1) * CELL, top: (LOBBY_H/2 - 2) * CELL, width: CELL, height: CELL * 4 }}>
+                <div className="w-full h-full flex items-center justify-center">
+                  <div className="rotate-90 font-pixel text-[6px] bg-black/60 px-1 py-0.5 rounded text-retro-cream whitespace-nowrap">WING 2</div>
+                </div>
+              </div>
+            </>
           )}
 
-          {/* PORTAL (Round 2 → Round 1) */}
-          {inRound2 && (
-            <div className={`absolute z-[40] transition-all overflow-hidden rounded stairs-up cursor-pointer`}
-              style={{ left: 15 * CELL, top: 2 * CELL, width: CELL * 4, height: CELL * 2 }}>
-              <div className="w-full h-full flex flex-col items-center justify-center gap-1">
-                <span className="text-xl drop-shadow-xl z-10">🪜</span>
-                <div className="font-pixel text-[8px] whitespace-nowrap tracking-widest bg-black/60 px-2 py-1 rounded border border-white/10 shadow-lg z-10 text-retro-gold font-bold">
-                  RETURN
-                </div>
+          {/* EXIT PORTAL */}
+          {scene !== 'LOBBY' && (
+            <div className="absolute z-[40] stairs-up cursor-pointer" style={{ left: 15 * CELL, top: 33 * CELL, width: CELL * 4, height: CELL }}>
+              <div className="w-full h-full flex items-center justify-center">
+                <div className="font-pixel text-[6px] bg-black/60 px-2 py-0.5 rounded text-retro-gold font-bold">LOBBY</div>
               </div>
             </div>
           )}
@@ -742,9 +715,14 @@ export default function MapClient({ userData }: MapClientProps) {
             if (entity.type === 'deco') {
               const d = entity.data
               return (
-                <div key={entity.key} className="absolute flex items-center justify-center pointer-events-none"
-                  style={{ left: d.x * CELL, top: d.y * CELL, width: CELL, height: CELL, zIndex }}>
-                  <span className="deco-sprite" style={{ transform: `scale(${d.scale || 1})` }}>{d.emoji}</span>
+                <div key={entity.key} className="absolute flex items-end justify-center pointer-events-none"
+                  style={{ left: d.x * CELL, top: d.y * CELL, width: (d.w || 1) * CELL, height: (d.h || 1) * CELL, zIndex }}>
+                  {d.image ? (
+                    <img src={d.image} className="w-full h-full object-contain drop-shadow-xl" alt={d.label || 'deco'} />
+                  ) : (
+                    <span className="deco-sprite" style={{ transform: `scale(${d.scale || 1})` }}>{d.emoji}</span>
+                  )}
+                  {d.label && <div className="absolute -top-4 left-1/2 -translate-x-1/2 name-tag font-pixel whitespace-nowrap bg-black/80 text-retro-gold border-retro-brass">{d.label}</div>}
                 </div>
               )
             }
@@ -786,7 +764,7 @@ export default function MapClient({ userData }: MapClientProps) {
 
                   <div className={`w-full h-full transform transition-transform duration-200 ${direction === 'left' ? '-scale-x-100' : 'scale-x-100'}`}>
                     <img src={mySpriteUrl}
-                      className={`w-full h-full drop-shadow-lg ${isMoving ? 'animate-walk-wobble' : 'animate-avatar-bob'}`}
+                      className={`w-full h-full drop-shadow-lg object-contain ${isMoving ? 'animate-walk-wobble' : 'animate-avatar-bob'}`}
                       alt="Me" />
                   </div>
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 name-tag-you font-pixel">YOU</div>

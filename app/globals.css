@@ -9,7 +9,7 @@
 }
 
 body {
-  background-color: #3a3028;
+  background-color: #0d0d0d;
 }
 
 /* ================================================
@@ -38,30 +38,43 @@ body {
    FLOOR TILES — WorkAdventure-style warm surfaces
    ================================================ */
 
-/* Warm oak wood plank floor (main hallways) */
+/* Luxurious dark marble floor (main hallways) */
 .floor-wood {
-  background-color: #C4A76C;
+  background-color: #111111;
   background-image:
-    repeating-linear-gradient(90deg,
-      transparent 0px,
-      transparent 38px,
-      rgba(0, 0, 0, 0.07) 38px,
-      rgba(0, 0, 0, 0.07) 40px),
-    repeating-linear-gradient(0deg,
-      transparent 0px,
-      transparent 78px,
-      rgba(0, 0, 0, 0.04) 78px,
-      rgba(0, 0, 0, 0.04) 80px),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, transparent 50%, rgba(0, 0, 0, 0.03) 100%);
+    repeating-linear-gradient(45deg,
+      rgba(255, 215, 0, 0.05) 0px,
+      rgba(255, 215, 0, 0.05) 2px,
+      transparent 2px,
+      transparent 60px),
+    repeating-linear-gradient(-45deg,
+      rgba(255, 215, 0, 0.03) 0px,
+      rgba(255, 215, 0, 0.03) 1px,
+      transparent 1px,
+      transparent 40px),
+    radial-gradient(ellipse at center, rgba(255, 255, 255, 0.02) 0%, transparent 70%);
+  box-shadow: inset 0 0 100px rgba(0,0,0,0.8);
 }
 
-/* Green felt carpet (inside table rooms) */
+/* Playing Cards Geometric Pattern for the Lobby Floor */
+.floor-playing-cards {
+  background-color: #2b1f24;
+  background-image: 
+    radial-gradient(circle at 20px 20px, rgba(255, 255, 255, 0.05) 4px, transparent 5px),
+    radial-gradient(circle at 40px 40px, rgba(255, 0, 0, 0.05) 4px, transparent 5px);
+  background-size: 40px 40px;
+  box-shadow: inset 0 0 100px rgba(0,0,0,0.8);
+}
+
+/* Plush casino carpet (inside table rooms) */
 .floor-felt {
-  background-color: #1B5E3B;
+  background-color: #4A0E1A; /* Deep Burgundy */
   background-image:
-    radial-gradient(circle, rgba(255, 255, 255, 0.015) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(0, 0, 0, 0.05) 0%, transparent 100%);
-  background-size: 8px 8px, 100% 100%;
+    radial-gradient(circle at 10px 10px, rgba(255, 215, 0, 0.15) 2px, transparent 3px),
+    radial-gradient(circle at 30px 30px, rgba(255, 215, 0, 0.08) 3px, transparent 4px),
+    repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.2) 0px, rgba(0, 0, 0, 0.2) 10px, transparent 10px, transparent 20px);
+  background-size: 40px 40px, 40px 40px, 100% 100%;
+  box-shadow: inset 0 0 40px rgba(0,0,0,0.6);
 }
 
 /* Royal carpet (final showdown room) */
@@ -88,66 +101,78 @@ body {
   box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
-/* Warm wood-paneled wall */
+/* Polished black wall with gold trim */
 .wall-wood {
-  background: linear-gradient(180deg, #A07828 0%, #A07828 40%, #6B4E1E 40%, #6B4E1E 100%);
-  border: 1px solid rgba(0, 0, 0, 0.25);
-  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, #2a2a2a 0%, #2a2a2a 20%, #151515 20%, #151515 80%, #000000 80%, #000000 100%);
+  border: 1px solid #111;
+  box-shadow: inset 0 -3px 0 #D4AF37, inset 0 2px 0 rgba(255, 255, 255, 0.1);
 }
 
-/* Dark walnut wall (premium rooms) */
+/* Obsidian luxury wall */
 .wall-walnut {
-  background: linear-gradient(180deg, #7A5230 0%, #7A5230 40%, #4E2D15 40%, #4E2D15 100%);
-  border: 1px solid rgba(0, 0, 0, 0.3);
-  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  background: linear-gradient(180deg, #1f1f1f 0%, #1f1f1f 25%, #0a0a0a 25%, #0a0a0a 100%);
+  border: 1px solid #000;
+  box-shadow: inset 0 -3px 0 #C5A059, inset 0 2px 0 rgba(255, 255, 255, 0.05);
 }
 
 /* ================================================
-   RETRO CASINO TABLE — 3/4 view furniture
+   REALISTIC CASINO TABLE — Modern Style
    ================================================ */
 .retro-table {
-  background: linear-gradient(180deg, #1B7A45 0%, #1B7A45 65%, #0D5A2E 65%, #0D5A2E 100%);
-  border: 2px solid #0D3D24;
-  border-radius: 8px;
-  box-shadow: 0 4px 0 #0D3D24, 0 6px 10px rgba(0, 0, 0, 0.35);
+  background: linear-gradient(180deg, #0f5132 0%, #0f5132 100%);
+  border: 4px solid #1a1a1a; /* Black padded leather bumper */
+  border-radius: 40px;
+  box-shadow: 0 8px 0 #000000, 0 15px 20px rgba(0, 0, 0, 0.5), inset 0 0 10px rgba(0, 0, 0, 0.5);
   position: relative;
 }
 
 .retro-table::after {
   content: '';
   position: absolute;
-  top: 15%;
-  left: 15%;
-  right: 15%;
-  bottom: 40%;
-  border: 1.5px solid rgba(255, 255, 255, 0.12);
-  border-radius: 50%;
+  top: 10%;
+  left: 5%;
+  right: 5%;
+  bottom: 10%;
+  border: 1px solid rgba(255, 215, 0, 0.3); /* Gold playing area line */
+  border-radius: 35px;
 }
 
-/* Gold-trimmed VIP table */
+/* High-Roller VIP table */
 .retro-table-vip {
-  background: linear-gradient(180deg, #1B7A45 0%, #1B7A45 65%, #0D5A2E 65%, #0D5A2E 100%);
-  border: 3px solid #B5A642;
-  border-radius: 8px;
-  box-shadow: 0 4px 0 #0D3D24, 0 6px 10px rgba(0, 0, 0, 0.35), 0 0 15px rgba(181, 166, 66, 0.2);
+  background: linear-gradient(180deg, #0a2540 0%, #0a2540 100%); /* Deep Royal Blue */
+  border: 4px solid #111111;
+  border-radius: 40px;
+  box-shadow: 0 8px 0 #000000, 0 15px 20px rgba(0, 0, 0, 0.6), inset 0 0 12px rgba(0, 0, 0, 0.6), 0 0 20px rgba(212, 175, 55, 0.3);
   position: relative;
 }
 
+.retro-table-vip::after {
+  content: '';
+  position: absolute;
+  top: 10%;
+  left: 5%;
+  right: 5%;
+  bottom: 10%;
+  border: 2px solid #D4AF37; /* Distinct Gold Line */
+  border-radius: 35px;
+}
+
 /* ================================================
-   RETRO CHAIR — Small pixel furniture
+   CASINO STOOL — Sleek leather & chrome
    ================================================ */
 .retro-chair {
-  background: linear-gradient(180deg, #A0522D 0%, #A0522D 35%, #8B4513 35%, #8B4513 100%);
-  border: 1px solid #5C2D00;
-  border-radius: 3px;
-  box-shadow: 0 2px 0 #5C2D00, 0 3px 4px rgba(0, 0, 0, 0.2);
+  background: radial-gradient(circle at center, #333333 0%, #111111 80%);
+  border: 1px solid #000;
+  border-radius: 50%;
+  box-shadow: 0 4px 0 #666666, 0 5px 6px rgba(0, 0, 0, 0.4); /* Chrome pedestal base implied by shadow */
 }
 
 /* Highlighted chair (player nearby) */
 .retro-chair-active {
-  background: linear-gradient(180deg, #C8A96E 0%, #C8A96E 35%, #A0884A 35%, #A0884A 100%);
+  background: radial-gradient(circle at center, #555555 0%, #222222 80%);
   border: 2px solid #FFD700;
-  box-shadow: 0 2px 0 #8B6914, 0 0 8px rgba(255, 215, 0, 0.3);
+  border-radius: 50%;
+  box-shadow: 0 4px 0 #888888, 0 5px 12px rgba(255, 215, 0, 0.4);
 }
 
 /* ================================================
@@ -205,13 +230,13 @@ body {
 
 .name-tag-you {
   background: #FFD700;
-  color: #333;
+  color: #111;
   font-size: 8px;
   font-weight: bold;
-  padding: 1px 6px;
+  padding: 2px 8px;
   border-radius: 4px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(139, 105, 20, 0.3);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+  border: 1px solid #D4AF37;
   white-space: nowrap;
 }
 
@@ -251,27 +276,27 @@ body {
 }
 
 /* ================================================
-   DOOR — Wooden doorway with open/closed states
+   DOOR — Modern Glass and Chrome doors
    ================================================ */
 .door-frame {
-  background: linear-gradient(180deg, #6B4E1E 0%, #5C4033 100%);
-  border: 2px solid #3a2810;
+  background: linear-gradient(180deg, #111 0%, #050505 100%);
+  border: 2px solid #333;
   border-radius: 4px 4px 0 0;
-  box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.3);
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.8);
 }
 
 .door-open {
-  background: linear-gradient(180deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 180, 0, 0.08) 100%);
-  border: 2px solid #8B6914;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.02) 100%);
+  border: 2px solid #666; /* Chrome frame */
   border-radius: 4px 4px 0 0;
-  box-shadow: 0 0 12px rgba(255, 215, 0, 0.2), inset 0 0 8px rgba(255, 215, 0, 0.1);
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.1), inset 0 0 10px rgba(255, 255, 255, 0.05);
 }
 
 .door-locked {
-  background: linear-gradient(180deg, #4a3a2a 0%, #3a2a1a 100%);
-  border: 2px solid #2a1a0a;
+  background: linear-gradient(180deg, #000 0%, #000 100%);
+  border: 2px solid #111;
   border-radius: 4px 4px 0 0;
-  opacity: 0.7;
+  opacity: 0.8;
 }
 
 /* ================================================
@@ -290,28 +315,30 @@ body {
 }
 
 /* ================================================
-   ROOM LABEL — Floating room name sign
+   ROOM LABEL — Sleek Neon/Metallic Sign
    ================================================ */
 .room-sign {
-  background: linear-gradient(180deg, #5C4033 0%, #4E2D15 100%);
-  color: #F5F0E1;
-  border: 1px solid #3a2810;
-  border-radius: 4px;
-  padding: 2px 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-  font-size: 8px;
-  letter-spacing: 0.1em;
+  background: linear-gradient(180deg, #111 0%, #000 100%);
+  color: #D4AF37; /* Gold text */
+  border: 1px solid #D4AF37;
+  border-radius: 2px;
+  padding: 3px 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5), 0 0 10px rgba(212, 175, 55, 0.3);
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  font-weight: bold;
 }
 
 /* ================================================
    FULL WIDTH HUD BAR
    ================================================ */
 .hud-bar-full {
-  background: #3a3028; /* Solid dark warm brown */
+  background: #0a0a0a; /* Sleek black */
   background-image: 
-    linear-gradient(to right, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.2) 10%, rgba(0,0,0,0.2) 90%, rgba(0,0,0,0.6) 100%),
-    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
-  box-shadow: 0 -8px 24px rgba(0,0,0,0.7);
+    linear-gradient(to right, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 10%, rgba(0,0,0,0.4) 90%, rgba(0,0,0,0.8) 100%),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
+  box-shadow: 0 -8px 24px rgba(0,0,0,0.9);
+  border-top: 1px solid #D4AF37; /* Gold trim */
 }
 
 /* ================================================

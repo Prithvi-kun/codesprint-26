@@ -3,17 +3,30 @@
 import Editor from "@monaco-editor/react"
 import { useRef } from "react"
 
+// Language config for display and Monaco syntax
+const LANG_OPTIONS = [
+  { id: 'python', label: 'Python', monacoLang: 'python', fileName: 'main.py', icon: '🐍' },
+  { id: 'javascript', label: 'JavaScript', monacoLang: 'javascript', fileName: 'main.js', icon: '⚡' },
+  { id: 'c', label: 'C', monacoLang: 'c', fileName: 'main.c', icon: '⚙️' },
+  { id: 'cpp', label: 'C++', monacoLang: 'cpp', fileName: 'main.cpp', icon: '🔧' },
+  { id: 'java', label: 'Java', monacoLang: 'java', fileName: 'Main.java', icon: '☕' },
+] as const
+
 interface CodeEditorProps {
   starterCode: string
   onChange?: (value: string) => void
   readOnly?: boolean
   isRunning?: boolean
   hasError?: boolean
+  language?: string
+  onChangeLanguage?: (lang: string) => void
 }
 
-export default function CodeEditor({ starterCode, onChange, readOnly = false, isRunning = false, hasError = false }: CodeEditorProps) {
+export default function CodeEditor({ starterCode, onChange, readOnly = false, isRunning = false, hasError = false, language = 'python', onChangeLanguage }: CodeEditorProps) {
   // FIX: Added <any> so it can hold the Editor object
   const editorRef = useRef<any>(null)
+
+  const currentLang = LANG_OPTIONS.find(l => l.id === language) || LANG_OPTIONS[0]
 
   function handleEditorDidMount(editor: any) {
     editorRef.current = editor
@@ -50,10 +63,28 @@ export default function CodeEditor({ starterCode, onChange, readOnly = false, is
             {isRunning ? 'EXECUTING' : hasError ? 'ERROR' : 'READY'}
           </span>
         </div>
-        {/* File label plate */}
-        <div className="bg-black/30 px-3 py-1 rounded border border-white/10">
-          <span className="text-[10px] text-gray-500 font-mono tracking-wider">main.py</span>
+
+        {/* Language Selector — Retro dropdown */}
+        <div className="flex items-center gap-2">
+          <select
+            value={language}
+            onChange={(e) => onChangeLanguage && onChangeLanguage(e.target.value)}
+            className="bg-black/60 border border-white/20 text-yellow-400 text-[11px] font-pixel px-3 py-1.5 rounded cursor-pointer outline-none hover:border-yellow-500/50 transition-colors appearance-none"
+            style={{ backgroundImage: 'none' }}
+          >
+            {LANG_OPTIONS.map((lang) => (
+              <option key={lang.id} value={lang.id} className="bg-[#1a1a2e] text-yellow-400">
+                {lang.icon} {lang.label}
+              </option>
+            ))}
+          </select>
+
+          {/* File label plate */}
+          <div className="bg-black/30 px-3 py-1 rounded border border-white/10">
+            <span className="text-[10px] text-gray-500 font-mono tracking-wider">{currentLang.fileName}</span>
+          </div>
         </div>
+
         {/* Decorative screws */}
         <div className="flex gap-4">
           <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-br from-gray-500 to-gray-700 border border-gray-600 shadow-inner" />
@@ -65,7 +96,7 @@ export default function CodeEditor({ starterCode, onChange, readOnly = false, is
       <div className="flex-grow relative machine-screen-inset m-1.5 crt-screen screen-glare overflow-hidden">
         <Editor
           height="100%"
-          defaultLanguage="python"
+          language={currentLang.monacoLang}
           value={starterCode}
           theme="vs-dark"
           options={{

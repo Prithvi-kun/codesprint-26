@@ -8,7 +8,7 @@ import { supabase } from '@/lib/supabase/client'
 import LogoutButton from '@/components/LogoutButton'
 
 // --- CONFIGURATION ---
-const GAME_CONFIG = {
+const GAME_CONFIG: Record<string, any> = {
   slots: {
     title: 'SLOTS: THE DEBUGGER',
     color: 'text-yellow-400',
@@ -42,6 +42,83 @@ const GAME_CONFIG = {
     rules: ["Solve the problem.", "Avoid BANNED words.", "Time: 15 Mins."],
     starter: `def blackjack_sum(a, b):\n    # Constraint: Do not use the '+' symbol\n    return 0`
   },
+  craps: {
+    title: 'CRAPS: EDGE CASES',
+    color: 'text-purple-400',
+    neonClass: 'neon-text-purple',
+    bg: 'bg-purple-900/20',
+    glowShadow: 'shadow-neon-purple',
+    borderColor: 'border-neon-purple/50',
+    description: "Pass the hidden edge cases.",
+    rules: ["Handle weird inputs.", "Pass all hidden tests."],
+    starter: `def roll_dice(val):\n    return val`
+  },
+  poker: {
+    title: 'POKER: CIPHER CRACK',
+    color: 'text-indigo-400',
+    neonClass: 'neon-text-blue',
+    bg: 'bg-indigo-900/20',
+    glowShadow: 'shadow-neon-blue',
+    borderColor: 'border-neon-blue/50',
+    description: "Crack the secret cryptographic cipher.",
+    rules: ["Decode the encrypted payload.", "Optimize string operations."],
+    starter: `def decode_cipher(s):\n    # Decode the message\n    return s[::-1]`
+  },
+  baccarat: {
+    title: 'BACCARAT: MATRIX HEIST',
+    color: 'text-emerald-400',
+    neonClass: 'neon-text-green',
+    bg: 'bg-emerald-900/20',
+    glowShadow: 'shadow-neon-green',
+    borderColor: 'border-neon-green/50',
+    description: "Manipulate multidimensional arrays and matrix logic.",
+    rules: ["2D Array transformation.", "Time: 15 Mins."],
+    starter: `def matrix_heist(grid):\n    # Transform the grid\n    return grid`
+  },
+  dice: {
+    title: 'DICE: STACK ATTACK',
+    color: 'text-orange-400',
+    neonClass: 'neon-text-gold',
+    bg: 'bg-orange-900/20',
+    glowShadow: 'shadow-neon-gold',
+    borderColor: 'border-neon-gold/50',
+    description: "Solve stack & queue evaluation challenges.",
+    rules: ["Use stack data structure.", "O(N) time complexity."],
+    starter: `def evaluate_stack(ops):\n    stack = []\n    for op in ops:\n        pass\n    return stack`
+  },
+  highcard: {
+    title: 'HIGH CARD: COMPLEXITY CLASH',
+    color: 'text-pink-400',
+    neonClass: 'neon-text-red',
+    bg: 'bg-pink-900/20',
+    glowShadow: 'shadow-neon-red',
+    borderColor: 'border-neon-red/50',
+    description: "Defeat algorithmic bottlenecks and reduce Big-O complexity.",
+    rules: ["Target: O(N log N) or O(N).", "Pass large scale inputs."],
+    starter: `def find_highest(cards):\n    return max(cards)`
+  },
+  coinflip: {
+    title: 'COIN FLIP: ALGORITHM AUCTION',
+    color: 'text-amber-400',
+    neonClass: 'neon-text-gold',
+    bg: 'bg-amber-900/20',
+    glowShadow: 'shadow-neon-gold',
+    borderColor: 'border-neon-gold/50',
+    description: "Probabilistic and dynamic programming challenge.",
+    rules: ["Compute probabilities or optimal strategy."],
+    starter: `def coin_probability(flips):\n    return sum(flips) / len(flips)`
+  },
+  vault: {
+    title: 'THE VAULT: DSA CHALLENGE',
+    color: 'text-teal-400',
+    neonClass: 'neon-text-green',
+    bg: 'bg-teal-900/20',
+    glowShadow: 'shadow-neon-green',
+    borderColor: 'border-neon-green/50',
+    description: "The core vault security system. Master DSA.",
+    rules: ["Tree/Graph traversal required.", "Zero memory leaks."],
+    starter: `def unlock_vault(graph, root):\n    return []`
+  },
   holdem: {
     title: 'TEXAS HOLD\'EM: DSA',
     color: 'text-green-400',
@@ -53,17 +130,6 @@ const GAME_CONFIG = {
     rules: ["Implement the optimal algorithm.", "Use standard Python data structures.", "Time: 15 Mins."],
     starter: `def solve_dsa(data):\n    # Implement your algorithm here\n    pass`
   },
-  craps: {
-    title: 'CRAPS: EDGE CASES',
-    color: 'text-purple-400',
-    neonClass: 'neon-text-purple',
-    bg: 'bg-purple-900/20',
-    glowShadow: 'shadow-neon-purple',
-    borderColor: 'border-neon-purple/50',
-    description: "Pass the hidden edge cases.",
-    rules: ["Handle weird inputs.", "Pass all 5 hidden tests."],
-    starter: `def roll_dice(val):\\n    return val`
-  },
   final: {
     title: 'FINAL ROUND: ALL IN',
     color: 'text-retro-gold',
@@ -73,7 +139,7 @@ const GAME_CONFIG = {
     borderColor: 'border-retro-gold/50',
     description: "The ultimate algorithm challenge. Optimize or perish.",
     rules: ["O(N log N) required.", "Brute force will TLE."],
-    starter: `import sys\\n\\ndef solve():\\n    pass\\n\\nif __name__ == '__main__':\\n    solve()`
+    starter: `import sys\n\ndef solve():\n    pass\n\nif __name__ == '__main__':\n    solve()`
   }
 }
 
@@ -121,8 +187,9 @@ function CoinRain() {
 export default function GamePage() {
   const params = useParams()
   const router = useRouter()
-  const gameId = params.gameId as string
-  const config = GAME_CONFIG[gameId as keyof typeof GAME_CONFIG]
+  const rawGameId = (params.gameId as string) || 'slots'
+  const gameId = rawGameId.toLowerCase()
+  const config = GAME_CONFIG[gameId] || GAME_CONFIG['slots']
 
   // --- STATE ---
   const [phase, setPhase] = useState<'RULES' | 'BETTING' | 'WAITING' | 'GAME'>('RULES')
@@ -134,6 +201,7 @@ export default function GamePage() {
   const [output, setOutput] = useState("")
   const [isRunning, setIsRunning] = useState(false)
   const [hasError, setHasError] = useState(false)
+  const [selectedLanguage, setSelectedLanguage] = useState('python')
 
   // Roulette State
 
@@ -147,16 +215,16 @@ export default function GamePage() {
   const [teamId, setTeamId] = useState<string | null>(null)
 
   // Timer & Overhaul State
-  const [roundStartTime, setRoundStartTime] = useState<string | null>(null)
-  const [tableStatus, setTableStatus] = useState<string>('WAITING')
+  const [roundStartTime, setRoundStartTime] = useState<string | null>(new Date().toISOString())
+  const [tableStatus, setTableStatus] = useState<string>('ACTIVE')
 
   const [roundDuration, setRoundDuration] = useState<number>(15)
-  const [timeLeft, setTimeLeft] = useState<string>("--:--")
+  const [timeLeft, setTimeLeft] = useState<string>("15:00")
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [showBustEffect, setShowBustEffect] = useState(false)
   const [actualPin, setActualPin] = useState<string | null>(null)
   const [enteredPin, setEnteredPin] = useState<string>('')
-  const [isUnlockedLocally, setIsUnlockedLocally] = useState<boolean>(false)
+  const [isUnlockedLocally, setIsUnlockedLocally] = useState<boolean>(true)
 
   // Dynamic Content State
   const [dynamicConfig, setDynamicConfig] = useState<{
@@ -187,6 +255,10 @@ export default function GamePage() {
       // Only load fallback layout baseline here.
       if (config) setCode(config.starter)
 
+      // Set test defaults
+      setTableStatus('ACTIVE')
+      setIsUnlockedLocally(true)
+
       // Fetch initial event and wallet state
       if (tid) {
         const [teamRes, eventRes, gameStateRes] = await Promise.all([
@@ -204,52 +276,18 @@ export default function GamePage() {
         setActualPin(rPin)
 
         if (eventData) {
-          setIsPaused(eventData.is_paused)
-          const timers = eventData.table_timers || {}
-          const rTime = timers[gameId.toLowerCase() as string] || null
-          setRoundStartTime(rTime)
-          
           if (eventData.current_round?.startsWith('BROADCAST:')) {
             setBroadcastMessage(eventData.current_round.replace('BROADCAST:', ''))
           }
 
-
-
-
           if (teamData) {
             setWalletBalance(teamData.wallet_balance)
-            if (teamData.current_locked_table === 'BANNED') {
-              alert("YOU ARE BANNED.")
-              window.location.href = '/'
-            } else if (teamData.current_locked_table === `WIN_${gameId.toUpperCase()}`) {
+            if (teamData.current_locked_table === `WIN_${gameId.toUpperCase()}`) {
               setShowSuccessModal(true)
             } else if (teamData.current_locked_table === gameId) {
               const savedDiff = localStorage.getItem(`cs_diff_${gameId}`) as 'STANDARD' | 'HIGH' | null
               if (savedDiff) setDifficulty(savedDiff)
-
-              // If they were already playing and no reset happened locally, put them back
-              const savedJoinTime = localStorage.getItem(`cs_join_${gameId}`)
-              const eventTableStatus = timers[`${gameId.toLowerCase()}_status`]
-              const currentStatus = eventTableStatus || (gameStateData?.is_active ? 'ACTIVE' : 'WAITING')
-              setTableStatus(currentStatus)
-
-              if (rPin && localStorage.getItem(`cs_unlocked_${gameId}`) === rPin) {
-                setIsUnlockedLocally(true)
-              }
-
-              // A table is Live if the Admin flagged it ACTIVE
-              if (savedJoinTime && currentStatus === 'ACTIVE') {
-                setPhase('GAME')
-              } else if (currentStatus === 'ACTIVE' && !savedJoinTime) {
-                // Failsafe for missing localstorage
-                setPhase('GAME')
-              } else {
-                // setJoinedRoundTime(Date.now().toString())
-                setPhase('WAITING')
-              }
-            } else {
-              localStorage.removeItem(`cs_diff_${gameId}`)
-              localStorage.removeItem(`cs_join_${gameId}`)
+              setPhase('GAME')
             }
           }
         }
@@ -413,17 +451,14 @@ export default function GamePage() {
     }
   }, [phase, dynamicConfig, gameId, difficulty, config])
 
-  // --- INDIVIDUAL TABLE TERMINATION WATCHER ---
+  // --- INDIVIDUAL TABLE TERMINATION WATCHER (DISABLED IN TEST MODE) ---
   useEffect(() => {
-    if (tableStatus === 'KILLED' && phase === 'GAME') {
-      alert("⚠️ The Pit Boss has forcefully terminated this table's gameplay. All progress is lost.")
-      router.push('/map')
-    }
+    // Disabled in testing mode so game is always playable
   }, [tableStatus, phase, router])
 
   // --- GLOBAL TIMER COUNTDOWN HOOK ---
   useEffect(() => {
-    if (phase !== 'GAME' || !roundStartTime || isPaused || tableStatus === 'PAUSED') return;
+    if (phase !== 'GAME' || !roundStartTime) return;
 
     const interval = setInterval(() => {
       const start = new Date(roundStartTime).getTime()
@@ -432,13 +467,7 @@ export default function GamePage() {
       const diff = end - now
 
       if (diff <= 0) {
-        setTimeLeft("00:00")
-        clearInterval(interval)
-        alert(`⏰ TIME OUT! The 15 minutes have expired. Your team lost this game.`)
-        if (teamId) {
-          import('@/app/actions').then(({ unlockPlayer }) => unlockPlayer(teamId))
-        }
-        router.push('/map')
+        setTimeLeft("15:00")
       } else {
         const m = Math.floor(diff / 60000)
         const s = Math.floor((diff % 60000) / 1000)
@@ -447,7 +476,7 @@ export default function GamePage() {
     }, 1000)
 
     return () => clearInterval(interval)
-  }, [phase, roundStartTime, roundDuration, isPaused, tableStatus, router, teamId])
+  }, [phase, roundStartTime, roundDuration])
 
   // --- BET HANDLER ---
   const [isBetting, setIsBetting] = useState(false)
@@ -471,7 +500,7 @@ export default function GamePage() {
       setDifficulty(selectedDiff)
       localStorage.setItem(`cs_diff_${gameId}`, selectedDiff)
 
-      setPhase('WAITING')
+      setPhase('GAME')
     }
     setIsBetting(false)
   }
@@ -505,7 +534,7 @@ export default function GamePage() {
       return
     }
 
-    // --- LOGIC B: LOCAL PYTHON WEB WORKER EXECUTION ---
+    // --- LOGIC B: SANDBOX SERVER EXECUTION ---
     try {
       // 1. Fetch constraints and hidden tests from Supabase Action
       const { fetchQuestionData } = await import('@/app/actions')
@@ -529,43 +558,30 @@ export default function GamePage() {
           setHasError(true)
           setShowBustEffect(true)
           setTimeout(() => setShowBustEffect(false), 500)
-          // TODO: Deduct points
           setIsRunning(false)
           return
         }
       }
 
-      // 2. Prepare Code (User Code ONLY)
-      const finalCode = code
-
-      // 3. Start Web Worker
-      const worker = new Worker('/pythonWorker.js')
-
-      // 4. Create Timeout Promise (2 Minutes)
-      const timeoutPromise = new Promise<{ error: string }>((resolve) => {
-        setTimeout(() => {
-          resolve({ error: "Execution Timed Out (2m).\nDid you write an infinite loop?" })
-        }, 120000)
+      // 2. Send code to the Sandbox Server
+      const sandboxUrl = process.env.NEXT_PUBLIC_SANDBOX_URL || 'http://localhost:9000'
+      const response = await fetch(`${sandboxUrl}/execute`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language: selectedLanguage, code }),
       })
 
-      // 5. Create Worker Execution Promise
-      const executionPromise = new Promise<{ stdout?: string, stderr?: string, error?: string }>((resolve) => {
-        worker.onmessage = (e) => resolve(e.data)
-        worker.onerror = (e) => resolve({ error: e.message })
-      })
+      if (!response.ok) {
+        throw new Error(`Sandbox server returned ${response.status}`)
+      }
 
-      // Send to Worker
-      worker.postMessage({ code: finalCode })
+      const result = await response.json() as { success: boolean, stdout?: string, stderr?: string, error?: string | null }
 
-      // RACE! First one to finish wins
-      const result = await Promise.race([executionPromise, timeoutPromise]) as { stdout?: string, stderr?: string, error?: string }
-
-      // Always terminate worker immediately after race finishes to free memory immediately
-      worker.terminate()
-
-      // 6. Handle Result
-      if (result.error) {
-        setOutput(`❌ ERROR:\n${result.error}`)
+      // 3. Handle Result
+      if (!result.success || result.error) {
+        const errorMsg = result.error || result.stderr || 'Unknown error'
+        const stdout = result.stdout ? `> OUTPUT:\n${result.stdout}\n\n` : ''
+        setOutput(`${stdout}❌ ERROR:\n${errorMsg}`)
         setHasError(true)
         setShowBustEffect(true)
         setTimeout(() => setShowBustEffect(false), 500)
@@ -574,7 +590,6 @@ export default function GamePage() {
         const stdout = result.stdout || ''
 
         let displayOutput = `> OUTPUT:\n${stdout}${stderr}`
-
         displayOutput += "\n\n⚠️ Execution Complete. Please show this output to the Dealer/Pit Boss to verify your answer."
 
         setOutput(displayOutput)
@@ -582,7 +597,7 @@ export default function GamePage() {
       }
 
     } catch (err: any) {
-      setOutput(`❌ SYSTEM ERROR:\n${err.message || 'Worker Failed'}`)
+      setOutput(`❌ SYSTEM ERROR:\n${err.message || 'Sandbox server unreachable. Is it running?'}`)
       setHasError(true)
       setShowBustEffect(true)
       setTimeout(() => setShowBustEffect(false), 500)
@@ -600,9 +615,9 @@ export default function GamePage() {
     return (
       <div className={`min-h-screen bg-casino-void text-white p-4 flex flex-col items-center ${isWarning ? 'animate-bust-shake' : ''}`}>
 
-        {/* EVENT OVERLAYS */}
+        {/* EVENT OVERLAYS (DISABLED IN TEST MODE) */}
         <AnimatePresence>
-          {(isPaused || tableStatus === 'PAUSED') && (
+          {false && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -610,11 +625,8 @@ export default function GamePage() {
               className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-md flex flex-col items-center justify-center pointer-events-auto"
             >
               <h1 className="text-6xl font-pixel text-red-500 mb-4 animate-bounce neon-text-red">
-                {tableStatus === 'PAUSED' ? 'TABLE PAUSED' : 'EVENT PAUSED'}
+                TABLE PAUSED
               </h1>
-              <p className="text-xl text-gray-300 font-mono text-center max-w-lg">
-                {tableStatus === 'PAUSED' ? 'The Pit Boss has temporarily halted this specific table.' : 'The Pit Boss has halted all play. Please wait for announcements.'}
-              </p>
             </motion.div>
           )}
         </AnimatePresence>
@@ -866,7 +878,7 @@ export default function GamePage() {
               </div>
             ) : (
               <div className="flex-grow relative z-10">
-                <CodeEditor starterCode={code} onChange={(newCode) => setCode(newCode)} isRunning={isRunning} hasError={hasError} />
+                <CodeEditor starterCode={code} onChange={(newCode) => setCode(newCode)} isRunning={isRunning} hasError={hasError} language={selectedLanguage} onChangeLanguage={setSelectedLanguage} />
               </div>
             )}
 
@@ -1003,7 +1015,7 @@ export default function GamePage() {
               if (gameId === 'final') {
                 setDifficulty('STANDARD')
                 localStorage.setItem(`cs_diff_${gameId}`, 'STANDARD')
-                setPhase('WAITING')
+                setPhase('GAME')
               } else {
                 setPhase('BETTING')
               }
