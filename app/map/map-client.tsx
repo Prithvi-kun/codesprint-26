@@ -280,7 +280,7 @@ export default function MapClient({ userData }: MapClientProps) {
 
     const activeTables = sceneRef.current === 'WING_1' ? WING_1_TABLES : sceneRef.current === 'WING_2' ? WING_2_TABLES : sceneRef.current === 'VIP_ROOM' ? VIP_TABLES : []
     for (const t of activeTables) {
-      if (x >= t.x && x < t.x + (t.w || 3) && y >= t.y && y < t.y + (t.h || 2)) return true
+      if (x >= t.x && x < t.x + ((t as any).w || 3) && y >= t.y && y < t.y + ((t as any).h || 2)) return true
     }
     for (const t of activeTables) {
       for (const d of t.dealers) {
@@ -528,7 +528,7 @@ export default function MapClient({ userData }: MapClientProps) {
           } else {
             // Check if game is live before routing
             supabase.from('game_state').select('entry_pin').eq('game_id', routeOrAction).eq('is_active', true).maybeSingle().then(({ data }) => {
-              if (data?.entry_pin) {
+              if ((data as any)?.entry_pin) {
                 router.push(`/game/${routeOrAction}`)
               } else {
                 setBroadcastMessage("DEALER|DEALER: This table is currently closed. Wait for the admin to open it.")
