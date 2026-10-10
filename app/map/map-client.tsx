@@ -117,15 +117,21 @@ const VIP_ROOM = [{ id: 'vip', x: 1, y: 1, w: VIP_W-2, h: VIP_H-2, floor: 'floor
 
 
 const VIP_TABLES = [
-  { id: 'FINAL', label: 'FINAL SHOWDOWN', sublabel: 'All In', route: 'final', x: 12, y: 12, chairs: [{ id: 'c1', x: 11, y: 12 }, { id: 'c2', x: 11, y: 13 }, { id: 'c3', x: 12, y: 14 }, { id: 'c4', x: 13, y: 14 }, { id: 'c5', x: 14, y: 14 }, { id: 'c6', x: 15, y: 12 }, { id: 'c7', x: 15, y: 13 }], dealers: [{ x: 13, y: 11 }, { x: 14, y: 11 }] }
+  { id: 'FINAL', label: 'FINAL SHOWDOWN', sublabel: 'All In', route: 'final', 
+    x: 11, y: 11, w: 5, h: 3, 
+    chairs: [
+      { id: 'c1', x: 10, y: 11 }, { id: 'c2', x: 10, y: 12 }, { id: 'c3', x: 10, y: 13 },
+      { id: 'c4', x: 11, y: 14 }, { id: 'c5', x: 12, y: 14 }, { id: 'c6', x: 13, y: 14 }, { id: 'c7', x: 14, y: 14 }, { id: 'c8', x: 15, y: 14 },
+      { id: 'c9', x: 16, y: 11 }, { id: 'c10', x: 16, y: 12 }, { id: 'c11', x: 16, y: 13 }
+    ], dealers: [{ x: 12, y: 10 }, { x: 13, y: 10 }, { x: 14, y: 10 }] }
+]
+
+const LOBBY_DEALERS = [
+  { x: 7, y: 1 },
+  { x: 12, y: 1 }
 ]
 
 const LOBBY_DECORATIONS: any[] = []
-
-const LOBBY_BOUNCERS = [
-  { x: 7, y: 1, label: 'BOUNCER' },
-  { x: 12, y: 1, label: 'BOUNCER' }
-]
 
 interface MapClientProps {
   userData: {
@@ -192,6 +198,7 @@ export default function MapClient({ userData }: MapClientProps) {
   const [showBetModal, setShowBetModal] = useState<boolean>(false)
   const [betAmount, setBetAmount] = useState<number | ''>(() => Math.min(500, userData.wallet_balance))
   const [isBetting, setIsBetting] = useState<boolean>(false)
+  const [showConfirmBet, setShowConfirmBet] = useState<boolean>(false)
 
   // --- HUD STATE ---
   const [walletBalance, setWalletBalance] = useState<number>(userData.wallet_balance)
@@ -202,18 +209,7 @@ export default function MapClient({ userData }: MapClientProps) {
 
   // --- BROADCAST STATE ---
   const [broadcastMessage, setBroadcastMessage] = useState<string | null>(null)
-
-  // --- BOUNCER STATE ---
-  const [bouncerMsg, setBouncerMsg] = useState<{ left: string | null, right: string | null }>({ left: null, right: null })
-  const bouncerTimeout = useRef<NodeJS.Timeout | null>(null)
-
-  const triggerBouncerMsg = (left: string | null, right: string | null) => {
-    setBouncerMsg({ left, right })
-    if (bouncerTimeout.current) clearTimeout(bouncerTimeout.current)
-    bouncerTimeout.current = setTimeout(() => {
-      setBouncerMsg({ left: null, right: null })
-    }, 4000)
-  }
+  const [bouncerSpeech, setBouncerSpeech] = useState<'closed' | 'need_badges' | null>(null)
 
   // --- STATE REFS FOR EVENT LISTENERS ---
   const sceneRef = useRef(scene)
@@ -284,10 +280,16 @@ export default function MapClient({ userData }: MapClientProps) {
 
     const activeTables = sceneRef.current === 'WING_1' ? WING_1_TABLES : sceneRef.current === 'WING_2' ? WING_2_TABLES : sceneRef.current === 'VIP_ROOM' ? VIP_TABLES : []
     for (const t of activeTables) {
-      if (x >= t.x && x <= t.x + 2 && y >= t.y && y <= t.y + 1) return true
+      if (x >= t.x && x < t.x + ((t as any).w || 3) && y >= t.y && y < t.y + ((t as any).h || 2)) return true
     }
     for (const t of activeTables) {
       for (const d of t.dealers) {
+        if (x === d.x && y === d.y) return true
+      }
+    }
+
+    if (sceneRef.current === 'LOBBY') {
+      for (const d of LOBBY_DEALERS) {
         if (x === d.x && y === d.y) return true
       }
     }
@@ -297,18 +299,11 @@ export default function MapClient({ userData }: MapClientProps) {
       if (x >= d.x && x < d.x + (d.w || 1) && y >= d.y && y < d.y + (d.h || 1)) return true
     }
 
-    if (sceneRef.current === 'LOBBY') {
-      for (const b of LOBBY_BOUNCERS) {
-        if (x === b.x && y === b.y) return true
-      }
-    }
-
     return false
   }
 
   const handleTeleportToRound2 = async () => {
     setScene('VIP_ROOM')
-    setInRound2(true)
     setPosition({ x: Math.floor(VIP_W / 2), y: VIP_H - 2 })
     const { updateRound2Status } = await import('@/app/actions')
     await updateRound2Status(userData.id, true)
@@ -316,7 +311,6 @@ export default function MapClient({ userData }: MapClientProps) {
 
   const handleTeleportToRound1 = async () => {
     setScene('LOBBY')
-    setInRound2(false)
     setPosition({ x: 9, y: 2 })
     const { updateRound2Status } = await import('@/app/actions')
     await updateRound2Status(userData.id, false)
@@ -399,38 +393,25 @@ export default function MapClient({ userData }: MapClientProps) {
     const eventChannel = supabase.channel('map_event_updates')
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'event_control', filter: 'id=eq.1' }, (payload) => {
         const newRecord = payload.new as any
+        const portalNowClosed = newRecord.round_2_open === false
+        setIsRound2Open(!portalNowClosed)
+        if (inRound2 && portalNowClosed) handleTeleportToRound1()
         handleBroadcast(newRecord.current_round)
       })
       .subscribe()
 
-    const gameStateChannel = supabase.channel('map_gamestate_updates')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'game_state', filter: "game_id=eq.final" }, (payload) => {
-        const newRecord = payload.new as any
-        const portalNowClosed = !newRecord || newRecord.is_active !== true
+    const pollInterval = setInterval(async () => {
+      const eventData = await supabase.from('event_control').select('current_round, round_2_open').eq('id', 1).maybeSingle().then(res => res.data as any)
+      if (eventData) {
+        const portalNowClosed = eventData.round_2_open === false
         setIsRound2Open(!portalNowClosed)
         if (inRound2 && portalNowClosed) handleTeleportToRound1()
-      })
-      .subscribe()
-
-    const fetchInitialEventData = async () => {
-      const eventData = await supabase.from('event_control').select('current_round').eq('id', 1).maybeSingle().then(res => res.data as any)
-      if (eventData) {
         handleBroadcast(eventData.current_round)
       }
-      
-      const gameData = await supabase.from('game_state').select('is_active').eq('game_id', 'final').maybeSingle().then(res => res.data as any)
-      const portalNowClosed = !gameData || gameData.is_active !== true
-      setIsRound2Open(!portalNowClosed)
-      if (inRound2 && portalNowClosed) handleTeleportToRound1()
-    }
-    
-    fetchInitialEventData() // Fetch immediately on mount
-
-    const pollInterval = setInterval(fetchInitialEventData, 5000)
+    }, 5000)
 
     return () => {
       supabase.removeChannel(eventChannel)
-      supabase.removeChannel(gameStateChannel)
       clearInterval(pollInterval)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -458,35 +439,6 @@ export default function MapClient({ userData }: MapClientProps) {
       if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') { newPos.x += 1; newDir = 'right' }
 
       if (newPos.x === currentPos.x && newPos.y === currentPos.y && newDir === currentDir && e.key !== 'Enter') return
-
-      // --- PORTAL LOGIC (Checked BEFORE walls so you can walk off the screen) ---
-      if (currentScene === 'LOBBY') {
-        if (newPos.x <= 0 && newPos.y >= 8 && newPos.y <= 11) { setScene('WING_1'); setPosition({ x: WING_W - 2, y: 16 }); return }
-        if (newPos.x >= LOBBY_W - 1 && newPos.y >= 8 && newPos.y <= 11) { setScene('WING_2'); setPosition({ x: 1, y: 16 }); return }
-        if (newPos.y <= 0 && newPos.x >= 8 && newPos.x <= 11) { 
-          if (r2open) {
-            const REQUIRED_GAMES = ['slots', 'roulette', 'blackjack', 'craps', 'poker', 'baccarat', 'dice', 'highcard', 'coinflip', 'vault']
-            const bCount = REQUIRED_GAMES.filter(g => stampsRef.current[g]).length
-            
-            if (bCount < 10) {
-              triggerBouncerMsg("Need 10 badges buddy!", "Skill issue man.")
-              setPosition({ x: newPos.x, y: 1 })
-              return
-            }
-            handleTeleportToRound2()
-          } else {
-            triggerBouncerMsg("The VIP Room is closed.", "Wait for the Pit Boss.")
-            setPosition({ x: newPos.x, y: 1 })
-          }
-          return 
-        }
-      } else if (currentScene === 'WING_1') {
-        if (newPos.x >= WING_W - 1 && newPos.y >= 14 && newPos.y <= 17) { setScene('LOBBY'); setPosition({ x: 1, y: 9 }); return }
-      } else if (currentScene === 'WING_2') {
-        if (newPos.x <= 0 && newPos.y >= 14 && newPos.y <= 17) { setScene('LOBBY'); setPosition({ x: LOBBY_W - 2, y: 9 }); return }
-      } else if (currentScene === 'VIP_ROOM') {
-        if (newPos.y >= VIP_H - 1 && newPos.x >= 12 && newPos.x <= 15) { handleTeleportToRound1(); return }
-      }
 
       if (isBlocked(newPos.x, newPos.y)) {
         if (newDir !== currentDir) setDirection(newDir)
@@ -522,7 +474,35 @@ export default function MapClient({ userData }: MapClientProps) {
 
       setNearTable(foundTableRoute || foundInteract)
 
-      setNearTable(foundTableRoute || foundInteract)
+      // Portal Logic
+      if (currentScene === 'LOBBY') {
+        if (newPos.x <= 0) { setScene('WING_1'); setPosition({ x: WING_W - 2, y: 16 }); return }
+        if (newPos.x >= LOBBY_W - 1) { setScene('WING_2'); setPosition({ x: 1, y: 16 }); return }
+        if (newPos.y <= 0) { 
+          if (!r2open) {
+            setBouncerSpeech('closed')
+            setTimeout(() => setBouncerSpeech(null), 3000)
+            setPosition({ x: newPos.x, y: 1 })
+            return
+          }
+          // Check badges for VIP room
+          const bCount = Object.values(stampsRef.current).filter(Boolean).length
+          if (bCount < 10) {
+            setBouncerSpeech('need_badges')
+            setTimeout(() => setBouncerSpeech(null), 3000)
+            setPosition({ x: newPos.x, y: 1 })
+            return
+          }
+          handleTeleportToRound2()
+          return 
+        }
+      } else if (currentScene === 'WING_1') {
+        if (newPos.x >= WING_W - 1) { setScene('LOBBY'); setPosition({ x: 1, y: 9 }); return }
+      } else if (currentScene === 'WING_2') {
+        if (newPos.x <= 0) { setScene('LOBBY'); setPosition({ x: LOBBY_W - 2, y: 9 }); return }
+      } else if (currentScene === 'VIP_ROOM') {
+        if (newPos.y >= VIP_H - 1) { handleTeleportToRound1(); return }
+      }
 
       // Broadcast Position
       const now = Date.now()
@@ -537,12 +517,18 @@ export default function MapClient({ userData }: MapClientProps) {
       if (e.key === 'Enter') {
         const routeOrAction = foundTableRoute || foundInteract
         if (routeOrAction) {
+          if (stampsRef.current[routeOrAction]) {
+            setBroadcastMessage("DEALER|DEALER: You've already cleared this table. Give the others a chance!")
+            return
+          }
           if (routeOrAction === 'final') {
+            setShowConfirmBet(false);
+            setBetAmount(500);
             setShowBetModal(true)
           } else {
             // Check if game is live before routing
             supabase.from('game_state').select('entry_pin').eq('game_id', routeOrAction).eq('is_active', true).maybeSingle().then(({ data }) => {
-              if (data?.entry_pin) {
+              if ((data as any)?.entry_pin) {
                 router.push(`/game/${routeOrAction}`)
               } else {
                 setBroadcastMessage("DEALER|DEALER: This table is currently closed. Wait for the admin to open it.")
@@ -599,12 +585,6 @@ export default function MapClient({ userData }: MapClientProps) {
       allEntities.push({ type: 'other-player', y: p.y, key: `player-${p.id}`, data: p })
     }
   })
-  // Bouncers
-  if (scene === 'LOBBY') {
-    LOBBY_BOUNCERS.forEach((b, i) => {
-      allEntities.push({ type: 'dealer', y: b.y, key: `bouncer-${i}`, data: b })
-    })
-  }
   // My player
   allEntities.push({ type: 'my-player', y: position.y, key: 'me', data: position })
 
@@ -649,25 +629,34 @@ export default function MapClient({ userData }: MapClientProps) {
                   <input type="number" min="500" max={walletBalance}
                     value={betAmount === '' ? '' : betAmount}
                     onChange={(e) => { const val = e.target.value; if (val === '') setBetAmount(''); else setBetAmount(Number(val)) }}
+                    onBlur={() => { if (betAmount !== '' && betAmount < 500) setBetAmount(500) }}
                     className="w-full bg-transparent border-b-2 border-retro-brass/50 font-hud text-center text-4xl py-2 text-retro-gold focus:outline-none focus:border-retro-gold transition-colors"
                   />
                 </div>
               </div>
-              <div className="flex gap-4 pt-4">
-                <button onClick={() => setShowBetModal(false)} disabled={isBetting}
-                  className="flex-1 py-3 bg-retro-slate/50 border border-retro-cream/20 text-retro-cream font-pixel text-xs rounded-lg transition-colors hover:bg-retro-slate">BACK OUT</button>
-                <button onClick={async () => {
-                  const finalBet = Number(betAmount)
-                  if (isNaN(finalBet) || finalBet < 500) { alert('Minimum bet is 500 credits.'); return }
-                  if (finalBet > walletBalance) { alert('Insufficient funds.'); return }
-                  setIsBetting(true)
-                  const { submitFinalBet } = await import('@/app/actions')
-                  await submitFinalBet(userData.id, finalBet)
-                  router.push('/game/final')
-                }} disabled={isBetting}
-                  className="flex-1 py-3 bg-retro-gold text-black hover:bg-yellow-400 font-pixel text-xs rounded-lg transition-colors shadow-retro uppercase tracking-widest">
-                  {isBetting ? 'LOADING...' : 'ALL IN'}
-                </button>
+              <div className="flex flex-col gap-2 pt-4">
+                <div className="flex gap-2">
+                  <button onClick={() => { setShowBetModal(false); setShowConfirmBet(false); setBetAmount(500); }} disabled={isBetting}
+                    className="flex-1 py-3 bg-red-800/80 border border-red-500/50 text-retro-cream hover:bg-red-700 font-pixel text-[10px] rounded-lg transition-colors uppercase">GIVE UP</button>
+                  <button onClick={() => setShowConfirmBet(true)} disabled={isBetting} 
+                    className="flex-[1.5] py-3 bg-gray-700 hover:bg-gray-600 border border-gray-500 text-retro-cream font-pixel text-[10px] rounded-lg shadow-inner transition-colors uppercase">BET {betAmount === '' ? 0 : betAmount}</button>
+                  <button onClick={() => { setBetAmount(walletBalance); setShowConfirmBet(true); }} disabled={isBetting}
+                    className="flex-1 py-3 bg-retro-gold text-black hover:bg-yellow-400 font-pixel text-[10px] rounded-lg transition-colors shadow-retro uppercase">ALL IN</button>
+                </div>
+                {showConfirmBet && (
+                  <button onClick={async () => {
+                    const finalBet = Number(betAmount)
+                    if (isNaN(finalBet) || finalBet < 500) { alert('Minimum bet is 500 credits.'); return }
+                    if (finalBet > walletBalance) { alert('Insufficient funds.'); return }
+                    setIsBetting(true)
+                    const { submitFinalBet } = await import('@/app/actions')
+                    await submitFinalBet(userData.id, finalBet)
+                    router.push('/game/final')
+                  }} disabled={isBetting}
+                    className="w-full py-4 mt-2 bg-green-800 border-2 border-green-500 text-retro-cream hover:bg-green-700 font-pixel text-sm rounded-lg transition-colors shadow-retro uppercase tracking-widest">
+                    {isBetting ? 'LOADING...' : 'CONFIRM WAGER'}
+                  </button>
+                )}
               </div>
             </motion.div>
           </motion.div>
@@ -723,6 +712,26 @@ export default function MapClient({ userData }: MapClientProps) {
             />
           ))}
 
+          {/* WATERMARKS */}
+          {scene === 'LOBBY' && (
+            <div className="absolute pointer-events-none flex items-center justify-center opacity-10"
+                 style={{ left: 2 * CELL, top: 8 * CELL, width: (LOBBY_W - 4) * CELL, height: 4 * CELL, zIndex: 0 }}>
+              <span className="font-pixel text-4xl text-retro-cream whitespace-nowrap tracking-widest">CODESPRINT &apos;26</span>
+            </div>
+          )}
+          {(scene === 'WING_1' || scene === 'WING_2') && (
+            <div className="absolute pointer-events-none flex items-start justify-center opacity-10"
+                 style={{ left: 2 * CELL, top: 2 * CELL, width: (WING_W - 4) * CELL, height: 10 * CELL, zIndex: 0 }}>
+              <span className="font-pixel text-3xl text-retro-cream whitespace-nowrap tracking-widest mt-8">CODESPRINT &apos;26</span>
+            </div>
+          )}
+          {scene === 'VIP_ROOM' && (
+            <div className="absolute pointer-events-none flex items-start justify-center opacity-10"
+                 style={{ left: 11 * CELL, top: 16 * CELL, width: 5 * CELL, height: 4 * CELL, zIndex: 0 }}>
+              <span className="font-pixel text-3xl text-retro-cream whitespace-nowrap tracking-widest">CODESPRINT &apos;26</span>
+            </div>
+          )}
+
           {/* ROOM SIGNS — floating above each room */}
           {activeRooms.map(room => (
             <div key={`sign-${room.id}`}
@@ -755,6 +764,29 @@ export default function MapClient({ userData }: MapClientProps) {
                 <div className="w-full h-full flex flex-col items-center justify-center">
                   {!isRound2Open ? <span className="text-xl">🔒</span> : <div className="font-pixel text-[6px] bg-black/60 px-1 py-0.5 rounded text-retro-gold animate-pulse">VIP ENTRY</div>}
                 </div>
+              </div>
+              {/* Bouncers for VIP Door */}
+              <div className="absolute avatar-shadow z-[41]" style={{ left: (LOBBY_W/2 - 3) * CELL, top: 1 * CELL, width: CELL, height: CELL }}>
+                <img src={`/assets/bouncer.png`} className="w-full h-full scale-100 animate-avatar-bob drop-shadow-md" alt="Bouncer 1" />
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 name-tag-dealer font-pixel">BOUNCER</div>
+                {bouncerSpeech && (
+                  <div className="absolute bottom-[calc(100%+10px)] left-1/2 -translate-x-1/2 bg-white text-black p-2 rounded-lg text-[10px] font-pixel shadow-xl w-32 text-center z-50 border-2 border-black">
+                    <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-l-transparent border-t-[8px] border-t-black border-r-[6px] border-r-transparent"></div>
+                    <div className="absolute -bottom-[6px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[5px] border-l-transparent border-t-[7px] border-t-white border-r-[5px] border-r-transparent z-10"></div>
+                    {bouncerSpeech === 'closed' ? "VIP Room is closed." : "Sorry pal, you need 10 badges to enter."}
+                  </div>
+                )}
+              </div>
+              <div className="absolute avatar-shadow z-[41]" style={{ left: (LOBBY_W/2 + 2) * CELL, top: 1 * CELL, width: CELL, height: CELL }}>
+                <img src={`/assets/bouncer.png`} className="w-full h-full scale-100 animate-avatar-bob drop-shadow-md" alt="Bouncer 2" />
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 name-tag-dealer font-pixel">BOUNCER</div>
+                {bouncerSpeech && (
+                  <div className="absolute bottom-[calc(100%+10px)] left-1/2 -translate-x-1/2 bg-white text-black p-2 rounded-lg text-[10px] font-pixel shadow-xl w-24 text-center z-50 border-2 border-black">
+                    <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-l-transparent border-t-[8px] border-t-black border-r-[6px] border-r-transparent"></div>
+                    <div className="absolute -bottom-[6px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[5px] border-l-transparent border-t-[7px] border-t-white border-r-[5px] border-r-transparent z-10"></div>
+                    {bouncerSpeech === 'closed' ? "Come back later." : "Skill issue."}
+                  </div>
+                )}
               </div>
               {/* WING 1 Door */}
               <div className="absolute z-[40] stairs-up" style={{ left: 0, top: (LOBBY_H/2 - 2) * CELL, width: CELL, height: CELL * 4 }}>
@@ -803,12 +835,24 @@ export default function MapClient({ userData }: MapClientProps) {
               const t = entity.data
               const isVip = t.route === 'final' || t.route === 'blackjack'
               return (
-                <div key={entity.key} className="absolute"
-                  style={{ left: t.x * CELL, top: t.y * CELL, width: 3 * CELL, height: 2 * CELL, zIndex }}>
-                  <div className={`w-full h-full ${isVip ? 'retro-table-vip' : 'retro-table'} relative`}>
+                <div key={entity.key} className="absolute flex flex-col items-center justify-center cursor-pointer pointer-events-auto"
+                  onClick={() => {
+                    if (stamps[t.route]) {
+                      setBroadcastMessage("DEALER|DEALER: You've already cleared this table. Give the others a chance!")
+                      return
+                    }
+                    if (t.route === 'final') {
+                      setShowConfirmBet(false);
+                      setBetAmount(500);
+                      setShowBetModal(true);
+                    }
+                    else router.push(`/game/${t.route}`)
+                  }}
+                  style={{ left: t.x * CELL, top: t.y * CELL, width: (t.w || 3) * CELL, height: (t.h || 2) * CELL, zIndex }}>
+                  <div className={`w-full h-full ${isVip ? 'retro-table-vip' : 'retro-table'} relative ${nearTable === t.route ? 'table-glow shadow-retro-lg z-[100]' : ''}`}>
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center w-full pointer-events-none">
-                      <span className="text-lg mb-0.5">{TABLE_EMOJI[t.route]}</span>
-                      <span className="text-[6px] font-pixel text-retro-cream/80 font-bold">{t.label}</span>
+                      <span className={`${(t.w || 3) > 3 ? 'text-4xl' : 'text-lg'} mb-0.5`}>{TABLE_EMOJI[t.route]}</span>
+                      <span className={`${(t.w || 3) > 3 ? 'text-sm' : 'text-[6px]'} font-pixel text-retro-cream/80 font-bold mt-2`}>{t.label}</span>
                     </div>
                   </div>
                 </div>
@@ -818,35 +862,11 @@ export default function MapClient({ userData }: MapClientProps) {
             // --- DEALER ---
             if (entity.type === 'dealer') {
               const d = entity.data
-              
-              // Speech bubble logic for bouncers
-              const isLeftBouncer = d.label === 'BOUNCER' && d.x === 7
-              const isRightBouncer = d.label === 'BOUNCER' && d.x === 12
-              
-              let msg = null
-              if (isLeftBouncer) msg = bouncerMsg.left
-              if (isRightBouncer) msg = bouncerMsg.right
-
               return (
                 <div key={entity.key} className="absolute avatar-shadow"
                   style={{ left: d.x * CELL, top: d.y * CELL, width: CELL, height: CELL, zIndex }}>
-                  
-                  {msg && isLeftBouncer && (
-                    <div className="absolute top-0 right-full mr-2 bg-white text-black font-pixel text-[8px] sm:text-[10px] px-3 py-2 rounded-lg shadow-xl border-2 border-black whitespace-nowrap z-50 animate-bounce">
-                      {msg}
-                      <div className="absolute top-1/2 -translate-y-1/2 -right-[6px] border-solid border-l-white border-l-[6px] border-y-transparent border-y-[5px] border-r-0" />
-                    </div>
-                  )}
-
-                  {msg && !isLeftBouncer && (
-                    <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-white text-black font-pixel text-[8px] sm:text-[10px] px-3 py-2 rounded-lg shadow-xl border-2 border-black whitespace-nowrap z-50 animate-bounce">
-                      {msg}
-                      <div className="absolute -bottom-[6px] left-1/2 -translate-x-1/2 border-solid border-t-white border-t-[6px] border-x-transparent border-x-[5px] border-b-0" />
-                    </div>
-                  )}
-
                   <img src={DEALER_AVATAR} className="w-full h-full scale-90 animate-avatar-bob" alt="Dealer" />
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 name-tag-dealer font-pixel">{d.label || 'DEALER'}</div>
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 name-tag-dealer font-pixel">DEALER</div>
                 </div>
               )
             }
@@ -858,7 +878,6 @@ export default function MapClient({ userData }: MapClientProps) {
                 <div key={entity.key} className="absolute"
                   style={{ left: c.x * CELL, top: c.y * CELL, width: CELL, height: CELL, zIndex }}>
                   <div className={`w-[28px] h-[28px] mx-auto mt-[6px] ${nearTable === c.tableRoute ? 'retro-chair-active' : 'retro-chair'}`}>
-                    <div className={`w-full h-[35%] rounded-t-sm ${nearTable === c.tableRoute ? 'bg-retro-gold/30' : 'bg-white/10'}`} />
                   </div>
                 </div>
               )
@@ -867,6 +886,8 @@ export default function MapClient({ userData }: MapClientProps) {
             // --- DECORATION ---
             if (entity.type === 'deco') {
               const d = entity.data
+              if (d.hidden) return null
+              
               return (
                 <div key={entity.key} className="absolute flex items-end justify-center pointer-events-none"
                   style={{ left: d.x * CELL, top: d.y * CELL, width: (d.w || 1) * CELL, height: (d.h || 1) * CELL, zIndex }}>
@@ -928,12 +949,6 @@ export default function MapClient({ userData }: MapClientProps) {
             return null
           })}
 
-          {/* MAP WATERMARK */}
-          <div className="absolute top-3 left-1/2 -translate-x-1/2 pointer-events-none opacity-10 z-[1]">
-            <h1 className="text-[32px] font-pixel text-retro-walnut whitespace-nowrap tracking-[0.2em]">
-              {inRound2 ? 'ROUND 2' : 'CODESPRINT \'26'}
-            </h1>
-          </div>
 
         </div>
       </div>

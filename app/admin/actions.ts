@@ -548,10 +548,13 @@ export async function uploadQuestionsForTable(gameType: string, difficulty: stri
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         questions = questions.map((q: any) => ({
             title: q.title || 'Untitled',
-            problem_statement: q.problem_statement || '',
-            starter_code: q.starter_code || '',
+            problem_statement: q.problem_statement || q.description || '',
+            starter_code: q.starter_code || q.starter || '',
             test_cases: q.test_cases || [],
             constraints: q.constraints || '',
+            clues: q.clues || [],
+            expected_output: q.expected_output || null,
+            options: q.options || null,
             game_type: gameType.toUpperCase(),
             difficulty: difficulty.toUpperCase(),
             is_active: false,

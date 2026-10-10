@@ -6,6 +6,10 @@ export default function LogoutButton({ teamId, className }: { teamId: string, cl
     const [showConfirm, setShowConfirm] = useState(false)
 
     const handleLogout = async () => {
+        localStorage.removeItem('cs_map_scene')
+        localStorage.removeItem('cs_map_pos')
+        localStorage.removeItem('cs_map_dir')
+        
         const { logoutAction } = await import('@/app/actions')
         await logoutAction(teamId)
     }

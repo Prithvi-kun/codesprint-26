@@ -21,9 +21,11 @@ interface CodeEditorProps {
   language?: string
   onLanguageChange?: (lang: string) => void
   onRun?: () => void
+  onGetClue?: () => void
+  clueCost?: number
 }
 
-export default function CodeEditor({ starterCode, onChange, readOnly = false, isRunning = false, hasError = false, language = 'python', onLanguageChange, onRun }: CodeEditorProps) {
+export default function CodeEditor({ starterCode, onChange, readOnly = false, isRunning = false, hasError = false, language = 'python', onLanguageChange, onRun, onGetClue, clueCost }: CodeEditorProps) {
   // FIX: Added <any> so it can hold the Editor object
   const editorRef = useRef<any>(null)
 
@@ -60,9 +62,18 @@ export default function CodeEditor({ starterCode, onChange, readOnly = false, is
         <div className="flex items-center gap-3">
           {/* Status LED */}
           <div className={isRunning ? 'led-yellow' : hasError ? 'led-red' : 'led-green'} />
-          <span className="text-[10px] font-pixel text-gray-400 uppercase tracking-widest">
+          <span className="text-[10px] font-pixel text-gray-400 uppercase tracking-widest mr-2">
             {isRunning ? 'EXECUTING' : hasError ? 'ERROR' : 'READY'}
           </span>
+          {onGetClue && (
+            <button 
+              onClick={onGetClue}
+              className="px-2 py-1 bg-yellow-900/50 hover:bg-yellow-800 border border-yellow-500 text-yellow-400 rounded text-[10px] font-pixel transition-colors flex items-center gap-1 shadow-[0_0_8px_rgba(234,179,8,0.3)]"
+            >
+              <span>💡 CLUE</span>
+              {clueCost && <span className="text-gray-300">({clueCost}💰)</span>}
+            </button>
+          )}
         </div>
 
         {/* Language Selector — Retro dropdown */}
