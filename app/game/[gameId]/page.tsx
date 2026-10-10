@@ -222,16 +222,25 @@ export default function GamePage() {
   const [wheelMultiplier, setWheelMultiplier] = useState<number>(0)
   const [rewardClaimed, setRewardClaimed] = useState<boolean>(false)
   const [isSpinningWheel, setIsSpinningWheel] = useState<boolean>(false)
+  const [vaultClueLevel, setVaultClueLevel] = useState<number>(0)
 
   // Dynamic Content State
   const [dynamicConfig, setDynamicConfig] = useState<{
+    id?: string,
     description: string,
     starter: string,
     expected_output?: string,
     test_cases?: any[],
-    options?: string[]
+    options?: string[],
+    clues_total?: number
   } | null>(null)
+  const [revealedClues, setRevealedClues] = useState<string[]>([])
+  const [isBuyingClue, setIsBuyingClue] = useState(false)
   const [selectedMcqOption, setSelectedMcqOption] = useState<string>('')
+  
+  // Blackjack State
+  const [currentTeammate, setCurrentTeammate] = useState<number>(0)
+  const [blackjackTimers, setBlackjackTimers] = useState<number[]>([300, 300, 300])
 
   // Timer urgency
   const isTimerUrgent = timeLeft !== '--:--' && (() => {
@@ -498,12 +507,15 @@ export default function GamePage() {
         const res = await fetchQuestionData(gameId, diff as string)
         if (res.success && res.question) {
           setDynamicConfig({
+            id: res.question.id,
             description: res.question.content || (config ? config.description : ""),
             starter: res.question.starter_code || (config ? config.starter : ""),
             expected_output: res.question.expected_output,
-            test_cases: res.question.test_cases
+            test_cases: res.question.test_cases,
+            clues_total: res.question.clues_total
           })
           setCode(res.question.starter_code || (config ? config.starter : ""))
+          setRevealedClues([])
         } else {
           setDynamicConfig({
             description: "⚠️ CONFIGURATION ERROR: Could not find '" + diff + "' question in the database. Ask the Pit Boss.",
@@ -514,6 +526,28 @@ export default function GamePage() {
       loadQuestion()
     }
   }, [phase, dynamicConfig, gameId, difficulty, config])
+
+  // --- PRE-BET CLUES AUTO-BUY (COINFLIP) ---
+  useEffect(() => {
+    if (phase === 'GAME' && gameId === 'coinflip' && dynamicConfig?.id && vaultClueLevel > 0) {
+      if (revealedClues.length === 0 && !isBuyingClue && teamId) {
+        const fetchMissingClues = async () => {
+          setIsBuyingClue(true)
+          const { buyVaultClues } = await import('@/app/actions')
+          let currentBalance = walletBalance || 0;
+          
+          const res = await buyVaultClues(teamId, dynamicConfig.id as string, vaultClueLevel);
+          if (res.clues) {
+            setRevealedClues(res.clues);
+            currentBalance -= (vaultClueLevel * 50);
+            setWalletBalance(currentBalance);
+          }
+          setIsBuyingClue(false)
+        }
+        fetchMissingClues()
+      }
+    }
+  }, [phase, gameId, dynamicConfig?.id, vaultClueLevel, revealedClues.length, teamId, isBuyingClue, walletBalance])
 
   // --- INDIVIDUAL TABLE TERMINATION WATCHER ---
   useEffect(() => {
@@ -545,11 +579,38 @@ export default function GamePage() {
         const m = Math.floor(diff / 60000)
         const s = Math.floor((diff % 60000) / 1000)
         setTimeLeft(`${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`)
+
+        if (gameId === 'blackjack') {
+          const elapsed = Math.floor((now - start) / 1000)
+          const teammateIndex = Math.floor(elapsed / 300)
+          
+          if (teammateIndex > currentTeammate && teammateIndex < 3) {
+            setCurrentTeammate(teammateIndex)
+            alert(`Teammate ${teammateIndex}'s time is up! Pass the keyboard to Teammate ${teammateIndex + 1}!`)
+          }
+          
+          const newTimers = [300, 300, 300]
+          if (elapsed < 300) {
+             newTimers[0] = 300 - elapsed;
+          } else if (elapsed < 600) {
+             newTimers[0] = 0;
+             newTimers[1] = 600 - elapsed;
+          } else if (elapsed < 900) {
+             newTimers[0] = 0;
+             newTimers[1] = 0;
+             newTimers[2] = 900 - elapsed;
+          } else {
+             newTimers[0] = 0;
+             newTimers[1] = 0;
+             newTimers[2] = 0;
+          }
+          setBlackjackTimers(newTimers)
+        }
       }
     }, 1000)
 
     return () => clearInterval(interval)
-  }, [phase, roundStartTime, roundDuration, isPaused, tableStatus, router, teamId])
+  }, [phase, roundStartTime, roundDuration, isPaused, tableStatus, router, teamId, gameId, currentTeammate])
 
   // --- BET HANDLER ---
   const [isBetting, setIsBetting] = useState(false)
@@ -563,6 +624,17 @@ export default function GamePage() {
     if (!teamId) return alert("System Error: Team ID not found")
     setIsBetting(true)
     const betAmount = selectedBet === 'STANDARD' ? 100 : 200
+    
+    let totalClueCost = 0;
+    if (gameId === 'coinflip' && vaultClueLevel > 0) {
+      totalClueCost = vaultClueLevel * 50;
+    }
+    
+    if (walletBalance !== null && walletBalance < betAmount + totalClueCost) {
+      alert(`Not enough credits! You need ${betAmount + totalClueCost} coins for the bet + clues.`)
+      setIsBetting(false)
+      return
+    }
 
     const { placeBet } = await import('@/app/actions')
     const res = await placeBet(teamId, betAmount, gameId)
@@ -581,6 +653,36 @@ export default function GamePage() {
       setPhase('WAITING')
     }
     setIsBetting(false)
+  }
+
+  // --- CLUE HANDLER ---
+  const handleBuyClue = async () => {
+    if (!teamId || !dynamicConfig?.id) return
+    const nextClueIndex = revealedClues.length
+    if (nextClueIndex >= 3) {
+      alert("No more clues available for this challenge!")
+      return
+    }
+    const cost = (nextClueIndex + 1) * 50
+    if (walletBalance !== null && walletBalance < cost) {
+      alert(`Not enough credits! You need ${cost} coins for the next clue.`)
+      return
+    }
+    
+    if (!window.confirm(`Are you sure you want to buy Clue #${nextClueIndex + 1} for ${cost} coins? This will be deducted instantly.`)) {
+      return
+    }
+
+    setIsBuyingClue(true)
+    const { buyClue } = await import('@/app/actions')
+    const res = await buyClue(teamId, dynamicConfig.id, nextClueIndex)
+    if (res.error) {
+      alert(`Error buying clue: ${res.error}`)
+    } else if (res.clue) {
+      setRevealedClues(prev => [...prev, res.clue])
+      setWalletBalance(prev => (prev !== null ? prev - cost : prev))
+    }
+    setIsBuyingClue(false)
   }
 
   // --- SUBMIT HANDLER (WEB WORKER ENGINE) ---
@@ -665,48 +767,33 @@ export default function GamePage() {
         }
       }
 
-      // 2. Prepare Code and Payload
+      // 2. Prepare Code (User Code ONLY)
       const finalCode = code
-      const sandboxUrl = process.env.NEXT_PUBLIC_SANDBOX_URL || 'http://localhost:9000'
-      
-      const payload = {
-        language: language,
-        code: finalCode,
-        stdin: ''
-      }
 
-      // 3. Execute via Custom Sandbox Server
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 120000) // 2m timeout
+      // 3. Start Web Worker
+      const worker = new Worker('/pythonWorker.js')
 
-      let result: { stdout?: string, stderr?: string, error?: string } = {}
-      try {
-        const res = await fetch(`${sandboxUrl}/execute`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-          signal: controller.signal
-        })
-        clearTimeout(timeoutId)
+      // 4. Create Timeout Promise (2 Minutes)
+      const timeoutPromise = new Promise<{ error: string }>((resolve) => {
+        setTimeout(() => {
+          resolve({ error: "Execution Timed Out (2m).\nDid you write an infinite loop?" })
+        }, 120000)
+      })
 
-        if (!res.ok) {
-          const errorText = await res.text()
-          result = { error: `Server Error (${res.status}): ${errorText}` }
-        } else {
-          const data = await res.json()
-          if (!data.success) {
-             result = { error: data.error || 'Execution failed' }
-          } else {
-             result = { stdout: data.stdout, stderr: data.stderr }
-          }
-        }
-      } catch (err: any) {
-        if (err.name === 'AbortError') {
-          result = { error: "Execution Timed Out (2m).\nDid you write an infinite loop?" }
-        } else {
-          result = { error: `Network Error: ${err.message}` }
-        }
-      }
+      // 5. Create Worker Execution Promise
+      const executionPromise = new Promise<{ stdout?: string, stderr?: string, error?: string }>((resolve) => {
+        worker.onmessage = (e) => resolve(e.data)
+        worker.onerror = (e) => resolve({ error: e.message })
+      })
+
+      // Send to Worker
+      worker.postMessage({ code: finalCode })
+
+      // RACE! First one to finish wins
+      const result = await Promise.race([executionPromise, timeoutPromise]) as { stdout?: string, stderr?: string, error?: string }
+
+      // Always terminate worker immediately after race finishes to free memory immediately
+      worker.terminate()
 
       // 6. Handle Result
       if (result.error) {
@@ -721,13 +808,27 @@ export default function GamePage() {
         let displayOutput = `> OUTPUT:\n${stdout}${stderr}`
 
         if (isSubmit) {
-          displayOutput += "\n\n⚠️ Submission Complete. Please show this output to the Dealer/Pit Boss to verify your answer."
+          const expectedRaw = dynamicConfig?.test_cases?.[0]?.expected || dynamicConfig?.expected_output
+          const expectedStr = expectedRaw ? String(expectedRaw).trim() : null
+          
+          if (expectedStr && stdout.trim() === expectedStr) {
+            displayOutput += "\n\n✅ Passed Public Test Case!\n⚠️ Please call the Dealer/Pit Boss to verify your code against a PRIVATE test case to pass."
+            setHasError(false)
+          } else if (expectedStr) {
+            displayOutput += `\n\n❌ Failed Public Test Case.\nExpected: ${expectedStr}\nGot: ${stdout.trim()}`
+            setHasError(true)
+            setShowBustEffect(true)
+            setTimeout(() => setShowBustEffect(false), 500)
+          } else {
+            displayOutput += "\n\n⚠️ Submission Complete. Please show this output to the Dealer/Pit Boss."
+            setHasError(false)
+          }
         } else {
           displayOutput += "\n\n✅ Run Complete. Check your output."
+          setHasError(false)
         }
 
         setOutput(displayOutput)
-        setHasError(false)
       }
 
     } catch (err: any) {
@@ -907,18 +1008,33 @@ export default function GamePage() {
                 </AnimatePresence>
 
                 {/* CHALLENGE PANEL */}
-                <div className="bg-casino-surface rounded-xl p-6 border border-white/10 flex-grow overflow-y-auto shadow-lg flex flex-col gap-4 noise-overlay">
+                <div className="bg-[#5A3A18] rounded-xl p-6 border border-white/10 flex-grow overflow-y-auto shadow-lg flex flex-col gap-4 noise-overlay">
                   <div className="relative z-10">
                     <h2 className="text-lg font-bold mb-4 text-retro-gold neon-text-gold">The Challenge</h2>
-                    <p className={`font-sans leading-relaxed text-sm whitespace-pre-wrap ${gameId === 'roulette' ? 'text-green-400' : 'text-gray-300'}`}>
+                    <p className="font-sans leading-relaxed text-sm whitespace-pre-wrap text-green-500 drop-shadow-[0_0_2px_rgba(34,197,94,0.3)]">
                       {dynamicConfig ? dynamicConfig.description : (gameId === 'roulette' ? "Predict the output." : "Write a Python script to solve the problem.")}
                     </p>
                     {gameId === 'roulette' && (
-                      <div className="bg-black p-4 mt-4 rounded-lg border border-gray-600 font-mono text-xs whitespace-pre-wrap crt-screen text-green-400">
-                        {dynamicConfig ? dynamicConfig.starter : "x = 3\ny = 5\nfor i in range(1, 4):..."}
+                      <div className="bg-black/50 border border-green-500/30 p-4 rounded-xl mt-4 font-mono text-sm text-green-300">
+                        Analyze the code on the right and predict its exact output.
                       </div>
                     )}
                   </div>
+
+                  {/* REVEALED CLUES VISUALIZER */}
+                  {revealedClues.length > 0 && (
+                    <div className="mt-4 border-t border-white/10 pt-4 relative z-10">
+                      <h3 className="text-sm font-bold text-yellow-400 mb-3 uppercase tracking-wider font-pixel text-[10px]">Unlocked Clues</h3>
+                      <div className="space-y-3">
+                        {revealedClues.map((clue, i) => (
+                          <div key={i} className="bg-yellow-900/40 border border-yellow-500/50 rounded-lg p-3 font-mono text-[10px] md:text-xs">
+                            <span className="text-yellow-400 font-bold block mb-1">Clue #{i + 1}:</span>
+                            <div className="text-yellow-200 whitespace-pre-wrap bg-black/40 p-2 rounded">{clue}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* TEST CASES VISUALIZER */}
                   {dynamicConfig?.test_cases && dynamicConfig.test_cases.length > 0 && gameId !== 'roulette' && (
@@ -926,16 +1042,16 @@ export default function GamePage() {
                       <h3 className="text-sm font-bold text-gray-400 mb-3 uppercase tracking-wider font-pixel text-[10px]">Test Cases</h3>
                       <div className="space-y-3">
                         {dynamicConfig.test_cases.map((tc: any, i: number) => (
-                          <div key={i} className="bg-black/50 border border-gray-700 rounded-lg p-3 font-mono text-[10px] md:text-xs">
+                          <div key={i} className="bg-black border border-green-500 shadow-[0_0_10px_rgba(34,197,94,0.4)] rounded-lg p-3 font-mono text-[10px] md:text-xs">
                             {tc.input && (
                               <div className="mb-2">
-                                <span className="text-blue-400 font-bold block mb-1">Input:</span>
-                                <div className="text-gray-300 whitespace-pre-wrap bg-black/40 p-2 rounded border border-gray-800">{tc.input}</div>
+                                <span className="text-green-400 font-bold block mb-1 drop-shadow-[0_0_3px_rgba(34,197,94,0.5)]">Input:</span>
+                                <div className="text-green-300 whitespace-pre-wrap bg-black p-2 rounded border border-green-500/30">{tc.input}</div>
                               </div>
                             )}
                             <div>
-                              <span className="text-green-400 font-bold block mb-1">Expected:</span>
-                              <div className="text-gray-300 whitespace-pre-wrap bg-black/40 p-2 rounded border border-gray-800">{tc.expected}</div>
+                              <span className="text-green-400 font-bold block mb-1 drop-shadow-[0_0_3px_rgba(34,197,94,0.5)]">Expected:</span>
+                              <div className="text-green-300 whitespace-pre-wrap bg-black p-2 rounded border border-green-500/30">{tc.expected}</div>
                             </div>
                           </div>
                         ))}
@@ -945,12 +1061,12 @@ export default function GamePage() {
                 </div>
 
                 {/* TERMINAL OUTPUT PANEL */}
-                <div className={`bg-black rounded-xl p-4 border h-1/3 overflow-y-auto font-mono text-xs shadow-inner relative
-                  ${showBustEffect ? 'animate-bust-shake border-neon-red/50' : 'border-gray-700'}
+                <div className={`bg-black rounded-xl p-4 border h-1/3 overflow-y-auto font-mono text-xs relative
+                  ${showBustEffect ? 'animate-bust-shake border-neon-red/50 shadow-[0_0_15px_rgba(255,0,0,0.5)]' : 'border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.3)]'}
                   ${hasError ? 'border-neon-red/30' : ''}
                 `}>
-                  <div className="text-gray-500 mb-2 uppercase font-bold font-pixel text-[10px] tracking-wider">Terminal Output:</div>
-                  <pre className={`whitespace-pre-wrap ${output?.startsWith('❌') ? 'text-neon-red' : 'text-neon-green'}`}>
+                  <div className="text-blue-500 mb-2 uppercase font-bold font-pixel text-[10px] tracking-wider">Terminal Output:</div>
+                  <pre className={`whitespace-pre-wrap ${output?.startsWith('❌') ? 'text-neon-red' : 'text-blue-400 drop-shadow-[0_0_5px_rgba(59,130,246,0.5)]'}`}>
                     {output}
                   </pre>
                   {/* BUST watermark on error */}
@@ -1014,20 +1130,8 @@ export default function GamePage() {
                   )}
                 </AnimatePresence>
 
-                {/* EDITOR OR ROULETTE INPUT OR BACCARAT MCQ */}
-                {gameId === 'roulette' ? (
-                  <div className="flex-grow flex flex-col items-center justify-center p-10 gap-6 relative z-10 bg-black machine-bezel crt-screen">
-                    <h3 className="text-3xl font-pixel text-yellow-500 mb-2 tracking-widest neon-text-gold">SUBMIT OUTPUT</h3>
-                    <p className="text-gray-400 font-mono mb-6 text-center text-sm">Analyze the code challenge on the left and enter the exact output below.</p>
-                    <input
-                      type="text"
-                      placeholder="Type exact match..."
-                      className="w-full max-w-md bg-[#000080] border-2 border-blue-900 focus:border-yellow-500 text-white text-3xl p-6 text-center rounded-xl outline-none font-hud transition-colors shadow-inner"
-                      onChange={(e) => setTextInput(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
-                    />
-                  </div>
-                ) : gameId === 'baccarat' ? (
+                {/* EDITOR OR BACCARAT MCQ */}
+                {gameId === 'baccarat' ? (
                   <div className="flex-grow flex flex-col items-center justify-center p-10 gap-6 relative z-10 bg-black machine-bezel crt-screen">
                     <h3 className="text-3xl font-pixel text-retro-gold mb-2 tracking-widest neon-text-gold">SELECT OPTION</h3>
                     <div className="w-full max-w-lg space-y-4">
@@ -1047,18 +1151,74 @@ export default function GamePage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="flex-grow relative z-10">
-                    <CodeEditor starterCode={code} onChange={(newCode) => setCode(newCode)} isRunning={isRunning} hasError={hasError} language={language} onLanguageChange={setLanguage} onRun={() => handleSubmit(false)} />
+                  <div className="flex-grow relative z-10 flex flex-col h-full overflow-hidden">
+                    <div className="flex-grow relative flex h-full min-h-0">
+                      <div className="flex-grow relative h-full">
+                        <CodeEditor 
+                          starterCode={code} 
+                          onChange={(newCode) => setCode(newCode)} 
+                          isRunning={isRunning} 
+                          hasError={hasError} 
+                          language={language} 
+                          onLanguageChange={setLanguage} 
+                          onRun={gameId === 'roulette' ? undefined : () => handleSubmit(false)} 
+                          onGetClue={gameId === 'craps' ? handleBuyClue : undefined}
+                          clueCost={gameId === 'craps' ? (revealedClues.length + 1) * 50 : undefined}
+                          readOnly={gameId === 'roulette'}
+                        />
+                      </div>
+                      
+                      {/* BLACKJACK TIMERS SIDEBAR */}
+                      {gameId === 'blackjack' && (
+                        <div className="w-24 md:w-32 shrink-0 bg-[#0a0a0a] border-l-2 border-white/10 flex flex-col items-center p-2 md:p-4 gap-4 overflow-y-auto">
+                          <h4 className="text-white font-pixel text-[8px] md:text-[10px] text-center mb-2 tracking-widest">TEAM RELAY</h4>
+                          {[0, 1, 2].map((i) => (
+                            <div 
+                              key={i} 
+                              className={`w-full p-2 rounded flex flex-col items-center border-2 transition-all ${
+                                currentTeammate === i 
+                                  ? 'bg-green-900/40 border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.5)] scale-105' 
+                                  : currentTeammate > i
+                                    ? 'bg-gray-900/50 border-gray-700 opacity-50'
+                                    : 'bg-black border-gray-800'
+                              }`}
+                            >
+                              <span className={`font-pixel text-[8px] md:text-[10px] mb-1 ${currentTeammate === i ? 'text-green-400' : 'text-gray-500'}`}>
+                                PLAYER {i + 1}
+                              </span>
+                              <span className={`font-hud font-bold text-lg md:text-xl ${currentTeammate === i ? 'text-white' : 'text-gray-600'}`}>
+                                {Math.floor(blackjackTimers[i] / 60).toString().padStart(2, '0')}:{(blackjackTimers[i] % 60).toString().padStart(2, '0')}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* ROULETTE OUTPUT PREDICTION BAR */}
+                    {gameId === 'roulette' && (
+                      <div className="h-20 shrink-0 bg-black border-t-2 border-green-500 p-4 flex items-center justify-center gap-4 shadow-[0_-5px_20px_rgba(34,197,94,0.15)] z-20">
+                        <span className="text-green-500 font-pixel text-sm md:text-base whitespace-nowrap hidden sm:inline-block">PREDICT OUTPUT:</span>
+                        <input
+                          type="text"
+                          placeholder="Type exact match here..."
+                          className="flex-grow max-w-2xl bg-[#000030] border-2 border-green-500/50 text-green-300 p-3 rounded-lg font-mono text-sm md:text-lg focus:outline-none focus:border-green-400 focus:shadow-[0_0_15px_rgba(34,197,94,0.4)] transition-all"
+                          value={textInput}
+                          onChange={(e) => setTextInput(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+                        />
+                      </div>
+                    )}
                   </div>
                 )}
 
                 {/* BOTTOM ACTION BAR */}
-                <div className="h-20 bg-casino-panel border-t border-white/10 flex items-center justify-between px-6 gap-4 z-20">
+                <div className="h-20 bg-[#5A3A18] border-t border-white/10 flex items-center justify-between px-6 gap-4 z-20 shadow-[0_-5px_15px_rgba(0,0,0,0.3)]">
                   <button onClick={() => {
                     if (window.confirm("Are you sure you want to Give Up? You will instantly LOSE your bet and return to the map.")) {
                       router.back()
                     }
-                  }} className="px-6 py-2 border border-red-900/50 text-red-500 hover:bg-red-900/20 font-bold rounded-lg uppercase text-sm transition-all hover:shadow-neon-red font-pixel text-[10px] tracking-wider">Give Up</button>
+                  }} className="px-6 py-2 bg-red-950 border border-red-800 text-red-400 hover:bg-red-900 font-bold rounded-lg uppercase text-sm transition-all hover:shadow-[0_0_10px_rgba(220,38,38,0.5)] font-pixel text-[10px] tracking-wider">Give Up</button>
                   <button onClick={handleSubmit} disabled={isRunning} className={`px-8 py-3 font-bold rounded-lg uppercase text-lg shadow-lg transition-all font-pixel
                     ${isRunning
                       ? 'bg-gray-600 cursor-not-allowed opacity-50'
@@ -1203,6 +1363,23 @@ export default function GamePage() {
                 </motion.div>
                 
                 <div className="mt-4 w-full flex flex-col items-center gap-3">
+                  {gameId === 'coinflip' && (
+                    <div className="w-full max-w-md bg-black/50 p-4 rounded-xl border border-yellow-600/30 mb-2">
+                      <label className="text-yellow-400 font-pixel text-[10px] block mb-2 uppercase tracking-widest text-center">PRE-PURCHASE CLUES (COINFLIP ONLY)</label>
+                      <select 
+                        value={vaultClueLevel}
+                        onChange={(e) => setVaultClueLevel(Number(e.target.value))}
+                        disabled={isBetting}
+                        className="w-full bg-black border border-yellow-600/50 text-yellow-500 rounded p-2 font-mono text-sm outline-none focus:border-yellow-400 transition-colors"
+                      >
+                        <option value={0}>No Clues (Cost: $0)</option>
+                        <option value={1} disabled={(walletBalance || 0) < (selectedBet === 'STANDARD' ? 100 : 200) + 50}>Level 1 Clue (Cost: $50)</option>
+                        <option value={2} disabled={(walletBalance || 0) < (selectedBet === 'STANDARD' ? 100 : 200) + 100}>Level 2 Clues (Cost: $100)</option>
+                        <option value={3} disabled={(walletBalance || 0) < (selectedBet === 'STANDARD' ? 100 : 200) + 150}>Level 3 Clues (Cost: $150)</option>
+                      </select>
+                      <p className="text-[9px] text-gray-500 font-mono text-center mt-2">Clues cannot be purchased after the round starts.</p>
+                    </div>
+                  )}
                   {selectedBet === 'STANDARD' && wheelMultiplier === 0 && (
                     <button onClick={() => setSelectedBet(null)} className="text-gray-400 hover:text-white text-[10px] font-pixel tracking-widest uppercase mb-1 transition-colors">
                       ← CANCEL AND CHANGE BET TYPE

@@ -12,9 +12,10 @@ type TeamRow = {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function loginAction(prevState: any, formData: FormData) {
-  const code = formData.get('access_code') as string
+  let code = formData.get('access_code') as string
 
   if (!code) return { error: "Please enter a code." }
+  code = code.toUpperCase()
 
   // 1. Fetch data
   const { data, error } = await supabaseAdmin
@@ -115,7 +116,8 @@ export async function fetchQuestionData(gameId: string, difficultyStr: string = 
         starter_code: questionData.starter_code,
         constraints: questionData.constraints, // This could be a string of banned words/symbols separated by commas
         expected_output: questionData.test_cases && questionData.test_cases.length > 0 ? questionData.test_cases[0].expected : null,
-        test_cases: questionData.test_cases || [] // Raw payload for the UI
+        test_cases: questionData.test_cases || [], // Raw payload for the UI
+        clues_total: questionData.clues ? questionData.clues.length : 0
       }
     };
   } catch {
@@ -295,7 +297,7 @@ export async function claimAutomatedReward(teamId: string, payout: number, gameI
   try {
     const { data: teamData, error: fetchError } = await supabaseAdmin
       .from('teams')
-      .select('wallet_balance')
+      .select('wallet_balance, stamps')
       .eq('id', teamId)
       .single()
       .then(res => ({ data: res.data as any, error: res.error }));
@@ -322,12 +324,14 @@ export async function claimAutomatedReward(teamId: string, payout: number, gameI
     }
 
     const newBalance = teamData.wallet_balance + payout;
+    const stamps = (teamData.stamps as Record<string, boolean>) || {}
+    stamps[gameId] = true
     
-    // Update balance
+    // Update balance and stamps
     const { error: updateError } = await supabaseAdmin
       .from('teams')
       // @ts-expect-error: Next.js/Supabase inference bug
-      .update({ wallet_balance: newBalance })
+      .update({ wallet_balance: newBalance, stamps: stamps as any })
       .eq('id', teamId);
 
     if (updateError) {
@@ -345,4 +349,65 @@ export async function claimAutomatedReward(teamId: string, payout: number, gameI
   } catch (err) {
     return { error: "System error claiming reward." };
   }
+}
+
+export async function buyClue(teamId: string, questionId: string, clueIndex: number) {
+  const cost = (clueIndex + 1) * 50;
+  
+  const { data: team, error: teamErr } = await supabaseAdmin.from('teams').select('wallet_balance').eq('id', teamId).single();
+  if (teamErr || !team) return { error: 'Team not found' };
+  
+  if (team.wallet_balance < cost) {
+    return { error: `Not enough coins. Need ${cost} coins.` };
+  }
+
+  const { data: question, error: qErr } = await supabaseAdmin.from('question_bank').select('clues').eq('id', questionId).single();
+  
+  let actualClue = '';
+  const cluesArray = question && question.clues ? question.clues : [];
+
+  if (!Array.isArray(cluesArray) || clueIndex >= cluesArray.length) {
+    // For testing purposes: allow up to 3 clues even if they don't exist in DB
+    if (clueIndex >= 3) {
+      return { error: 'No more clues available for this challenge!' };
+    }
+    actualClue = `[TEST CLUE ${clueIndex + 1}] This is a dummy clue because no clues were uploaded (or column is missing).`;
+  } else {
+    actualClue = cluesArray[clueIndex];
+  }
+
+  const { error: updateErr } = await supabaseAdmin.from('teams').update({ wallet_balance: team.wallet_balance - cost }).eq('id', teamId);
+  if (updateErr) return { error: 'Failed to deduct coins' };
+
+  // Log to event_control or wallet history if needed, but not strictly required
+  return { clue: actualClue };
+}
+
+export async function buyVaultClues(teamId: string, questionId: string, level: number) {
+  const cost = level * 50;
+  
+  const { data: team, error: teamErr } = await supabaseAdmin.from('teams').select('wallet_balance').eq('id', teamId).single();
+  if (teamErr || !team) return { error: 'Team not found' };
+  
+  if (team.wallet_balance < cost) {
+    return { error: `Not enough coins. Need ${cost} coins.` };
+  }
+
+  const { data: question, error: qErr } = await supabaseAdmin.from('question_bank').select('clues').eq('id', questionId).single();
+  
+  let actualClues: string[] = [];
+  const cluesArray = question && question.clues ? question.clues : [];
+
+  for (let i = 0; i < level; i++) {
+    if (!Array.isArray(cluesArray) || i >= cluesArray.length) {
+      actualClues.push(`[TEST CLUE ${i + 1}] This is a dummy clue because no clues were uploaded (or column is missing).`);
+    } else {
+      actualClues.push(cluesArray[i]);
+    }
+  }
+
+  const { error: updateErr } = await supabaseAdmin.from('teams').update({ wallet_balance: team.wallet_balance - cost }).eq('id', teamId);
+  if (updateErr) return { error: 'Failed to deduct coins' };
+
+  return { clues: actualClues };
 }

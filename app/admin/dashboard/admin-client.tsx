@@ -806,7 +806,7 @@ function TheVault() {
 // TAB C: "THE DECK" — Question Manager (Per-Table)
 // ========================================
 
-const TABLE_GAME_IDS = ['slots', 'roulette', 'blackjack', 'craps', 'poker', 'baccarat', 'dice', 'highcard', 'coinflip', 'vault'] as const
+const TABLE_GAME_IDS = ['slots', 'roulette', 'blackjack', 'craps', 'poker', 'baccarat', 'dice', 'highcard', 'coinflip', 'vault', 'final'] as const
 
 function TheDeck() {
     const [questions, setQuestions] = useState<any[]>([])
@@ -940,7 +940,7 @@ function TheDeck() {
                         </button>
                     </div>
                     <p className="text-[10px] text-gray-500 font-mono">
-                        Paste JSON array. game_type and difficulty are auto-filled. Only include: title, problem_statement, starter_code, test_cases, constraints
+                        Paste JSON array. game_type and difficulty are auto-filled. Only include: title, problem_statement, starter_code, test_cases, constraints, clues
                     </p>
                     <textarea
                         value={uploadJson}
@@ -951,6 +951,7 @@ function TheDeck() {
     "problem_statement": "The loop runs infinitely...",
     "starter_code": "def solve():\\n    pass",
     "test_cases": [{"input": "5", "expected": "10"}],
+    "clues": ["Clue 1...", "Clue 2...", "Clue 3..."],
     "constraints": ""
   }
 ]`}
@@ -975,7 +976,7 @@ function TheDeck() {
                     const standardQs = getQuestionsForTable(gameId, 'STANDARD')
                     const highQs = getQuestionsForTable(gameId, 'HIGH')
                     const isExpanded = expandedTable === gameId
-                    const totalExpected = 12
+                    const totalExpected = gameId === 'final' ? 2 : 12
                     const loaded = tableQuestions.length
                     const isFull = loaded >= totalExpected
                     const isEmpty = loaded === 0
@@ -1000,16 +1001,26 @@ function TheDeck() {
                                         {loaded}/{totalExpected}
                                     </span>
                                     <div className="flex gap-1">
-                                        <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${
-                                            standardQs.length >= 6 ? 'bg-green-900/20 text-green-400' : 'bg-red-900/20 text-red-400'
-                                        }`}>
-                                            STD {standardQs.length}/6
-                                        </span>
-                                        <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${
-                                            highQs.length >= 6 ? 'bg-green-900/20 text-green-400' : 'bg-red-900/20 text-red-400'
-                                        }`}>
-                                            HIGH {highQs.length}/6
-                                        </span>
+                                        {gameId === 'final' ? (
+                                            <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${
+                                                standardQs.length >= 2 ? 'bg-purple-900/20 text-purple-400' : 'bg-red-900/20 text-red-400'
+                                            }`}>
+                                                FINAL {standardQs.length}/2
+                                            </span>
+                                        ) : (
+                                            <>
+                                                <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${
+                                                    standardQs.length >= 6 ? 'bg-green-900/20 text-green-400' : 'bg-red-900/20 text-red-400'
+                                                }`}>
+                                                    STD {standardQs.length}/6
+                                                </span>
+                                                <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${
+                                                    highQs.length >= 6 ? 'bg-green-900/20 text-green-400' : 'bg-red-900/20 text-red-400'
+                                                }`}>
+                                                    HIGH {highQs.length}/6
+                                                </span>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                             </button>
@@ -1017,17 +1028,22 @@ function TheDeck() {
                             {/* Expanded Content */}
                             {isExpanded && (
                                 <div className="border-t border-white/5 px-5 py-4">
-                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                        {/* STANDARD Column */}
-                                        {(['STANDARD', 'HIGH'] as const).map(difficulty => {
+                                    <div className={`grid grid-cols-1 gap-6 ${gameId === 'final' ? '' : 'lg:grid-cols-2'}`}>
+                                        {/* Column Rendering */}
+                                        {(gameId === 'final' ? ['STANDARD'] : ['STANDARD', 'HIGH']).map(difficulty => {
                                             const diffQs = difficulty === 'STANDARD' ? standardQs : highQs
-                                            const diffColor = difficulty === 'STANDARD' ? 'green' : 'red'
+                                            const diffColor = difficulty === 'STANDARD' ? (gameId === 'final' ? 'purple' : 'green') : 'red'
+                                            const expected = gameId === 'final' ? 2 : 6
+                                            
+                                            const labelText = gameId === 'final' 
+                                                ? '👑 FINAL MATCH' 
+                                                : (difficulty === 'HIGH' ? '🔥 HIGH ROLLER' : '📋 STANDARD')
 
                                             return (
                                                 <div key={difficulty} className="space-y-3">
                                                     <div className="flex items-center justify-between">
                                                         <h5 className={`text-[10px] font-pixel tracking-widest text-${diffColor}-400`}>
-                                                            {difficulty === 'HIGH' ? '🔥 HIGH ROLLER' : '📋 STANDARD'} ({diffQs.length}/6)
+                                                            {labelText} ({diffQs.length}/{expected})
                                                         </h5>
                                                         <div className="flex gap-2">
                                                             <button
