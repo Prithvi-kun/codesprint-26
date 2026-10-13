@@ -510,8 +510,9 @@ export default function GamePage() {
             id: res.question.id,
             description: res.question.content || (config ? config.description : ""),
             starter: res.question.starter_code || (config ? config.starter : ""),
-            expected_output: res.question.expected_output,
+            expected_output: res.question.expected_output || undefined,
             test_cases: res.question.test_cases,
+            options: res.question.options || undefined,
             clues_total: res.question.clues_total
           })
           setCode(res.question.starter_code || (config ? config.starter : ""))
@@ -1219,7 +1220,7 @@ export default function GamePage() {
                       router.back()
                     }
                   }} className="px-6 py-2 bg-red-950 border border-red-800 text-red-400 hover:bg-red-900 font-bold rounded-lg uppercase text-sm transition-all hover:shadow-[0_0_10px_rgba(220,38,38,0.5)] font-pixel text-[10px] tracking-wider">Give Up</button>
-                  <button onClick={handleSubmit} disabled={isRunning} className={`px-8 py-3 font-bold rounded-lg uppercase text-lg shadow-lg transition-all font-pixel
+                  <button onClick={() => handleSubmit(true)} disabled={isRunning} className={`px-8 py-3 font-bold rounded-lg uppercase text-lg shadow-lg transition-all font-pixel
                     ${isRunning
                       ? 'bg-gray-600 cursor-not-allowed opacity-50'
                       : 'bg-green-700 text-white hover:bg-green-500 hover:scale-105 shadow-[0_0_15px_rgba(34,197,94,0.4)] hover:shadow-[0_0_25px_rgba(34,197,94,0.8)]'
@@ -1296,12 +1297,12 @@ export default function GamePage() {
                   initial={{ y: 20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 0.4 }}
-                  className={`grid grid-cols-1 ${selectedBet === 'STANDARD' ? 'md:grid-cols-2' : 'md:grid-cols-2'} gap-6 md:gap-8 mt-8 w-full`}
+                  className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 mt-8 w-full"
                 >
                   {/* STANDARD BET CARD */}
                   <motion.div
-                    whileHover={{ scale: selectedBet === 'STANDARD' ? 1 : 1.03, y: selectedBet === 'STANDARD' ? 0 : -4 }}
-                    whileTap={{ scale: selectedBet === 'STANDARD' ? 1 : 0.98 }}
+                    whileHover={{ scale: 1.03, y: -4 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => setSelectedBet('STANDARD')}
                     className={`group cursor-pointer border-[3px] p-6 md:p-8 rounded-2xl transition-all relative overflow-hidden flex flex-col justify-center h-full min-h-[300px]
                       ${selectedBet === 'STANDARD' ? 'bg-[#1e4d2b] border-white shadow-[0_0_30px_rgba(34,197,94,0.3)]' : 'bg-[#143a21] border-green-500/60 hover:border-green-400/80'}`}
@@ -1316,50 +1317,23 @@ export default function GamePage() {
                     </div>
                   </motion.div>
 
-                  {/* HIGH ROLLER CARD OR SPIN WHEEL */}
-                  {selectedBet === 'STANDARD' ? (
-                    <motion.div
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      className="h-full"
-                    >
-                      <SpinWheel 
-                        teamId={teamId || ''} 
-                        gameId={gameId}
-                        onSpinStart={() => setIsSpinningWheel(true)}
-                        onSpinComplete={(multiplier, newBalance) => {
-                          setIsSpinningWheel(false)
-                          setIsBetting(true)
-                          setWheelMultiplier(multiplier)
-                          setWalletBalance(newBalance)
-                          setDifficulty('STANDARD')
-                          localStorage.setItem(`cs_diff_${gameId}`, 'STANDARD')
-                          setTimeout(() => {
-                            setPhase('WAITING')
-                            setIsBetting(false)
-                          }, 2000)
-                        }}
-                        disabled={isBetting || isSpinningWheel} 
-                      />
-                    </motion.div>
-                  ) : (
-                    <motion.div
-                      whileHover={{ scale: 1.03, y: -4 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => setSelectedBet('HIGH')}
-                      className={`group cursor-pointer border-[3px] p-6 md:p-8 rounded-2xl transition-all relative overflow-hidden flex flex-col justify-center h-full min-h-[300px]
-                        ${selectedBet === 'HIGH' ? 'bg-[#2a0a0a] border-neon-red shadow-neon-red' : 'bg-[#1a0a0a] border-red-900/60 hover:border-neon-red/80'}`}
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-b from-red-900/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                      <div className="relative z-10">
-                        <h3 className="text-2xl text-white font-bold mb-1 font-pixel">HIGH ROLLER</h3>
-                        <div className="text-4xl font-hud font-bold text-neon-red mb-2 neon-text-red">$200</div>
-                        <div className="text-base font-hud font-bold text-red-300 mb-3">Returns $400</div>
-                        <p className="text-gray-400 text-sm font-mono">{gameId === 'roulette' ? 'Exact Match Input' : 'Extreme Difficulty'}</p>
-                        <div className="mt-3 text-[9px] font-pixel text-red-600/60 uppercase tracking-widest">HIGH RISK • HIGH REWARD</div>
-                      </div>
-                    </motion.div>
-                  )}
+                  {/* HIGH ROLLER CARD */}
+                  <motion.div
+                    whileHover={{ scale: 1.03, y: -4 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setSelectedBet('HIGH')}
+                    className={`group cursor-pointer border-[3px] p-6 md:p-8 rounded-2xl transition-all relative overflow-hidden flex flex-col justify-center h-full min-h-[300px]
+                      ${selectedBet === 'HIGH' ? 'bg-[#2a0a0a] border-neon-red shadow-neon-red' : 'bg-[#1a0a0a] border-red-900/60 hover:border-neon-red/80'}`}
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-b from-red-900/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="relative z-10">
+                      <h3 className="text-2xl text-white font-bold mb-1 font-pixel">HIGH ROLLER</h3>
+                      <div className="text-4xl font-hud font-bold text-neon-red mb-2 neon-text-red">$200</div>
+                      <div className="text-base font-hud font-bold text-red-300 mb-3">Returns $400</div>
+                      <p className="text-gray-400 text-sm font-mono">{gameId === 'roulette' ? 'Exact Match Input' : 'Extreme Difficulty'}</p>
+                      <div className="mt-3 text-[9px] font-pixel text-red-600/60 uppercase tracking-widest">HIGH RISK • HIGH REWARD</div>
+                    </div>
+                  </motion.div>
                 </motion.div>
                 
                 <div className="mt-4 w-full flex flex-col items-center gap-3">
@@ -1380,21 +1354,16 @@ export default function GamePage() {
                       <p className="text-[9px] text-gray-500 font-mono text-center mt-2">Clues cannot be purchased after the round starts.</p>
                     </div>
                   )}
-                  {selectedBet === 'STANDARD' && wheelMultiplier === 0 && (
-                    <button onClick={() => setSelectedBet(null)} className="text-gray-400 hover:text-white text-[10px] font-pixel tracking-widest uppercase mb-1 transition-colors">
-                      ← CANCEL AND CHANGE BET TYPE
-                    </button>
-                  )}
                   <button 
                     onClick={handleBet}
-                    disabled={!selectedBet || isBetting || isSpinningWheel}
+                    disabled={!selectedBet || isBetting}
                     className={`px-6 py-3 font-bold rounded-xl uppercase text-sm shadow-lg transition-all font-pixel w-full max-w-md
-                      ${selectedBet && !isBetting && !isSpinningWheel
+                      ${selectedBet && !isBetting
                         ? 'bg-retro-gold text-black hover:bg-yellow-400 hover:scale-105 shadow-neon-gold cursor-pointer' 
                         : 'bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700'
                       }`}
                   >
-                    {isSpinningWheel ? 'SPINNING WHEEL...' : isBetting ? 'ENTERING CASINO...' : 'CONFIRM CHOICES & ENTER'}
+                    {isBetting ? 'ENTERING CASINO...' : 'CONFIRM CHOICES & ENTER'}
                   </button>
                   <button onClick={() => router.back()} className="text-gray-500 hover:text-white text-[9px] disabled:opacity-0 font-pixel tracking-widest uppercase transition-colors" disabled={isBetting}>
                     ← BACK TO MAP
@@ -1431,7 +1400,7 @@ export default function GamePage() {
           <div className="space-y-4 mb-8">
             <h3 className="text-gray-400 font-bold uppercase tracking-widest text-[10px] font-pixel">HOW TO PLAY:</h3>
             <ul className="space-y-3">
-              {config.rules.map((rule, i) => (
+              {config.rules.map((rule: string, i: number) => (
                 <li key={i} className="flex items-start gap-3 text-gray-300 font-mono text-sm">
                   <span className={`${config.color} font-bold font-pixel text-xs`}>[0{i + 1}]</span>{rule}
                 </li>

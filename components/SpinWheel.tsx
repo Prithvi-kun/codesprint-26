@@ -53,7 +53,7 @@ export default function SpinWheel({ teamId, gameId, onSpinStart, onSpinComplete,
     setTimeout(() => {
       setIsSpinning(false)
       setHasSpun(true)
-      onSpinComplete(winningMultiplier, res.newBalance)
+      onSpinComplete(winningMultiplier, res.newBalance ?? 0)
     }, 4000)
   }
 

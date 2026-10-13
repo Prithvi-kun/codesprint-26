@@ -209,7 +209,8 @@ export default function MapClient({ userData }: MapClientProps) {
 
   // --- BROADCAST STATE ---
   const [broadcastMessage, setBroadcastMessage] = useState<string | null>(null)
-  const [bouncerSpeech, setBouncerSpeech] = useState<'closed' | 'need_badges' | null>(null)
+  const [bouncerSpeech, setBouncerSpeech] = useState<'closed' | 'need_badges' | 'not_top6' | null>(null)
+  const [top6Ids, setTop6Ids] = useState<string[]>([])
 
   // --- STATE REFS FOR EVENT LISTENERS ---
   const sceneRef = useRef(scene)
@@ -263,9 +264,11 @@ export default function MapClient({ userData }: MapClientProps) {
     }
   }, [position, CELL])
 
-  // --- GET MY AVATAR URL ---
-  const mySeed = AVATAR_LIST.find(a => a.id === userData.avatar_id)?.seed || 'Felix'
+  // --- GET MY AVATAR & SYNDICATE INFO ---
+  const myAvatarInfo = AVATAR_LIST.find(a => a.id === userData.avatar_id || a.code === userData.access_code)
+  const mySeed = myAvatarInfo?.seed || 'Felix'
   const mySpriteUrl = getAvatarUrl(mySeed)
+  const mySyndicateName = myAvatarInfo?.name || userData.access_code
 
   // --- COLLISION LOGIC (uses refs for always-fresh state) ---
   const isBlocked = (x: number, y: number) => {
@@ -326,6 +329,9 @@ export default function MapClient({ userData }: MapClientProps) {
         if (teamData.stamps) setStamps(teamData.stamps as Record<string, boolean>)
         setWalletBalance(teamData.wallet_balance)
       }
+      // Fetch top-6 for final round gating
+      const { data: leaders } = await supabase.from('teams').select('id').order('wallet_balance', { ascending: false }).limit(6)
+      if (leaders) setTop6Ids(leaders.map((t: any) => t.id))
       const txData = await fetchTeamHistory(userData.id)
       if (txData.history) setHistory(txData.history)
     }
@@ -481,15 +487,22 @@ export default function MapClient({ userData }: MapClientProps) {
         if (newPos.y <= 0) { 
           if (!r2open) {
             setBouncerSpeech('closed')
-            setTimeout(() => setBouncerSpeech(null), 3000)
+            setTimeout(() => setBouncerSpeech(null), 3500)
             setPosition({ x: newPos.x, y: 1 })
             return
           }
-          // Check badges for VIP room
+          // Check all 10 badges for VIP room
           const bCount = Object.values(stampsRef.current).filter(Boolean).length
           if (bCount < 10) {
             setBouncerSpeech('need_badges')
-            setTimeout(() => setBouncerSpeech(null), 3000)
+            setTimeout(() => setBouncerSpeech(null), 3500)
+            setPosition({ x: newPos.x, y: 1 })
+            return
+          }
+          // Check Top-6 ranking for VIP room
+          if (top6Ids.length > 0 && !top6Ids.includes(userData.id)) {
+            setBouncerSpeech('not_top6')
+            setTimeout(() => setBouncerSpeech(null), 3500)
             setPosition({ x: newPos.x, y: 1 })
             return
           }
@@ -522,9 +535,8 @@ export default function MapClient({ userData }: MapClientProps) {
             return
           }
           if (routeOrAction === 'final') {
-            setShowConfirmBet(false);
-            setBetAmount(500);
-            setShowBetModal(true)
+            // Final round has its own dedicated page with betting + spin wheel
+            router.push('/game/final')
           } else {
             // Check if game is live before routing
             supabase.from('game_state').select('entry_pin').eq('game_id', routeOrAction).eq('is_active', true).maybeSingle().then(({ data }) => {
@@ -773,7 +785,7 @@ export default function MapClient({ userData }: MapClientProps) {
                   <div className="absolute bottom-[calc(100%+10px)] left-1/2 -translate-x-1/2 bg-white text-black p-2 rounded-lg text-[10px] font-pixel shadow-xl w-32 text-center z-50 border-2 border-black">
                     <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-l-transparent border-t-[8px] border-t-black border-r-[6px] border-r-transparent"></div>
                     <div className="absolute -bottom-[6px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[5px] border-l-transparent border-t-[7px] border-t-white border-r-[5px] border-r-transparent z-10"></div>
-                    {bouncerSpeech === 'closed' ? "VIP Room is closed." : "Sorry pal, you need 10 badges to enter."}
+                    {bouncerSpeech === 'closed' ? "VIP Room is closed. Come back later." : bouncerSpeech === 'not_top6' ? "Only Top 6 teams allowed. Check your ranking!" : "Need all 10 badges to enter!"}
                   </div>
                 )}
               </div>
@@ -784,7 +796,7 @@ export default function MapClient({ userData }: MapClientProps) {
                   <div className="absolute bottom-[calc(100%+10px)] left-1/2 -translate-x-1/2 bg-white text-black p-2 rounded-lg text-[10px] font-pixel shadow-xl w-24 text-center z-50 border-2 border-black">
                     <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-l-transparent border-t-[8px] border-t-black border-r-[6px] border-r-transparent"></div>
                     <div className="absolute -bottom-[6px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[5px] border-l-transparent border-t-[7px] border-t-white border-r-[5px] border-r-transparent z-10"></div>
-                    {bouncerSpeech === 'closed' ? "Come back later." : "Skill issue."}
+                    {bouncerSpeech === 'closed' ? "Come back." : bouncerSpeech === 'not_top6' ? "Top 6 only." : "Get all badges first!"}
                   </div>
                 )}
               </div>
@@ -842,9 +854,8 @@ export default function MapClient({ userData }: MapClientProps) {
                       return
                     }
                     if (t.route === 'final') {
-                      setShowConfirmBet(false);
-                      setBetAmount(500);
-                      setShowBetModal(true);
+                      // Navigate to dedicated final round page
+                      router.push('/game/final')
                     }
                     else router.push(`/game/${t.route}`)
                   }}
@@ -904,15 +915,13 @@ export default function MapClient({ userData }: MapClientProps) {
             // --- OTHER PLAYER ---
             if (entity.type === 'other-player') {
               const p = entity.data
-              const otherSeed = AVATAR_LIST.find(a => a.id === p.avatar_id)?.seed || 'Felix'
+              const otherAvatar = AVATAR_LIST.find(a => a.id === p.avatar_id)
+              const otherSeed = otherAvatar?.seed || 'Felix'
               const otherSpriteUrl = getAvatarUrl(otherSeed)
               return (
                 <div key={entity.key} className="absolute transition-all duration-200 ease-linear avatar-shadow"
                   style={{ left: p.x * CELL, top: p.y * CELL, width: CELL, height: CELL, zIndex }}>
                   <img src={otherSpriteUrl} className="w-full h-full drop-shadow-md opacity-70 animate-avatar-bob" alt="Player" />
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 name-tag font-pixel">
-                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 mr-1" />PLAYER
-                  </div>
                 </div>
               )
             }
@@ -941,7 +950,6 @@ export default function MapClient({ userData }: MapClientProps) {
                       className={`w-full h-full drop-shadow-lg object-contain ${isMoving ? 'animate-walk-wobble' : 'animate-avatar-bob'}`}
                       alt="Me" />
                   </div>
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 name-tag-you font-pixel">YOU</div>
                 </div>
               )
             }
@@ -965,8 +973,9 @@ export default function MapClient({ userData }: MapClientProps) {
             <div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border border-black ${inRound2 ? 'bg-retro-burgundy animate-pulse' : 'bg-green-500'}`} />
           </div>
           <div>
-            <div className="text-[10px] font-pixel text-retro-gold uppercase tracking-wider mb-0.5">Team Name</div>
-            <div className="text-lg font-mono text-retro-cream font-bold">{userData.access_code}</div>
+            <div className="text-[10px] font-pixel text-retro-gold uppercase tracking-wider mb-0.5">Syndicate</div>
+            <div className="text-lg font-mono text-retro-cream font-bold">{mySyndicateName}</div>
+            <div className="text-[10px] font-mono text-gray-400">Team #{myAvatarInfo?.teamNum || '?'} • {userData.access_code}</div>
           </div>
         </div>
 

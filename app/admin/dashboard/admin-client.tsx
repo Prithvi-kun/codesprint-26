@@ -4,12 +4,15 @@ import { useState, useEffect, useCallback } from 'react'
 import {
     Shield, Pause, Play, Zap, Search, DollarSign, AlertTriangle, Ban,
     Award, Upload, RotateCcw, ToggleLeft, ToggleRight, Trophy, BarChart3,
-    Megaphone, Eye, ChevronDown, RefreshCw, X, Check, Flame, Trash2, ChevronRight
+    Megaphone, Eye, ChevronDown, RefreshCw, X, Check, Flame, Trash2, ChevronRight,
+    Sparkles, FileText, CheckCircle2, HelpCircle, Code2, ListOrdered, FileJson,
+    Copy, Filter, Layers, Database
 } from 'lucide-react'
 import {
     togglePause, setCurrentRound, getEventState,
     getAllTeams, adjustWallet, sendWarning, banTeam, unbanTeam, toggleStamp,
     getAllQuestions, toggleQuestion, burnQuestion, reshuffleAllQuestions, bulkUploadQuestions,
+    uploadDefaultQuestionBank, purgeAllQuestions,
     uploadQuestionsForTable, deleteQuestion, deleteAllQuestionsForTable,
     getLeaderboard, getAnalytics, broadcastMessage, forceWin, createTeam,
     startTableRound, setTableStatusState, awardWin, toggleRound2Portal
@@ -36,10 +39,10 @@ const GAME_LABELS: Record<string, string> = {
 export default function AdminDashboard() {
     const [activeTab, setActiveTab] = useState<Tab>('pit')
 
-    const tabs: { id: Tab; label: string; icon: React.ReactNode; color: string }[] = [
+    const tabs: { id: Tab; label: string; icon: React.ReactNode; color: string; badge?: string }[] = [
         { id: 'pit', label: 'THE PIT', icon: <Zap className="w-4 h-4" />, color: 'text-red-400 border-red-500' },
         { id: 'vault', label: 'THE VAULT', icon: <DollarSign className="w-4 h-4" />, color: 'text-yellow-400 border-yellow-500' },
-        { id: 'deck', label: 'THE DECK', icon: <Flame className="w-4 h-4" />, color: 'text-blue-400 border-blue-500' },
+        { id: 'deck', label: '🃏 QUESTION BANK & BULK PUSH', icon: <Flame className="w-4 h-4" />, color: 'text-blue-400 border-blue-500', badge: '201 Qs' },
         { id: 'eye', label: 'THE EYE', icon: <Eye className="w-4 h-4" />, color: 'text-purple-400 border-purple-500' },
     ]
 
@@ -49,11 +52,32 @@ export default function AdminDashboard() {
             <div className="bg-[#12121a] border-b border-red-900/30 px-6 py-3 flex items-center justify-between sticky top-0 z-50">
                 <div className="flex items-center gap-3">
                     <Shield className="w-6 h-6 text-red-500" />
-                    <span className="font-pixel text-red-400 text-sm tracking-wider">PIT BOSS CONTROL</span>
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <span className="font-pixel text-red-400 text-sm tracking-wider">PIT BOSS CONTROL</span>
+                            <span className="text-[9px] font-mono bg-red-950/60 border border-red-500/30 text-red-300 px-2 py-0.5 rounded">ADMIN HQ</span>
+                        </div>
+                        <p className="text-[10px] text-gray-500 font-mono hidden sm:block">CodeSprint 2026 Casino Engine & Question Command</p>
+                    </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                    <span className="text-xs text-gray-500 font-mono">LIVE</span>
+                <div className="flex items-center gap-3">
+                    {/* Unmissable Top-Level Bulk Push Button */}
+                    <button
+                        onClick={() => setActiveTab('deck')}
+                        className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-pixel font-bold transition-all cursor-pointer ${
+                            activeTab === 'deck'
+                                ? 'bg-retro-green text-black shadow-[0_0_15px_#39ff14]'
+                                : 'bg-yellow-500 hover:bg-yellow-400 text-black shadow-[0_0_10px_rgba(234,179,8,0.4)]'
+                        }`}
+                        title="Open Question Bank and Bulk JSON Uploader"
+                    >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>BULK PUSH QUESTIONS (JSON)</span>
+                    </button>
+                    <div className="flex items-center gap-2 bg-black/50 px-3 py-1.5 rounded-lg border border-white/10">
+                        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                        <span className="text-xs text-gray-400 font-mono">LIVE</span>
+                    </div>
                 </div>
             </div>
 
@@ -63,14 +87,19 @@ export default function AdminDashboard() {
                     <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
-                        className={`flex items-center gap-2 px-5 py-3 text-xs font-pixel tracking-wider transition-all border-b-2 whitespace-nowrap
+                        className={`flex items-center gap-2 px-5 py-3 text-xs font-pixel tracking-wider transition-all border-b-2 whitespace-nowrap cursor-pointer
               ${activeTab === tab.id
                                 ? `${tab.color} bg-white/5`
                                 : 'text-gray-600 border-transparent hover:text-gray-400 hover:bg-white/[0.02]'
                             }`}
                     >
                         {tab.icon}
-                        {tab.label}
+                        <span>{tab.label}</span>
+                        {tab.badge && (
+                            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-blue-900/50 text-blue-300 border border-blue-500/30">
+                                {tab.badge}
+                            </span>
+                        )}
                     </button>
                 ))}
             </div>
@@ -803,16 +832,156 @@ function TheVault() {
 }
 
 // ========================================
-// TAB C: "THE DECK" — Question Manager (Per-Table)
+// TAB C: "THE DECK" — Question Bank & Bulk JSON Importer
 // ========================================
 
 const TABLE_GAME_IDS = ['slots', 'roulette', 'blackjack', 'craps', 'poker', 'baccarat', 'dice', 'highcard', 'coinflip', 'vault', 'final'] as const
+
+interface TableMeta {
+    label: string
+    sublabel: string
+    typeLabel: string
+    icon: string
+    color: string
+    badgeClass: string
+    description: string
+    expectedCount: number
+}
+
+const TABLE_METADATA: Record<string, TableMeta> = {
+    slots: {
+        label: 'TABLE 1: SLOTS',
+        sublabel: 'Bug Bounty',
+        typeLabel: '🐛 BUG BOUNTY',
+        icon: '🎰',
+        color: 'blue',
+        badgeClass: 'border-blue-500/40 text-blue-400 bg-blue-950/40',
+        description: 'Find and fix flawed code snippets in Python / C / JS. Test cases validate edge cases.',
+        expectedCount: 20
+    },
+    roulette: {
+        label: 'TABLE 2: ROULETTE',
+        sublabel: 'Output Oracle',
+        typeLabel: '🎯 OUTPUT ORACLE',
+        icon: '🎯',
+        color: 'amber',
+        badgeClass: 'border-amber-500/40 text-amber-400 bg-amber-950/40',
+        description: 'Code execution tracing. Players must submit the EXACT printed output string of the snippet.',
+        expectedCount: 20
+    },
+    blackjack: {
+        label: 'TABLE 3: BLACKJACK',
+        sublabel: 'Code Relay',
+        typeLabel: '🃏 CODE RELAY',
+        icon: '🃏',
+        color: 'emerald',
+        badgeClass: 'border-emerald-500/40 text-emerald-400 bg-emerald-950/40',
+        description: 'Missing algorithm logic. Complete the starter code function and pass test cases.',
+        expectedCount: 20
+    },
+    craps: {
+        label: 'TABLE 4: CRAPS',
+        sublabel: 'Debug Detective',
+        typeLabel: '🎲 3 PROGRESSIVE CLUES',
+        icon: '🎲',
+        color: 'yellow',
+        badgeClass: 'border-yellow-500/40 text-yellow-400 bg-yellow-950/40',
+        description: 'Error diagnosis with 3 hint ladders (Clue 1: -10%, Clue 2: -30%, Clue 3: -50% prize penalty).',
+        expectedCount: 20
+    },
+    poker: {
+        label: 'TABLE 5: POKER',
+        sublabel: 'Cipher Crack',
+        typeLabel: '🕵️ CIPHER CRACK',
+        icon: '🕵️',
+        color: 'indigo',
+        badgeClass: 'border-indigo-500/40 text-indigo-400 bg-indigo-950/40',
+        description: 'Cryptography, frequency substitution, and decoding encoded secret ciphertexts.',
+        expectedCount: 20
+    },
+    baccarat: {
+        label: 'TABLE 6: BACCARAT',
+        sublabel: 'SQL Heist',
+        typeLabel: '🏦 SQL 4-OPTION MCQ',
+        icon: '🏦',
+        color: 'cyan',
+        badgeClass: 'border-cyan-500/40 text-cyan-400 bg-cyan-950/40',
+        description: 'Relational database challenges with 4 Multiple-Choice Options (A, B, C, D) and SQL query verification.',
+        expectedCount: 20
+    },
+    dice: {
+        label: 'TABLE 7: DICE',
+        sublabel: 'Stack Attack',
+        typeLabel: '🎲 STACK ATTACK',
+        icon: '🎲',
+        color: 'fuchsia',
+        badgeClass: 'border-fuchsia-500/40 text-fuchsia-400 bg-fuchsia-950/40',
+        description: 'Stack data structure tracing, reverse Polish notation, and bracket balancing simulation.',
+        expectedCount: 20
+    },
+    highcard: {
+        label: 'TABLE 8: HIGH CARD',
+        sublabel: 'Complexity Clash',
+        typeLabel: '🃏 COMPLEXITY CLASH',
+        icon: '🃏',
+        color: 'orange',
+        badgeClass: 'border-orange-500/40 text-orange-400 bg-orange-950/40',
+        description: 'Big-O time and memory space asymptotic complexity evaluation (O(1), O(N), O(N log N), O(N²)).',
+        expectedCount: 20
+    },
+    coinflip: {
+        label: 'TABLE 9: COIN FLIP',
+        sublabel: 'Algorithm Auction',
+        typeLabel: '🪙 3 CLUES AUCTION',
+        icon: '🪙',
+        color: 'yellow',
+        badgeClass: 'border-yellow-400/40 text-yellow-300 bg-yellow-950/40',
+        description: 'Algorithmic deduction problem with auction bidding on progressive hint clues.',
+        expectedCount: 20
+    },
+    vault: {
+        label: 'TABLE 10: THE VAULT',
+        sublabel: 'DSA Challenge',
+        typeLabel: '🔐 HARD DSA',
+        icon: '🔐',
+        color: 'red',
+        badgeClass: 'border-red-500/40 text-red-400 bg-red-950/40',
+        description: 'Advanced data structures and dynamic programming challenges with strict time & space constraints.',
+        expectedCount: 20
+    },
+    final: {
+        label: 'FINAL SHOWDOWN',
+        sublabel: 'LeetCode 239: Sliding Window Maximum',
+        typeLabel: '👑 LEETCODE HARD',
+        icon: '🏆',
+        color: 'purple',
+        badgeClass: 'border-purple-500/40 text-purple-400 bg-purple-950/40',
+        description: 'Championship Betting Round for Top 6 qualifiers. Sliding Window Maximum with Monotonic Queue.',
+        expectedCount: 1
+    }
+}
 
 function TheDeck() {
     const [questions, setQuestions] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const [expandedTable, setExpandedTable] = useState<string | null>(null)
+    const [selectedTableFilter, setSelectedTableFilter] = useState<string>('all')
+    const [difficultyFilter, setDifficultyFilter] = useState<'ALL' | 'STANDARD' | 'HIGH'>('ALL')
+    const [searchQuery, setSearchQuery] = useState('')
     const [actionLoading, setActionLoading] = useState<string | null>(null)
+    const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(null)
+    const [copiedKey, setCopiedKey] = useState<string | null>(null)
+
+    // Bulk Upload State
+    const [bulkJson, setBulkJson] = useState('')
+    const [showBulkPanel, setShowBulkPanel] = useState(true)
+    const [bulkStats, setBulkStats] = useState<{
+        total: number
+        byGame: Record<string, number>
+        isValid: boolean
+    } | null>(null)
+
+    // Single Table Upload Modal State
     const [uploadTarget, setUploadTarget] = useState<{ game: string; difficulty: string } | null>(null)
     const [uploadJson, setUploadJson] = useState('')
 
@@ -827,13 +996,61 @@ function TheDeck() {
 
     useEffect(() => { refresh() }, [refresh])
 
+    // Live validation counter & per-game breakdown for bulk JSON
+    useEffect(() => {
+        if (!bulkJson.trim()) {
+            setBulkStats(null)
+            return
+        }
+        try {
+            let parsed = JSON.parse(bulkJson)
+            if (!Array.isArray(parsed)) {
+                if (typeof parsed === 'object' && parsed !== null) {
+                    parsed = [parsed]
+                } else {
+                    setBulkStats({ total: 0, byGame: {}, isValid: false })
+                    return
+                }
+            }
+            const byGame: Record<string, number> = {}
+            parsed.forEach((q: any) => {
+                let g = (q.game_type || '').toUpperCase()
+                if (!g && q.title) {
+                    const t = q.title.toLowerCase()
+                    if (t.includes('slots')) g = 'SLOTS'
+                    else if (t.includes('roulette')) g = 'ROULETTE'
+                    else if (t.includes('blackjack')) g = 'BLACKJACK'
+                    else if (t.includes('craps')) g = 'CRAPS'
+                    else if (t.includes('poker')) g = 'POKER'
+                    else if (t.includes('baccarat')) g = 'BACCARAT'
+                    else if (t.includes('dice')) g = 'DICE'
+                    else if (t.includes('high card') || t.includes('highcard')) g = 'HIGHCARD'
+                    else if (t.includes('coin flip') || t.includes('coinflip')) g = 'COINFLIP'
+                    else if (t.includes('vault')) g = 'VAULT'
+                    else if (t.includes('final')) g = 'FINAL'
+                }
+                if (!g) g = 'OTHER'
+                byGame[g] = (byGame[g] || 0) + 1
+            })
+            setBulkStats({ total: parsed.length, byGame, isValid: true })
+        } catch {
+            setBulkStats({ total: 0, byGame: {}, isValid: false })
+        }
+    }, [bulkJson])
+
+    const copyToClipboard = (text: string, key: string) => {
+        navigator.clipboard.writeText(text)
+        setCopiedKey(key)
+        setTimeout(() => setCopiedKey(null), 2000)
+    }
+
     const freshQuestions = questions.filter(q => !q.is_used)
     const burnedQuestions = questions.filter(q => q.is_used)
 
     const getQuestionsForTable = (gameType: string, difficulty?: string) => {
         return questions.filter(q => {
             const matchGame = q.game_type.toUpperCase() === gameType.toUpperCase()
-            if (difficulty) return matchGame && q.difficulty.toUpperCase() === difficulty.toUpperCase()
+            if (difficulty && difficulty !== 'ALL') return matchGame && q.difficulty.toUpperCase() === difficulty.toUpperCase()
             return matchGame
         })
     }
@@ -853,7 +1070,7 @@ function TheDeck() {
     }
 
     const handleDeleteQuestion = async (id: string) => {
-        if (!window.confirm('Delete this question permanently?')) return
+        if (!window.confirm('Delete this question permanently from the database?')) return
         setActionLoading(`del-${id}`)
         await deleteQuestion(id)
         await refresh()
@@ -861,21 +1078,80 @@ function TheDeck() {
     }
 
     const handleReshuffle = async () => {
-        if (!window.confirm('Reset ALL questions to fresh (un-burned) state?')) return
+        if (!window.confirm('Reset ALL questions to fresh (un-burned) state so teams can play them again?')) return
         setActionLoading('reshuffle')
         await reshuffleAllQuestions()
         await refresh()
         setActionLoading(null)
     }
 
-    const handleUpload = async () => {
+    // 1-Click Push Default Question Bank (All 201 questions from PDF)
+    const handleOneClickPushDefault = async () => {
+        if (!window.confirm('⚡ Push all 201 questions from CodeSprint 2026 PDF (all 10 tables × 20 questions + Final Round) directly into Supabase?')) return
+        setActionLoading('one-click-push')
+        const result = await uploadDefaultQuestionBank()
+        if (result && result.success) {
+            alert(`SUCCESS! Successfully pushed ${result.count} questions into the database!`)
+            await refresh()
+        } else {
+            alert(`Upload Failed: ${result?.error || 'Unknown error'}`)
+        }
+        setActionLoading(null)
+    }
+
+    // Bulk Custom JSON Upload
+    const handleBulkCustomUpload = async () => {
+        if (!bulkJson.trim() || !bulkStats?.isValid) return
+        setActionLoading('bulk-upload-submit')
+        const result = await bulkUploadQuestions(bulkJson)
+        if (result && result.success) {
+            alert(`SUCCESS! Successfully pushed ${result.count} questions into the database!`)
+            setBulkJson('')
+            await refresh()
+        } else {
+            alert(`Bulk Upload Error: ${result?.error || 'Unknown error'}`)
+        }
+        setActionLoading(null)
+    }
+
+    // File Input for Bulk JSON
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+        const reader = new FileReader()
+        reader.onload = (ev) => {
+            const content = ev.target?.result as string
+            if (content) {
+                setBulkJson(content)
+            }
+        }
+        reader.readAsText(file)
+    }
+
+    // Purge All
+    const handlePurgeAll = async () => {
+        if (!window.confirm('⚠️ DANGER: Are you sure you want to PURGE ALL QUESTIONS in the entire database?')) return
+        if (!window.confirm('Confirm second time: This will DELETE all rows from the question_bank table!')) return
+        setActionLoading('purge-all')
+        const result = await purgeAllQuestions()
+        if (result && result.success) {
+            alert('All questions have been purged from the database.')
+            await refresh()
+        } else {
+            alert(`Purge Error: ${result?.error}`)
+        }
+        setActionLoading(null)
+    }
+
+    // Single Table Upload
+    const handleUploadForTable = async () => {
         if (!uploadTarget || !uploadJson.trim()) return
         setActionLoading('upload')
         const result = await uploadQuestionsForTable(uploadTarget.game, uploadTarget.difficulty, uploadJson)
         if (result && !result.error) {
             setUploadJson('')
             setUploadTarget(null)
-            alert(`Uploaded ${result.count} question(s)!`)
+            alert(`Uploaded ${result.count} question(s) for ${uploadTarget.game.toUpperCase()}!`)
             await refresh()
         } else {
             alert(`Error: ${result?.error || 'Unknown error'}`)
@@ -892,171 +1168,392 @@ function TheDeck() {
         setActionLoading(null)
     }
 
+    // Visible tables based on filter
+    const visibleTableIds = selectedTableFilter === 'all'
+        ? TABLE_GAME_IDS
+        : TABLE_GAME_IDS.filter(id => id.toLowerCase() === selectedTableFilter.toLowerCase())
+
     return (
         <div className="space-y-6">
-            {/* Header Stats */}
+            {/* TOP METRIC CARDS */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div className="bg-[#12121a] rounded-xl border border-green-900/30 p-4 text-center">
+                <div className="bg-[#12121a] rounded-xl border border-blue-500/30 p-4 text-center">
+                    <p className="text-2xl font-mono font-bold text-blue-400">{questions.length} / 201</p>
+                    <p className="text-[10px] font-pixel text-blue-400/70 mt-1">TOTAL QUESTIONS</p>
+                </div>
+                <div className="bg-[#12121a] rounded-xl border border-green-500/30 p-4 text-center">
                     <p className="text-2xl font-mono font-bold text-green-400">{freshQuestions.length}</p>
-                    <p className="text-[10px] font-pixel text-green-400/60 mt-1">FRESH DECK</p>
+                    <p className="text-[10px] font-pixel text-green-400/70 mt-1">FRESH UN-BURNED</p>
                 </div>
-                <div className="bg-[#12121a] rounded-xl border border-red-900/30 p-4 text-center">
+                <div className="bg-[#12121a] rounded-xl border border-red-500/30 p-4 text-center">
                     <p className="text-2xl font-mono font-bold text-red-400">{burnedQuestions.length}</p>
-                    <p className="text-[10px] font-pixel text-red-400/60 mt-1">BURNED</p>
+                    <p className="text-[10px] font-pixel text-red-400/70 mt-1">BURNED QUESTIONS</p>
                 </div>
-                <div className="bg-[#12121a] rounded-xl border border-white/10 p-4 text-center">
-                    <p className="text-2xl font-mono font-bold text-white">{questions.length}</p>
-                    <p className="text-[10px] font-pixel text-gray-500 mt-1">TOTAL</p>
-                </div>
-                <div className="bg-[#12121a] rounded-xl border border-blue-900/30 p-4 text-center">
-                    <p className="text-2xl font-mono font-bold text-blue-400">{questions.filter(q => q.is_active).length}</p>
-                    <p className="text-[10px] font-pixel text-blue-400/60 mt-1">ACTIVE</p>
+                <div className="bg-[#12121a] rounded-xl border border-yellow-500/30 p-4 text-center">
+                    <p className="text-2xl font-mono font-bold text-yellow-400">
+                        {TABLE_GAME_IDS.filter(id => getQuestionsForTable(id).length >= (id === 'final' ? 1 : 20)).length} / 11
+                    </p>
+                    <p className="text-[10px] font-pixel text-yellow-400/70 mt-1">TABLES COMPLETE</p>
                 </div>
             </div>
 
-            {/* Global Action Bar */}
-            <div className="flex flex-wrap gap-3">
-                <button
-                    onClick={handleReshuffle}
-                    disabled={actionLoading === 'reshuffle'}
-                    className="flex items-center gap-2 px-4 py-2 bg-purple-700 hover:bg-purple-600 text-white text-xs font-pixel rounded-lg transition-all disabled:opacity-40"
-                >
-                    <RotateCcw className="w-3.5 h-3.5" /> RESHUFFLE ALL
-                </button>
-                <button onClick={refresh} className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 text-gray-400 text-xs font-pixel rounded-lg transition-all">
-                    <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> REFRESH
-                </button>
+            {/* UNMISSABLE BULK PUSH OF QUESTIONS IN JSON FORMAT */}
+            <div className="bg-[#131422] rounded-xl border-2 border-blue-500/40 p-5 sm:p-6 shadow-2xl relative overflow-hidden">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-blue-600/20 border border-blue-500/40 rounded-xl text-blue-400">
+                            <FileJson className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <h3 className="text-sm font-pixel text-blue-400 tracking-wider">
+                                    BULK PUSH QUESTIONS (JSON FORMAT)
+                                </h3>
+                                <span className="text-[9px] font-mono bg-blue-900/40 text-blue-300 border border-blue-500/40 px-2 py-0.5 rounded font-bold">
+                                    CORE TOOL
+                                </span>
+                            </div>
+                            <p className="text-xs text-gray-400 font-mono mt-0.5">
+                                Push the complete 201-question PDF bank, upload a <code className="text-yellow-400">.json</code> file, or paste custom JSON array.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2.5">
+                        {/* 1-CLICK PUSH ALL 201 PDF QUESTIONS */}
+                        <button
+                            onClick={handleOneClickPushDefault}
+                            disabled={actionLoading === 'one-click-push'}
+                            className="flex items-center gap-2 px-4 py-2.5 bg-yellow-500 hover:bg-yellow-400 text-black font-bold text-xs font-pixel rounded-lg transition-all shadow-[0_0_15px_rgba(234,179,8,0.4)] disabled:opacity-50 cursor-pointer"
+                            title="Push all 201 verified questions from questions_all_tables_complete.json"
+                        >
+                            <Sparkles className="w-4 h-4 shrink-0" />
+                            <span>{actionLoading === 'one-click-push' ? 'PUSHING 201...' : '⚡ 1-CLICK PUSH 201 PDF QUESTIONS'}</span>
+                        </button>
+
+                        <button
+                            onClick={() => setShowBulkPanel(!showBulkPanel)}
+                            className="px-3 py-2 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white text-xs font-pixel rounded-lg transition-colors cursor-pointer"
+                        >
+                            {showBulkPanel ? 'HIDE JSON EDITOR ▲' : 'OPEN JSON EDITOR ▼'}
+                        </button>
+                    </div>
+                </div>
+
+                {/* BULK PANEL BODY */}
+                {showBulkPanel && (
+                    <div className="mt-5 space-y-4 animate-in fade-in">
+                        {/* File Picker & Format Instructions */}
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-black/40 p-3.5 rounded-xl border border-white/5">
+                            <div className="text-xs text-gray-300 font-mono leading-relaxed">
+                                <span className="text-yellow-400 font-bold">Option 1:</span> Load file from disk (<code className="text-retro-gold font-bold">questions_all_tables_complete.json</code>)
+                                <span className="mx-2 text-gray-600">|</span>
+                                <span className="text-yellow-400 font-bold">Option 2:</span> Paste JSON array directly below.
+                            </div>
+                            <label className="px-4 py-2 bg-blue-900/40 hover:bg-blue-800/60 text-blue-300 border border-blue-500/40 rounded-lg text-xs font-mono font-bold cursor-pointer transition-colors flex items-center gap-2 shrink-0">
+                                <Upload className="w-3.5 h-3.5" />
+                                <span>Choose .json File</span>
+                                <input
+                                    type="file"
+                                    accept=".json"
+                                    onChange={handleFileUpload}
+                                    className="hidden"
+                                />
+                            </label>
+                        </div>
+
+                        {/* JSON TEXTAREA */}
+                        <textarea
+                            value={bulkJson}
+                            onChange={(e) => setBulkJson(e.target.value)}
+                            placeholder={`Paste JSON array of questions here in JSON format. Example:\n[\n  {\n    "title": "Table 6: Baccarat - Q1 (Standard)",\n    "game_type": "BACCARAT",\n    "difficulty": "STANDARD",\n    "description": "Give SQL query to get students whose marks > 40",\n    "options": ["A) SELECT ...", "B) SELECT ...", "C) SELECT ...", "D) SELECT ..."],\n    "expected_output": "SELECT * FROM students WHERE marks > 40;",\n    "correct_option": "B"\n  }\n]`}
+                            className="w-full h-48 bg-black/60 border border-blue-500/30 rounded-xl p-4 text-xs font-mono text-blue-100 placeholder:text-gray-600 focus:border-blue-400 focus:outline-none resize-y"
+                        />
+
+                        {/* LIVE PARSE BREAKDOWN MATRIX */}
+                        {bulkStats && (
+                            <div className="p-3.5 rounded-xl border font-mono text-xs transition-all bg-black/50 border-white/10">
+                                {bulkStats.isValid ? (
+                                    <div className="space-y-2.5">
+                                        <div className="flex items-center gap-2 text-green-400 font-bold">
+                                            <CheckCircle2 className="w-4 h-4 text-green-400" />
+                                            <span>VALID JSON ARRAY: Detected {bulkStats.total} question(s) ready to push!</span>
+                                        </div>
+                                        {/* Table Breakdown Chips */}
+                                        <div className="flex flex-wrap gap-1.5 pt-1">
+                                            {Object.entries(bulkStats.byGame).map(([game, count]) => (
+                                                <span key={game} className="text-[10px] bg-blue-950/60 border border-blue-500/30 text-blue-300 px-2 py-0.5 rounded font-mono">
+                                                    {game}: <strong>{count}</strong>
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center gap-2 text-red-400">
+                                        <AlertTriangle className="w-4 h-4 text-red-400" />
+                                        <span>Invalid JSON syntax. Ensure valid JSON array format starting with [ and ending with ].</span>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* ACTION BAR */}
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={handleReshuffle}
+                                    disabled={actionLoading === 'reshuffle'}
+                                    className="px-3 py-2 bg-purple-900/40 hover:bg-purple-800/60 text-purple-300 border border-purple-500/30 text-xs font-pixel rounded-lg transition-colors cursor-pointer"
+                                    title="Un-burn all questions"
+                                >
+                                    <RotateCcw className="w-3.5 h-3.5 inline mr-1" /> RESHUFFLE (UN-BURN) ALL
+                                </button>
+                                <button
+                                    onClick={handlePurgeAll}
+                                    disabled={actionLoading === 'purge-all' || questions.length === 0}
+                                    className="px-3 py-2 bg-red-950/40 hover:bg-red-900/60 text-red-400 border border-red-500/30 text-xs font-pixel rounded-lg transition-colors cursor-pointer"
+                                    title="Delete all questions in DB"
+                                >
+                                    <Trash2 className="w-3.5 h-3.5 inline mr-1" /> PURGE ALL
+                                </button>
+                            </div>
+
+                            <div className="flex gap-2 w-full sm:w-auto">
+                                <button
+                                    onClick={() => setBulkJson('')}
+                                    disabled={!bulkJson.trim()}
+                                    className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-mono rounded-lg transition-colors disabled:opacity-40"
+                                >
+                                    Clear Text
+                                </button>
+                                <button
+                                    onClick={handleBulkCustomUpload}
+                                    disabled={actionLoading === 'bulk-upload-submit' || !bulkStats?.isValid || bulkStats.total === 0}
+                                    className="flex-1 sm:flex-none px-6 py-2.5 bg-retro-green hover:bg-white text-black font-bold text-xs font-pixel rounded-lg transition-all shadow-[0_0_15px_#39ff14] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                                >
+                                    {actionLoading === 'bulk-upload-submit' ? 'PUSHING TO DB...' : `PUSH ${bulkStats?.total || 0} QUESTIONS TO DATABASE ➤`}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
 
-            {/* Upload Modal */}
+            {/* SINGLE TABLE MODAL (WHEN CLICKING UPLOAD ON A SPECIFIC TABLE) */}
             {uploadTarget && (
-                <div className="bg-[#12121a] rounded-xl border border-blue-900/30 p-6 space-y-4">
+                <div className="bg-[#12121a] rounded-xl border border-blue-500/40 p-5 space-y-3 animate-in fade-in">
                     <div className="flex items-center justify-between">
-                        <h4 className="text-xs font-pixel text-blue-400 tracking-widest">
-                            UPLOAD → {uploadTarget.game.toUpperCase()} / {uploadTarget.difficulty.toUpperCase()}
+                        <h4 className="text-xs font-pixel text-blue-400 tracking-wider">
+                            UPLOAD QUESTIONS FOR {uploadTarget.game.toUpperCase()} ({uploadTarget.difficulty})
                         </h4>
-                        <button onClick={() => { setUploadTarget(null); setUploadJson('') }} className="text-gray-600 hover:text-white">
+                        <button onClick={() => { setUploadTarget(null); setUploadJson('') }} className="text-gray-400 hover:text-white">
                             <X className="w-4 h-4" />
                         </button>
                     </div>
-                    <p className="text-[10px] text-gray-500 font-mono">
-                        Paste JSON array. game_type and difficulty are auto-filled. Only include: title, problem_statement, starter_code, test_cases, constraints, clues
-                    </p>
                     <textarea
                         value={uploadJson}
                         onChange={(e) => setUploadJson(e.target.value)}
-                        placeholder={`[
-  {
-    "title": "Fix the Loop",
-    "problem_statement": "The loop runs infinitely...",
-    "starter_code": "def solve():\\n    pass",
-    "test_cases": [{"input": "5", "expected": "10"}],
-    "clues": ["Clue 1...", "Clue 2...", "Clue 3..."],
-    "constraints": ""
-  }
-]`}
-                        className="w-full h-48 bg-black/40 border border-blue-900/30 rounded-lg p-4 text-sm font-mono text-blue-200
-              placeholder:text-blue-900/40 focus:border-blue-500 focus:outline-none resize-none"
+                        placeholder={`[\n  {\n    "title": "Title",\n    "description": "...",\n    "starter": "...",\n    "test_cases": []\n  }\n]`}
+                        className="w-full h-36 bg-black/60 border border-blue-900/40 rounded-lg p-3 text-xs font-mono text-blue-100 resize-none focus:outline-none focus:border-blue-500"
                     />
-                    <button
-                        onClick={handleUpload}
-                        disabled={actionLoading === 'upload' || !uploadJson.trim()}
-                        className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-pixel rounded-lg transition-all disabled:opacity-40"
-                    >
-                        UPLOAD
-                    </button>
+                    <div className="flex justify-end gap-2">
+                        <button onClick={() => { setUploadTarget(null); setUploadJson('') }} className="px-4 py-1.5 text-xs font-mono text-gray-400 hover:text-white">
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleUploadForTable}
+                            disabled={actionLoading === 'upload' || !uploadJson.trim()}
+                            className="px-5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-pixel rounded-lg transition-colors disabled:opacity-40"
+                        >
+                            Upload for Table
+                        </button>
+                    </div>
                 </div>
             )}
 
-            {/* Per-Table Sections */}
-            <div className="space-y-3">
-                {TABLE_GAME_IDS.map(gameId => {
-                    const gameLabel = GAME_LABELS[gameId] || gameId.toUpperCase()
+            {/* FILTER & SEARCH BAR */}
+            <div className="bg-[#12121a] rounded-xl border border-white/10 p-4 space-y-3">
+                <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+                    {/* Search */}
+                    <div className="relative flex-grow">
+                        <Search className="w-4 h-4 text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Search questions by title, problem text, or type..."
+                            className="w-full bg-black/40 border border-white/10 rounded-lg pl-10 pr-4 py-2 text-xs font-mono text-white placeholder:text-gray-600 focus:outline-none focus:border-blue-500"
+                        />
+                    </div>
+
+                    {/* Difficulty Filter */}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-[10px] text-gray-500 uppercase tracking-widest font-pixel">Diff:</span>
+                        {(['ALL', 'STANDARD', 'HIGH'] as const).map(diff => (
+                            <button
+                                key={diff}
+                                onClick={() => setDifficultyFilter(diff)}
+                                className={`px-2.5 py-1 rounded text-[10px] font-pixel transition-colors cursor-pointer ${
+                                    difficultyFilter === diff
+                                        ? 'bg-blue-600 text-white'
+                                        : 'bg-black/40 text-gray-400 hover:text-white border border-white/5'
+                                }`}
+                            >
+                                {diff}
+                            </button>
+                        ))}
+                    </div>
+
+                    <button
+                        onClick={refresh}
+                        className="px-3 py-2 bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-pixel rounded-lg transition-colors flex items-center gap-1.5 shrink-0 cursor-pointer"
+                    >
+                        <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+                        <span>REFRESH</span>
+                    </button>
+                </div>
+
+                {/* Table Quick-Filter Chips */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-1 text-[11px] font-mono scrollbar-thin">
+                    <button
+                        onClick={() => setSelectedTableFilter('all')}
+                        className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors cursor-pointer ${
+                            selectedTableFilter === 'all'
+                                ? 'bg-retro-gold text-black font-bold'
+                                : 'bg-black/40 text-gray-400 hover:text-white border border-white/5'
+                        }`}
+                    >
+                        ALL TABLES ({questions.length})
+                    </button>
+                    {TABLE_GAME_IDS.map(gameId => {
+                        const meta = TABLE_METADATA[gameId]
+                        const count = getQuestionsForTable(gameId).length
+                        const isSelected = selectedTableFilter.toLowerCase() === gameId.toLowerCase()
+                        const expected = meta.expectedCount
+                        return (
+                            <button
+                                key={gameId}
+                                onClick={() => setSelectedTableFilter(gameId)}
+                                className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors flex items-center gap-1.5 cursor-pointer ${
+                                    isSelected
+                                        ? 'bg-blue-600 text-white font-bold'
+                                        : 'bg-black/40 text-gray-400 hover:text-white border border-white/5'
+                                }`}
+                            >
+                                <span>{meta.icon}</span>
+                                <span>{meta.sublabel}</span>
+                                <span className={`text-[9px] px-1.5 py-0.2 rounded font-mono ${
+                                    count >= expected ? 'bg-green-950/60 text-green-300' : 'bg-yellow-950/60 text-yellow-300'
+                                }`}>
+                                    {count}/{expected}
+                                </span>
+                            </button>
+                        )
+                    })}
+                </div>
+            </div>
+
+            {/* PER-TABLE SECTIONS "ACCORDING TO THE QUESTION" */}
+            <div className="space-y-4">
+                {visibleTableIds.map(gameId => {
+                    const meta = TABLE_METADATA[gameId]
                     const tableQuestions = getQuestionsForTable(gameId)
                     const standardQs = getQuestionsForTable(gameId, 'STANDARD')
                     const highQs = getQuestionsForTable(gameId, 'HIGH')
-                    const isExpanded = expandedTable === gameId
-                    const totalExpected = gameId === 'final' ? 2 : 12
+                    const totalExpected = meta.expectedCount
                     const loaded = tableQuestions.length
                     const isFull = loaded >= totalExpected
                     const isEmpty = loaded === 0
 
+                    // Filter by search query if any
+                    const filterBySearch = (list: any[]) => {
+                        if (!searchQuery.trim()) return list
+                        const qLower = searchQuery.toLowerCase()
+                        return list.filter(q =>
+                            (q.title || '').toLowerCase().includes(qLower) ||
+                            (q.problem_statement || '').toLowerCase().includes(qLower)
+                        )
+                    }
+
+                    const filteredStandard = filterBySearch(standardQs)
+                    const filteredHigh = filterBySearch(highQs)
+                    const isExpanded = expandedTable === gameId || selectedTableFilter !== 'all'
+
                     return (
-                        <div key={gameId} className="bg-[#12121a] rounded-xl border border-white/10 overflow-hidden">
-                            {/* Table Header (clickable) */}
+                        <div key={gameId} className="bg-[#12121a] rounded-xl border border-white/10 overflow-hidden shadow-lg">
+                            {/* TABLE HEADER ACCORDING TO QUESTION TYPE */}
                             <button
                                 onClick={() => setExpandedTable(isExpanded ? null : gameId)}
-                                className="w-full flex items-center justify-between px-5 py-4 hover:bg-white/5 transition-colors"
+                                className="w-full flex items-center justify-between px-5 py-4 hover:bg-white/5 transition-colors cursor-pointer text-left"
                             >
                                 <div className="flex items-center gap-3">
-                                    <ChevronRight className={`w-4 h-4 text-gray-500 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
-                                    <span className="text-sm font-pixel text-white">{gameLabel}</span>
+                                    <span className="text-xl shrink-0">{meta.icon}</span>
+                                    <div>
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <span className="text-sm font-pixel text-white tracking-wide">{meta.label}</span>
+                                            <span className="text-xs text-retro-gold font-mono font-bold">({meta.sublabel})</span>
+                                            <span className={`text-[9px] font-mono px-2 py-0.5 rounded border ${meta.badgeClass}`}>
+                                                {meta.typeLabel}
+                                            </span>
+                                        </div>
+                                        <p className="text-[11px] text-gray-400 font-mono mt-0.5 hidden sm:block">
+                                            {meta.description}
+                                        </p>
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-3">
-                                    <span className={`text-[10px] font-mono px-2 py-0.5 rounded ${
-                                        isFull ? 'bg-green-900/30 text-green-400' :
-                                        isEmpty ? 'bg-red-900/30 text-red-400' :
-                                        'bg-yellow-900/30 text-yellow-400'
+
+                                <div className="flex items-center gap-3 shrink-0">
+                                    <span className={`text-xs font-mono px-2.5 py-1 rounded font-bold ${
+                                        isFull ? 'bg-green-900/40 text-green-400 border border-green-500/30' :
+                                        isEmpty ? 'bg-red-900/40 text-red-400 border border-red-500/30' :
+                                        'bg-yellow-900/40 text-yellow-400 border border-yellow-500/30'
                                     }`}>
                                         {loaded}/{totalExpected}
                                     </span>
-                                    <div className="flex gap-1">
-                                        {gameId === 'final' ? (
-                                            <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${
-                                                standardQs.length >= 2 ? 'bg-purple-900/20 text-purple-400' : 'bg-red-900/20 text-red-400'
-                                            }`}>
-                                                FINAL {standardQs.length}/2
-                                            </span>
-                                        ) : (
-                                            <>
-                                                <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${
-                                                    standardQs.length >= 6 ? 'bg-green-900/20 text-green-400' : 'bg-red-900/20 text-red-400'
-                                                }`}>
-                                                    STD {standardQs.length}/6
-                                                </span>
-                                                <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${
-                                                    highQs.length >= 6 ? 'bg-green-900/20 text-green-400' : 'bg-red-900/20 text-red-400'
-                                                }`}>
-                                                    HIGH {highQs.length}/6
-                                                </span>
-                                            </>
-                                        )}
-                                    </div>
+                                    <ChevronRight className={`w-4 h-4 text-gray-500 transition-transform ${isExpanded ? 'rotate-90 text-yellow-400' : ''}`} />
                                 </div>
                             </button>
 
-                            {/* Expanded Content */}
+                            {/* EXPANDED CONTENT ACCORDING TO QUESTION */}
                             {isExpanded && (
-                                <div className="border-t border-white/5 px-5 py-4">
+                                <div className="border-t border-white/5 px-5 py-4 bg-black/30">
                                     <div className={`grid grid-cols-1 gap-6 ${gameId === 'final' ? '' : 'lg:grid-cols-2'}`}>
-                                        {/* Column Rendering */}
-                                        {(gameId === 'final' ? ['STANDARD'] : ['STANDARD', 'HIGH']).map(difficulty => {
-                                            const diffQs = difficulty === 'STANDARD' ? standardQs : highQs
-                                            const diffColor = difficulty === 'STANDARD' ? (gameId === 'final' ? 'purple' : 'green') : 'red'
-                                            const expected = gameId === 'final' ? 2 : 6
-                                            
-                                            const labelText = gameId === 'final' 
-                                                ? '👑 FINAL MATCH' 
-                                                : (difficulty === 'HIGH' ? '🔥 HIGH ROLLER' : '📋 STANDARD')
+                                        {/* Render Standard and High Roller Columns */}
+                                        {(gameId === 'final' ? ['STANDARD'] : (
+                                            difficultyFilter === 'STANDARD' ? ['STANDARD'] :
+                                            difficultyFilter === 'HIGH' ? ['HIGH'] :
+                                            ['STANDARD', 'HIGH']
+                                        )).map(diff => {
+                                            const diffQs = diff === 'STANDARD' ? filteredStandard : filteredHigh
+                                            const totalInDiff = diff === 'STANDARD' ? standardQs.length : highQs.length
+                                            const expected = gameId === 'final' ? 1 : 10
+                                            const isHigh = diff === 'HIGH'
+                                            const diffColor = gameId === 'final' ? 'purple' : (isHigh ? 'red' : 'green')
+                                            const diffLabel = gameId === 'final'
+                                                ? '👑 FINAL SHOWDOWN (LeetCode 239)'
+                                                : (isHigh ? '🔥 HIGH ROLLER (10 Questions)' : '📋 STANDARD (10 Questions)')
 
                                             return (
-                                                <div key={difficulty} className="space-y-3">
-                                                    <div className="flex items-center justify-between">
-                                                        <h5 className={`text-[10px] font-pixel tracking-widest text-${diffColor}-400`}>
-                                                            {labelText} ({diffQs.length}/{expected})
+                                                <div key={diff} className="space-y-3">
+                                                    <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                                                        <h5 className={`text-[11px] font-pixel tracking-wider text-${diffColor}-400 flex items-center gap-2`}>
+                                                            <span>{diffLabel}</span>
+                                                            <span className="text-[10px] font-mono text-gray-400 font-bold">
+                                                                ({totalInDiff}/{expected})
+                                                            </span>
                                                         </h5>
                                                         <div className="flex gap-2">
                                                             <button
-                                                                onClick={() => setUploadTarget({ game: gameId, difficulty })}
-                                                                className={`flex items-center gap-1 px-2 py-1 text-[9px] font-pixel bg-${diffColor}-900/20 hover:bg-${diffColor}-900/40 text-${diffColor}-400 rounded transition-all`}
+                                                                onClick={() => setUploadTarget({ game: gameId, difficulty: diff })}
+                                                                className="flex items-center gap-1 px-2.5 py-1 text-[9px] font-pixel bg-blue-900/30 hover:bg-blue-800/50 text-blue-300 rounded border border-blue-500/30 transition-all cursor-pointer"
                                                             >
                                                                 <Upload className="w-3 h-3" /> UPLOAD
                                                             </button>
-                                                            {diffQs.length > 0 && (
+                                                            {totalInDiff > 0 && (
                                                                 <button
-                                                                    onClick={() => handleDeleteAll(gameId, difficulty)}
+                                                                    onClick={() => handleDeleteAll(gameId, diff)}
                                                                     disabled={!!actionLoading?.startsWith('delall')}
-                                                                    className="flex items-center gap-1 px-2 py-1 text-[9px] font-pixel bg-red-900/20 hover:bg-red-900/40 text-red-400 rounded transition-all disabled:opacity-40"
+                                                                    className="flex items-center gap-1 px-2.5 py-1 text-[9px] font-pixel bg-red-950/40 hover:bg-red-900/60 text-red-400 rounded border border-red-500/30 transition-all disabled:opacity-40 cursor-pointer"
                                                                 >
                                                                     <Trash2 className="w-3 h-3" /> CLEAR
                                                                 </button>
@@ -1064,60 +1561,277 @@ function TheDeck() {
                                                         </div>
                                                     </div>
 
-                                                    {/* Question List */}
-                                                    <div className="bg-black/20 rounded-lg border border-white/5 overflow-hidden max-h-[40vh] overflow-y-auto">
+                                                    {/* QUESTION LIST FOR THIS COLUMN */}
+                                                    <div className="bg-black/40 rounded-xl border border-white/5 overflow-hidden max-h-[60vh] overflow-y-auto divide-y divide-white/5">
                                                         {diffQs.length === 0 ? (
-                                                            <div className="text-center text-gray-600 text-[10px] py-6 font-mono">
-                                                                No {difficulty.toLowerCase()} questions uploaded
+                                                            <div className="text-center text-gray-500 text-xs py-8 font-mono">
+                                                                {searchQuery ? 'No matching questions found.' : `No ${diff.toLowerCase()} questions uploaded yet. Use Bulk Push above.`}
                                                             </div>
                                                         ) : (
-                                                            diffQs.map((q: any) => (
-                                                                <div key={q.id} className={`flex items-start justify-between px-3 py-2.5 border-b border-white/5 text-xs ${q.is_used ? 'opacity-40' : ''}`}>
-                                                                    <div className="flex-grow min-w-0 mr-2">
-                                                                        <div className="flex items-center gap-2">
-                                                                            <span className="font-mono text-white text-[11px] break-words">{q.title}</span>
-                                                                            {q.is_used && (
-                                                                                <span className="text-[7px] font-pixel text-red-400 bg-red-900/20 px-1.5 py-0.5 rounded shrink-0">BURNED</span>
-                                                                            )}
-                                                                            {q.is_active && (
-                                                                                <span className="text-[7px] font-pixel text-green-400 bg-green-900/20 px-1.5 py-0.5 rounded shrink-0">LIVE</span>
-                                                                            )}
+                                                            diffQs.map((q: any) => {
+                                                                const isQuestionOpen = selectedQuestionId === q.id
+                                                                const rawTc = q.test_cases
+                                                                const options = q.options || (rawTc && !Array.isArray(rawTc) ? rawTc.options : null)
+                                                                const clues = q.clues || (rawTc && !Array.isArray(rawTc) ? rawTc.clues : null)
+                                                                const expected = q.expected_output || (rawTc && !Array.isArray(rawTc) ? rawTc.expected_output : null)
+                                                                const correctOption = q.correct_option || (rawTc && !Array.isArray(rawTc) ? rawTc.correct_option : null)
+                                                                const solPy = q.solution_python || (rawTc && !Array.isArray(rawTc) ? rawTc.solution_python : null)
+                                                                const solC = q.solution_c || (rawTc && !Array.isArray(rawTc) ? rawTc.solution_c : null)
+                                                                const cases = Array.isArray(rawTc) ? rawTc : (rawTc?.cases || [])
+
+                                                                return (
+                                                                    <div key={q.id} className={`transition-colors ${q.is_used ? 'opacity-50' : ''} ${isQuestionOpen ? 'bg-white/[0.04]' : 'hover:bg-white/[0.02]'}`}>
+                                                                        {/* QUESTION SUMMARY ROW */}
+                                                                        <div className="flex items-start justify-between px-3.5 py-3 text-xs">
+                                                                            <div
+                                                                                onClick={() => setSelectedQuestionId(isQuestionOpen ? null : q.id)}
+                                                                                className="flex-grow min-w-0 mr-2 cursor-pointer group"
+                                                                            >
+                                                                                <div className="flex items-center gap-2 flex-wrap">
+                                                                                    <ChevronRight className={`w-3.5 h-3.5 text-gray-500 transition-transform ${isQuestionOpen ? 'rotate-90 text-yellow-400' : 'group-hover:text-white'}`} />
+                                                                                    <span className="font-mono text-white text-[11px] font-bold group-hover:text-yellow-400 transition-colors">
+                                                                                        {q.title}
+                                                                                    </span>
+
+                                                                                    {/* Badges */}
+                                                                                    {q.is_used && (
+                                                                                        <span className="text-[7px] font-pixel text-red-400 bg-red-900/30 border border-red-500/30 px-1.5 py-0.5 rounded">BURNED</span>
+                                                                                    )}
+                                                                                    {q.is_active && (
+                                                                                        <span className="text-[7px] font-pixel text-green-400 bg-green-900/30 border border-green-500/30 px-1.5 py-0.5 rounded">LIVE</span>
+                                                                                    )}
+
+                                                                                    {/* Question Format Badge */}
+                                                                                    {q.game_type?.toUpperCase() === 'BACCARAT' && (
+                                                                                        <span className="text-[7px] font-mono text-cyan-300 bg-cyan-900/30 border border-cyan-500/30 px-1.5 rounded">
+                                                                                            SQL MCQ ({options?.length || 4} OPTIONS)
+                                                                                        </span>
+                                                                                    )}
+                                                                                    {(q.game_type?.toUpperCase() === 'CRAPS' || q.game_type?.toUpperCase() === 'COINFLIP') && (
+                                                                                        <span className="text-[7px] font-mono text-yellow-300 bg-yellow-900/30 border border-yellow-500/30 px-1.5 rounded">
+                                                                                            3 CLUES LADDER
+                                                                                        </span>
+                                                                                    )}
+                                                                                    {q.game_type?.toUpperCase() === 'ROULETTE' && (
+                                                                                        <span className="text-[7px] font-mono text-amber-300 bg-amber-900/30 border border-amber-500/30 px-1.5 rounded">
+                                                                                            ORACLE OUTPUT: {expected || 'N/A'}
+                                                                                        </span>
+                                                                                    )}
+                                                                                    {q.game_type?.toUpperCase() === 'FINAL' && (
+                                                                                        <span className="text-[7px] font-mono text-purple-300 bg-purple-900/30 border border-purple-500/30 px-1.5 rounded">
+                                                                                            LEETCODE 239 HARD
+                                                                                        </span>
+                                                                                    )}
+                                                                                </div>
+
+                                                                                {/* Problem Snippet */}
+                                                                                {q.problem_statement && (
+                                                                                    <p className="text-[10px] text-gray-400 mt-1 line-clamp-2 pl-5 font-mono leading-relaxed">
+                                                                                        {q.problem_statement}
+                                                                                    </p>
+                                                                                )}
+                                                                            </div>
+
+                                                                            {/* Actions */}
+                                                                            <div className="flex items-center gap-1 shrink-0 pt-0.5">
+                                                                                <button
+                                                                                    onClick={() => handleToggle(q.id, q.is_active)}
+                                                                                    disabled={!!actionLoading?.startsWith('toggle')}
+                                                                                    className="p-1 rounded hover:bg-white/10 transition-colors"
+                                                                                    title={q.is_active ? 'Deactivate' : 'Activate'}
+                                                                                >
+                                                                                    {q.is_active
+                                                                                        ? <ToggleRight className="w-4 h-4 text-green-400" />
+                                                                                        : <ToggleLeft className="w-4 h-4 text-gray-600" />
+                                                                                    }
+                                                                                </button>
+                                                                                <button
+                                                                                    onClick={() => handleBurn(q.id)}
+                                                                                    disabled={q.is_used || !!actionLoading?.startsWith('burn')}
+                                                                                    className="p-1 rounded hover:bg-red-900/20 text-gray-500 hover:text-red-400 transition-colors disabled:opacity-20"
+                                                                                    title="Burn question"
+                                                                                >
+                                                                                    <Flame className="w-3.5 h-3.5" />
+                                                                                </button>
+                                                                                <button
+                                                                                    onClick={() => handleDeleteQuestion(q.id)}
+                                                                                    disabled={!!actionLoading?.startsWith('del-')}
+                                                                                    className="p-1 rounded hover:bg-red-900/20 text-gray-500 hover:text-red-400 transition-colors disabled:opacity-20"
+                                                                                    title="Delete question"
+                                                                                >
+                                                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                                                </button>
+                                                                            </div>
                                                                         </div>
-                                                                        {q.problem_statement && (
-                                                                            <p className="text-[9px] text-gray-500 mt-1 line-clamp-2">{q.problem_statement}</p>
+
+                                                                        {/* EXPANDED DETAILED INSPECTOR "ACCORDING TO THE QUESTION" */}
+                                                                        {isQuestionOpen && (
+                                                                            <div className="px-5 py-4 bg-black/60 border-t border-white/10 space-y-4 font-mono text-xs animate-in fade-in">
+                                                                                {/* Full Problem Statement */}
+                                                                                <div>
+                                                                                    <span className="text-[9px] uppercase tracking-widest text-gray-400 font-pixel block mb-1">
+                                                                                        Problem Statement:
+                                                                                    </span>
+                                                                                    <div className="text-gray-200 text-xs bg-black/50 p-3 rounded-lg border border-white/5 whitespace-pre-wrap leading-relaxed">
+                                                                                        {q.problem_statement || 'No problem statement provided.'}
+                                                                                    </div>
+                                                                                </div>
+
+                                                                                {/* BACCARAT: SQL 4-OPTION MULTIPLE CHOICE QUESTION */}
+                                                                                {options && Array.isArray(options) && options.length > 0 && (
+                                                                                    <div className="space-y-2 bg-cyan-950/20 p-3.5 rounded-xl border border-cyan-500/30">
+                                                                                        <div className="flex items-center justify-between">
+                                                                                            <span className="text-[10px] uppercase tracking-widest text-cyan-300 font-pixel">
+                                                                                                📋 BACCARAT SQL MULTIPLE-CHOICE OPTIONS:
+                                                                                            </span>
+                                                                                            {correctOption && (
+                                                                                                <span className="text-[10px] bg-green-900/60 text-green-300 border border-green-500/40 px-2 py-0.5 rounded font-pixel">
+                                                                                                    CORRECT KEY: OPTION {correctOption}
+                                                                                                </span>
+                                                                                            )}
+                                                                                        </div>
+                                                                                        <div className="grid grid-cols-1 gap-1.5">
+                                                                                            {options.map((opt: string, optIdx: number) => {
+                                                                                                const optLetter = opt.trim().slice(0, 1).toUpperCase()
+                                                                                                const isCorrect = (correctOption && optLetter === correctOption.toUpperCase()) ||
+                                                                                                    (expected && (opt === expected || opt.includes(expected) || expected.includes(opt.slice(3).trim())))
+                                                                                                return (
+                                                                                                    <div
+                                                                                                        key={optIdx}
+                                                                                                        className={`p-2.5 rounded-lg border text-xs flex items-center justify-between transition-colors ${
+                                                                                                            isCorrect
+                                                                                                                ? 'bg-green-950/50 border-green-500/60 text-green-200 font-bold'
+                                                                                                                : 'bg-black/40 border-white/5 text-gray-300'
+                                                                                                        }`}
+                                                                                                    >
+                                                                                                        <span>{opt}</span>
+                                                                                                        {isCorrect && (
+                                                                                                            <span className="text-[9px] bg-green-900/80 text-green-300 px-2 py-0.5 rounded border border-green-500/50 font-pixel">
+                                                                                                                ✓ CORRECT ANSWER
+                                                                                                            </span>
+                                                                                                        )}
+                                                                                                    </div>
+                                                                                                )
+                                                                                            })}
+                                                                                        </div>
+                                                                                    </div>
+                                                                                )}
+
+                                                                                {/* CRAPS & COIN FLIP: 3 PROGRESSIVE CLUES LADDER */}
+                                                                                {clues && Array.isArray(clues) && clues.length > 0 && (
+                                                                                    <div className="space-y-2 bg-yellow-950/20 p-3.5 rounded-xl border border-yellow-500/30">
+                                                                                        <span className="text-[10px] uppercase tracking-widest text-yellow-400 font-pixel block">
+                                                                                            🪜 3 PROGRESSIVE CLUES LADDER (HINT SYSTEM):
+                                                                                        </span>
+                                                                                        <div className="space-y-2">
+                                                                                            {clues.map((clue: string, cIdx: number) => {
+                                                                                                const penalty = cIdx === 0 ? '10%' : cIdx === 1 ? '30%' : '50%'
+                                                                                                return (
+                                                                                                    <div key={cIdx} className="p-3 bg-black/50 border border-yellow-500/20 rounded-lg text-xs space-y-1">
+                                                                                                        <div className="flex items-center justify-between text-[10px] font-pixel text-yellow-400">
+                                                                                                            <span>💡 CLUE {cIdx + 1}</span>
+                                                                                                            <span className="bg-yellow-900/40 text-yellow-300 px-1.5 py-0.5 rounded border border-yellow-500/30">
+                                                                                                                PENALTY: {penalty} DEDUCTION
+                                                                                                            </span>
+                                                                                                        </div>
+                                                                                                        <p className="text-gray-300 leading-relaxed font-mono whitespace-pre-wrap">{clue}</p>
+                                                                                                    </div>
+                                                                                                )
+                                                                                            })}
+                                                                                        </div>
+                                                                                    </div>
+                                                                                )}
+
+                                                                                {/* ROULETTE / ORACLE: EXPECTED EXACT OUTPUT KEY */}
+                                                                                {expected && (!options || options.length === 0) && (
+                                                                                    <div className="bg-amber-950/20 p-3.5 rounded-xl border border-amber-500/30 space-y-2">
+                                                                                        <div className="flex items-center justify-between">
+                                                                                            <span className="text-[10px] uppercase tracking-widest text-amber-400 font-pixel">
+                                                                                                🔮 ORACLE ANSWER KEY (EXACT EXPECTED OUTPUT):
+                                                                                            </span>
+                                                                                            <button
+                                                                                                onClick={() => copyToClipboard(expected, `exp-${q.id}`)}
+                                                                                                className="text-[9px] font-mono text-amber-300 hover:text-white flex items-center gap-1 bg-amber-900/40 px-2 py-0.5 rounded border border-amber-500/30 cursor-pointer"
+                                                                                            >
+                                                                                                <Copy className="w-3 h-3" />
+                                                                                                <span>{copiedKey === `exp-${q.id}` ? 'COPIED!' : 'COPY ANSWER'}</span>
+                                                                                            </button>
+                                                                                        </div>
+                                                                                        <div className="bg-black/80 border border-amber-500/40 text-amber-300 p-3 rounded-lg text-xs font-mono font-bold">
+                                                                                            <code>{expected}</code>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                )}
+
+                                                                                {/* STARTER CODE */}
+                                                                                {q.starter_code && (
+                                                                                    <div>
+                                                                                        <div className="flex items-center justify-between mb-1">
+                                                                                            <span className="text-[9px] uppercase tracking-widest text-gray-400 font-pixel">
+                                                                                                Starter Code Template:
+                                                                                            </span>
+                                                                                            <button
+                                                                                                onClick={() => copyToClipboard(q.starter_code, `sc-${q.id}`)}
+                                                                                                className="text-[9px] font-mono text-gray-400 hover:text-white flex items-center gap-1 cursor-pointer"
+                                                                                            >
+                                                                                                <Copy className="w-3 h-3" />
+                                                                                                <span>{copiedKey === `sc-${q.id}` ? 'COPIED!' : 'Copy Code'}</span>
+                                                                                            </button>
+                                                                                        </div>
+                                                                                        <pre className="bg-black/70 p-3 rounded-lg border border-white/5 text-[11px] text-green-300 font-mono overflow-x-auto max-h-48 leading-relaxed">
+                                                                                            {q.starter_code}
+                                                                                        </pre>
+                                                                                    </div>
+                                                                                )}
+
+                                                                                {/* REFERENCE SOLUTIONS (PYTHON / C) */}
+                                                                                {(solPy || solC) && (
+                                                                                    <div className="space-y-2 bg-emerald-950/20 p-3.5 rounded-xl border border-emerald-500/30">
+                                                                                        <span className="text-[10px] uppercase tracking-widest text-emerald-400 font-pixel block">
+                                                                                            💡 VERIFIED REFERENCE SOLUTIONS:
+                                                                                        </span>
+                                                                                        {solPy && (
+                                                                                            <div>
+                                                                                                <span className="text-[9px] text-gray-400 font-mono block mb-1">Python Solution:</span>
+                                                                                                <pre className="bg-black/70 p-2.5 rounded-lg border border-white/5 text-[11px] text-emerald-300 font-mono overflow-x-auto max-h-36">
+                                                                                                    {solPy}
+                                                                                                </pre>
+                                                                                            </div>
+                                                                                        )}
+                                                                                        {solC && (
+                                                                                            <div>
+                                                                                                <span className="text-[9px] text-gray-400 font-mono block mb-1">C Solution:</span>
+                                                                                                <pre className="bg-black/70 p-2.5 rounded-lg border border-white/5 text-[11px] text-cyan-300 font-mono overflow-x-auto max-h-36">
+                                                                                                    {solC}
+                                                                                                </pre>
+                                                                                            </div>
+                                                                                        )}
+                                                                                    </div>
+                                                                                )}
+
+                                                                                {/* TEST CASES */}
+                                                                                {cases.length > 0 && (
+                                                                                    <div>
+                                                                                        <span className="text-[9px] uppercase tracking-widest text-gray-400 font-pixel block mb-1">
+                                                                                            Unit Test Cases ({cases.length}):
+                                                                                        </span>
+                                                                                        <div className="space-y-1">
+                                                                                            {cases.map((tc: any, tcIdx: number) => (
+                                                                                                <div key={tcIdx} className="flex items-center gap-2 text-[10px] bg-black/40 px-2.5 py-1.5 rounded border border-white/5 font-mono">
+                                                                                                    <span className="text-gray-500 font-bold">In:</span>
+                                                                                                    <span className="text-gray-300 truncate max-w-sm">{tc.input}</span>
+                                                                                                    <span className="text-gray-500 font-bold">→ Out:</span>
+                                                                                                    <span className="text-retro-gold truncate">{tc.expected}</span>
+                                                                                                </div>
+                                                                                            ))}
+                                                                                        </div>
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
                                                                         )}
                                                                     </div>
-                                                                    <div className="flex items-center gap-1 shrink-0">
-                                                                        <button
-                                                                            onClick={() => handleToggle(q.id, q.is_active)}
-                                                                            disabled={!!actionLoading?.startsWith('toggle')}
-                                                                            className="p-1 rounded hover:bg-white/10 transition-colors"
-                                                                            title={q.is_active ? 'Deactivate' : 'Activate'}
-                                                                        >
-                                                                            {q.is_active
-                                                                                ? <ToggleRight className="w-4 h-4 text-green-400" />
-                                                                                : <ToggleLeft className="w-4 h-4 text-gray-600" />
-                                                                            }
-                                                                        </button>
-                                                                        <button
-                                                                            onClick={() => handleBurn(q.id)}
-                                                                            disabled={q.is_used || !!actionLoading?.startsWith('burn')}
-                                                                            className="p-1 rounded hover:bg-red-900/20 text-gray-600 hover:text-red-400 transition-colors disabled:opacity-20"
-                                                                            title="Burn"
-                                                                        >
-                                                                            <Flame className="w-3.5 h-3.5" />
-                                                                        </button>
-                                                                        <button
-                                                                            onClick={() => handleDeleteQuestion(q.id)}
-                                                                            disabled={!!actionLoading?.startsWith('del-')}
-                                                                            className="p-1 rounded hover:bg-red-900/20 text-gray-600 hover:text-red-400 transition-colors disabled:opacity-20"
-                                                                            title="Delete"
-                                                                        >
-                                                                            <Trash2 className="w-3.5 h-3.5" />
-                                                                        </button>
-                                                                    </div>
-                                                                </div>
-                                                            ))
+                                                                )
+                                                            })
                                                         )}
                                                     </div>
                                                 </div>

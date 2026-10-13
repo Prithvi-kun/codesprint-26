@@ -1,0 +1,4690 @@
+
+=== PAGE 1 ===
+CodeSprint 2026 - Question Bank
+Page 1
+ CodeSprint 2026
+Question Bank: 10 tables, each with 10 Standard and 10 High Roller questions
+Python is the primary language. C is provided for every coding question where it applies. Baccarat questions are multiple
+choice (one correct answer out of four). Craps and Coin Flip questions come with three clues, each revealing a larger
+share of the approach, but never the full solution.
+
+=== PAGE 2 ===
+CodeSprint 2026 - Question Bank
+Page 2
+Table 1: Slots: Bug Bounty
+Rapid debugging. Teams fix intentionally broken programs. Standard questions contain single, obvious bugs. High Roller
+questions contain subtle bugs that pass simple samples but fail hidden tests. Each question describes the bug and gives
+the corrected code.
+S1 (Standard). find_max uses "if x < m", so it returns the minimum. Fix the comparison. Also return None for an empty
+list.
+Python solution
+ def find_max(nums):
+    if not nums:
+        return None
+    m = nums[0]
+    for x in nums:
+        if x > m:
+            m = x
+    return m
+C solution
+ int find_max(const int a[], int n, int *ok) {
+    if (n == 0) { *ok = 0; return 0; }
+    int m = a[0];
+    for (int i = 1; i < n; i++)
+        if (a[i] > m) m = a[i];
+    *ok = 1;
+    return m;
+}
+S2 (Standard). total() loops with range(len(nums) - 1) and skips the last element. Fix the bound. Also count only positive
+values.
+Python solution
+ def total(nums):
+    s = 0
+    for x in nums:
+        if x > 0:
+            s += x
+    return s
+C solution
+ int total(const int a[], int n) {
+    int s = 0;
+    for (int i = 0; i < n; i++)
+        if (a[i] > 0) s += a[i];
+    return s;
+}
+S3 (Standard). is_even computes n % 2 == 0 but never returns it, so it always returns None. Add the return. Also return
+False for negative inputs.
+Python solution
+ def is_even(n):
+    return n >= 0 and n % 2 == 0
+C solution
+ int is_even(int n) {
+    return n >= 0 && n % 2 == 0;
+}
+S4 (Standard). is_done uses "if status = 'done':", which is a SyntaxError in Python. Use the comparison operator. Also
+ignore leading and trailing spaces.
+Python solution
+ def is_done(status):
+    return status.strip() == "done"
+C solution
+ #include <string.h>
+int is_done(const char *s) {
+    while (*s == ' ') s++;
+    if (strncmp(s, "done", 4) != 0) return 0;
+    s += 4;
+    while (*s == ' ') s++;
+    return *s == '\0';
+}
+
+=== PAGE 3 ===
+CodeSprint 2026 - Question Bank
+Page 3
+S5 (Standard). add() has a mutable default argument, so items accumulate across calls. Use a None sentinel. Also reject
+duplicate items.
+Python solution
+ def add(item, lst=None):
+    if lst is None:
+        lst = []
+    if item in lst:
+        return lst
+    lst.append(item)
+    return lst
+C solution
+ /* C has no default arguments. The caller owns the storage. Returns 1 if added, 0 if duplicate. */
+int add(int *lst, int *len, int item) {
+    for (int i = 0; i < *len; i++)
+        if (lst[i] == item) return 0;
+    lst[(*len)++] = item;
+    return 1;
+}
+S6 (Standard). average() uses integer-style truncation in C ("float avg = sum / n;"). Cast one operand to double. Also
+round the result to 2 decimal places.
+Python solution
+ def average(nums):
+    return round(sum(nums) / len(nums), 2) if nums else 0.0
+C solution
+ #include <math.h>
+double average(const int a[], int n) {
+    if (n == 0) return 0.0;
+    long long s = 0;
+    for (int i = 0; i < n; i++) s += a[i];
+    return round((double)s / n * 100.0) / 100.0;
+}
+S7 (Standard). In C, "char name[5]" cannot hold "Alice" plus the terminating zero. Enlarge the buffer. Also reject names
+longer than 10 characters.
+Python solution
+ def fits(name, capacity):
+    # C needs room for the terminating '\0'
+    return len(name) <= 10 and len(name) + 1 <= capacity
+C solution
+ #include <string.h>
+char name[12];                    /* up to 10 letters + '\0' */
+int set_name(const char *src) {
+    if (strlen(src) > 10) return 0;
+    strcpy(name, src);
+    return 1;
+}
+S8 (Standard). sum_down(n) never terminates because the loop increments n instead of decrementing it. Fix it. Rename
+the function to sum_squares_down and return the sum of squares from n down to 1.
+Python solution
+ def sum_squares_down(n):
+    total = 0
+    while n > 0:
+        total += n * n
+        n -= 1
+    return total
+C solution
+ int sum_squares_down(int n) {
+    int t = 0;
+    while (n > 0) {
+        t += n * n;
+        n--;
+    }
+    return t;
+}
+
+=== PAGE 4 ===
+CodeSprint 2026 - Question Bank
+Page 4
+S9 (Standard). reverse(s) indexes s[len(s)], which raises IndexError. Fix the index. Also reverse only the order of words
+separated by single spaces.
+Python solution
+ def reverse_words(s):
+    return ' '.join(s.split(' ')[::-1])
+C solution
+ #include <stdlib.h>
+#include <string.h>
+/* Reverses the word order in place. Words are separated by single spaces. */
+void reverse_words(char *s) {
+    size_t n = strlen(s);
+    char *tmp = malloc(n + 1);
+    if (!tmp) return;
+    strcpy(tmp, s);
+    char *tok[256];
+    int k = 0;
+    for (char *p = strtok(tmp, " "); p && k < 256; p = strtok(NULL, " ")) tok[k++] = p;
+    s[0] = '\0';
+    for (int i = k - 1; i >= 0; i--) {
+        strcat(s, tok[i]);
+        if (i > 0) strcat(s, " ");
+    }
+    free(tmp);
+}
+S10 (Standard). In C, "if (x = 0)" assigns 0 to x and never enters the block. Use ==. Also accept a NULL pointer and
+return 0 for it.
+Python solution
+ def is_zero(x):
+    return x is not None and x == 0
+C solution
+ #include <stddef.h>
+int is_zero(const int *p) {
+    return p != NULL && *p == 0;
+}
+H1 (High Roller). remove_evens() removes items while iterating, which skips the element after each removal. Keep odd
+values safely.
+Python solution
+ def remove_evens(lst):
+    lst[:] = [x for x in lst if x % 2 != 0]   # in place, no skipping
+    return lst
+C solution
+ /* In-place compaction. Returns the new length. */
+int remove_evens(int a[], int n) {
+    int k = 0;
+    for (int i = 0; i < n; i++)
+        if (a[i] % 2 != 0) a[k++] = a[i];
+    return k;
+}
+H2 (High Roller). make_grid(3, 3) built as [[0]*3]*3 makes every row the same object. Setting grid[0][0] changes all rows.
+Build each row separately.
+Python solution
+ def make_grid(rows, cols):
+    return [[0] * cols for _ in range(rows)]
+g = make_grid(3, 3)
+g[0][0] = 1          # only row 0 changes now
+C solution
+ #include <string.h>
+int grid[3][3];
+void init_grid(void) {
+    memset(grid, 0, sizeof grid);   /* each cell is independent */
+}
+
+=== PAGE 5 ===
+CodeSprint 2026 - Question Bank
+Page 5
+H3 (High Roller). Closures capture the variable, not its value, so [lambda: i for i in range(3)] returns 2, 2, 2. Bind the
+current value with a default argument.
+Python solution
+ funcs = [lambda i=i: i for i in range(3)]
+print([f() for f in funcs])   # [0, 1, 2]
+C solution
+ /* C has no closures. The equivalent fix is to store values, not references. */
+#include <stdio.h>
+int main(void) {
+    int vals[3];
+    for (int i = 0; i < 3; i++) vals[i] = i;   /* copy the value */
+    for (int i = 0; i < 3; i++) printf("%d\n", vals[i]);
+    return 0;
+}
+H4 (High Roller). Binary search computes mid = (lo + hi) / 2, which is a float in Python and can overflow in C. Use floor
+division and the overflow-safe form.
+Python solution
+ def bsearch(a, t):
+    lo, hi = 0, len(a) - 1
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        if a[mid] == t:
+            return mid
+        if a[mid] < t:
+            lo = mid + 1
+        else:
+            hi = mid - 1
+    return -1
+C solution
+ int bin_search(const int a[], int n, int t) {
+    int lo = 0, hi = n - 1;
+    while (lo <= hi) {
+        int mid = lo + (hi - lo) / 2;   /* no overflow */
+        if (a[mid] == t) return mid;
+        if (a[mid] < t) lo = mid + 1;
+        else hi = mid - 1;
+    }
+    return -1;
+}
+H5 (High Roller). factorial(13) overflows a 32-bit int in C, even though Python handles it. Use a 64-bit type. 20! is the
+largest factorial that fits in a signed 64-bit integer.
+Python solution
+ def fact(n):
+    r = 1
+    for i in range(2, n + 1):
+        r *= i          # Python ints are arbitrary precision
+    return r
+C solution
+ long long fact(int n) {
+    long long r = 1;
+    for (int i = 2; i <= n; i++) r *= i;
+    return r;           /* valid up to n = 20 */
+}
+H6 (High Roller). drop_negative() deletes keys while iterating the dict, which raises RuntimeError. Iterate over a
+snapshot of the keys.
+Python solution
+ def drop_negative(d):
+    for k in list(d):          # snapshot of the keys
+        if d[k] < 0:
+            del d[k]
+    return d
+C solution
+ /* C analogue: compact the array in place, keeping non-negative values. */
+int drop_negative(int v[], int n) {
+    int k = 0;
+    for (int i = 0; i < n; i++)
+        if (v[i] >= 0) v[k++] = v[i];
+    return k;
+}
+
+=== PAGE 6 ===
+CodeSprint 2026 - Question Bank
+Page 6
+H7 (High Roller). is_thousand(x) uses "x is 1000". Identity is not equality for ints outside the small-int cache, so the result
+is unreliable. Use ==.
+Python solution
+ def is_thousand(x):
+    return x == 1000      # value comparison, not identity
+C solution
+ int is_thousand(int x) {
+    return x == 1000;     /* C only has value comparison for ints */
+}
+H8 (High Roller). sum_positive() returns garbage when no element is positive because the accumulator is uninitialised.
+Initialise it.
+Python solution
+ def sum_positive(a):
+    s = 0                  # initialised, so it returns 0 for no positives
+    for x in a:
+        if x > 0:
+            s += x
+    return s
+C solution
+ int sum_positive(const int a[], int n) {
+    int s = 0;             /* was uninitialised */
+    for (int i = 0; i < n; i++)
+        if (a[i] > 0) s += a[i];
+    return s;
+}
+H9 (High Roller). fib(0) recurses forever because the base case only handles n == 1. Use n <= 1 as the base case.
+Python solution
+ def fib(n):
+    if n <= 1:
+        return n
+    return fib(n - 1) + fib(n - 2)
+C solution
+ long long fib(int n) {
+    if (n <= 1) return n;
+    return fib(n - 1) + fib(n - 2);
+}
+H10 (High Roller). Float comparison "0.1 * 3 == 0.3" is False. Compare with a tolerance instead of exact equality.
+Python solution
+ import math
+def approx_equal(a, b):
+    return math.isclose(a, b, rel_tol=1e-9, abs_tol=1e-12)
+print(0.1 * 3 == 0.3)                  # False
+print(approx_equal(0.1 * 3, 0.3))      # True
+C solution
+ #include <math.h>
+int approx_equal(double a, double b) {
+    return fabs(a - b) < 1e-9;   /* compile with -lm */
+}
+
+=== PAGE 7 ===
+CodeSprint 2026 - Question Bank
+Page 7
+Table 2: Roulette: Output Oracle
+Code tracing. The execution environment is disabled, so teams must predict the exact output, including spaces, line
+breaks and ordering. Each question gives the Python code, the exact expected output, and a C equivalent that prints the
+same text. Where C behaves differently (for example integer division), a comment says so.
+S1 (Standard). A loop adds 0, 1 and 2 to x, which starts at 5. Then x is doubled. Predict the printed value.
+Python solution
+ x = 5
+for i in range(3):
+    x += i
+x *= 2
+print(x)
+C solution
+ #include <stdio.h>
+int main(void) {
+    int x = 5;
+    for (int i = 0; i < 3; i++) x += i;
+    x *= 2;
+    printf("%d\n", x);
+    return 0;
+}
+Expected output
+ 16
+S2 (Standard). s = "abc". Predict the printed output of print(s * 2 + "|" + s[1:] + s[-1]).
+Python solution
+ s = "abc"
+print(s * 2 + "|" + s[1:] + s[-1])
+C solution
+ #include <stdio.h>
+#include <string.h>
+int main(void) {
+    char buf[32] = "abc";
+    strcat(buf, "abc");
+    printf("%s|%s%c\n", buf, "abc" + 1, "abc"[2]);
+    return 0;
+}
+Expected output
+ abcabc|bcc
+S3 (Standard). b is an alias of lst, not a copy. c is an independent copy. Predict the output of print(len(lst), len(c)).
+Python solution
+ lst = [1, 2, 3]
+b = lst
+b.append(4)
+c = lst[:]
+c.append(5)
+print(len(lst), len(c))
+C solution
+ #include <stdio.h>
+int main(void) {
+    int lst[10] = {1, 2, 3};
+    int *b = lst;               /* alias of the same storage */
+    int n = 3;
+    b[n++] = 4;
+    int c[10];
+    for (int i = 0; i < n; i++) c[i] = lst[i];   /* independent copy */
+    c[n] = 5;
+    printf("%d %d\n", n, n + 1);
+    return 0;
+}
+Expected output
+ 4 5
+
+=== PAGE 8 ===
+CodeSprint 2026 - Question Bank
+Page 8
+S4 (Standard). Assigning a key twice replaces the value. Add a second key "b". Predict the output of print(len(d), d["a"]).
+Python solution
+ d = {}
+d['a'] = 1
+d['a'] = 2
+d['b'] = 3
+print(len(d), d['a'])
+C solution
+ #include <stdio.h>
+int main(void) {
+    /* slot 0 holds key 'a', slot 1 holds key 'b' */
+    int val[26] = {0};
+    int size = 0;
+    val[0] = 1; size++;     /* new key */
+    val[0] = 2;             /* existing key: replace, no new slot */
+    val[1] = 3; size++;     /* new key */
+    printf("%d %d\n", size, val[0]);
+    return 0;
+}
+Expected output
+ 2 2
+S5 (Standard). Empty-string and truthiness checks. Predict the output of print(("a" * 0) == "", "" == "", len("0") > 0).
+Python solution
+ print(("a" * 0) == "", "" == "", len("0") > 0)
+C solution
+ #include <stdio.h>
+#include <string.h>
+int main(void) {
+    printf("%s %s %s\n",
+           strlen("") == 0 ? "True" : "False",
+           strlen("") == 0 ? "True" : "False",
+           strlen("0") > 0 ? "True" : "False");
+    return 0;
+}
+Expected output
+ True True True
+S6 (Standard). Slicing is end-exclusive, and negative indices count from the end. Predict the output of print(nums[1:3],
+nums[-2:]) for nums = [1, 2, 3, 4].
+Python solution
+ nums = [1, 2, 3, 4]
+print(nums[1:3], nums[-2:])
+C solution
+ #include <stdio.h>
+int main(void) {
+    int a[] = {1, 2, 3, 4};
+    printf("[%d, %d] [%d, %d]\n", a[1], a[2], a[2], a[3]);
+    return 0;
+}
+Expected output
+ [2, 3] [3, 4]
+S7 (Standard). The default argument b=2 is used when not supplied. Predict the output of print(f(3), f(3, 4), f(a=2)) for the
+function below.
+Python solution
+ def f(a, b=2):
+    return a * b
+print(f(3), f(3, 4), f(a=2))
+C solution
+ #include <stdio.h>
+int f(int a, int b) { return a * b; }   /* C has no default arguments */
+int main(void) {
+    printf("%d %d %d\n", f(3, 2), f(3, 4), f(2, 2));
+    return 0;
+}
+Expected output
+ 6 12 4
+
+=== PAGE 9 ===
+CodeSprint 2026 - Question Bank
+Page 9
+S8 (Standard). A function reads the global x when it is called, not when it is defined. Predict the output of print(g(), h())
+after x is changed to 20.
+Python solution
+ x = 10
+def g():
+    return x
+def h():
+    return x * 2
+x = 20
+print(g(), h())
+C solution
+ #include <stdio.h>
+int x = 10;
+int g(void) { return x; }
+int h(void) { return x * 2; }
+int main(void) {
+    x = 20;
+    printf("%d %d\n", g(), h());
+    return 0;
+}
+Expected output
+ 20 40
+S9 (Standard). Python division: 7 // 2 floors, and -7 // 2 floors toward negative infinity. Predict the Python output of print(3
+== 3.0, 7 // 2, -7 // 2, -7 % 3).
+Python solution
+ print(3 == 3.0, 7 // 2, -7 // 2, -7 % 3)
+C solution
+ #include <stdio.h>
+int main(void) {
+    /* Python prints "True 3 -4 2". C truncates toward zero, so -7 / 2 is -3 and -7 % 3 is -1. */
+    printf("%s %d %d %d\n", "True", 7 / 2, -7 / 2, -7 % 3);
+    return 0;
+}
+Expected output
+ True 3 -4 2
+S10 (Standard). s = "Hello". Predict the output of print(s[::-1][0], s[-1], s[:-1][-1]).
+Python solution
+ s = "Hello"
+print(s[::-1][0], s[-1], s[:-1][-1])
+C solution
+ #include <stdio.h>
+#include <string.h>
+int main(void) {
+    char s[] = "Hello";
+    size_t n = strlen(s);
+    printf("%c %c %c\n", s[n - 1], s[n - 1], s[n - 2]);
+    return 0;
+}
+Expected output
+ o o l
+H1 (High Roller). Nested comprehension with a filter on the outer loop.
+Python solution
+ print([[i * j for j in range(3)] for i in range(3) if i % 2 == 0])
+C solution
+ #include <stdio.h>
+int main(void) {
+    int rows[2][3];
+    int r = 0;
+    for (int i = 0; i < 3; i += 2, r++)
+        for (int j = 0; j < 3; j++) rows[r][j] = i * j;
+    printf("[[%d, %d, %d], [%d, %d, %d]]\n",
+           rows[0][0], rows[0][1], rows[0][2], rows[1][0], rows[1][1], rows[1][2]);
+    return 0;
+}
+Expected output
+ [[0, 0, 0], [0, 2, 4]]
+
+=== PAGE 10 ===
+CodeSprint 2026 - Question Bank
+Page 10
+H2 (High Roller). Variable shadowing: the local x inside f() is separate from the global x, and g() closes over the local x,
+which is reassigned to 3.
+Python solution
+ x = 1
+def f():
+    x = 2
+    def g():
+        return x
+    x = 3
+    return g()
+print(f(), x)
+C solution
+ #include <stdio.h>
+int x_g = 1;
+int f(void) {
+    int x = 2;
+    x = 3;            /* reassigned before use */
+    return x;
+}
+int main(void) {
+    printf("%d %d\n", f(), x_g);
+    return 0;
+}
+Expected output
+ 3 1
+H3 (High Roller). Mutation during iteration: removing the current element shifts the next element into the skipped slot.
+Python solution
+ lst = [1, 2, 3, 4, 5]
+for x in lst:
+    if x % 2 == 1:
+        lst.remove(x)
+print(lst)
+C solution
+ #include <stdio.h>
+#include <string.h>
+int main(void) {
+    int a[] = {1, 2, 3, 4, 5};
+    int n = 5;
+    for (int i = 0; i < n; i++) {        /* mimics Python's index-based loop */
+        if (a[i] % 2 == 1) {
+            memmove(a + i, a + i + 1, (n - i - 1) * sizeof(int));
+            n--;
+        }
+    }
+    printf("[");
+    for (int i = 0; i < n; i++) printf(i ? ", %d" : "%d", a[i]);
+    printf("]\n");
+    return 0;
+}
+Expected output
+ [2, 4]
+H4 (High Roller). Recursion with a conditional expression.
+Python solution
+ def f(n):
+    return 1 if n <= 1 else n * f(n - 1)
+print(f(5))
+C solution
+ #include <stdio.h>
+int f(int n) { return n <= 1 ? 1 : n * f(n - 1); }
+int main(void) {
+    printf("%d\n", f(5));
+    return 0;
+}
+Expected output
+ 120
+
+=== PAGE 11 ===
+CodeSprint 2026 - Question Bank
+Page 11
+H5 (High Roller). Late binding: every lambda reads the final value of i, which is 2, so each returns 12.
+Python solution
+ fs = [lambda x: x + i for i in range(3)]
+print([f(10) for f in fs])
+C solution
+ #include <stdio.h>
+int main(void) {
+    /* every closure reads the final i (2), so each result is 10 + 2 */
+    int out[3];
+    for (int k = 0; k < 3; k++) out[k] = 10 + 2;
+    printf("[%d, %d, %d]\n", out[0], out[1], out[2]);
+    return 0;
+}
+Expected output
+ [12, 12, 12]
+H6 (High Roller). print() keyword arguments sep and end, and the format spec .2f.
+Python solution
+ print("a", "b", sep="-", end="!\n")
+print(f"{3.14159:.2f}")
+C solution
+ #include <stdio.h>
+int main(void) {
+    printf("a-b!\n");
+    printf("%.2f\n", 3.14159);
+    return 0;
+}
+Expected output
+ a-b!
+3.14
+H7 (High Roller). Format spec: right-align in width 4, then left-align in width 4.
+Python solution
+ print(f"{'x':>4}|{12:<4}|")
+C solution
+ #include <stdio.h>
+int main(void) {
+    printf("%4s|%-4d|\n", "x", 12);
+    return 0;
+}
+Expected output
+    x|12  |
+H8 (High Roller). Generator expression with a filter: only odd i contribute.
+Python solution
+ g = (i * i for i in range(4) if i % 2)
+print(sum(g))
+C solution
+ #include <stdio.h>
+int main(void) {
+    int s = 0;
+    for (int i = 0; i < 4; i++)
+        if (i % 2) s += i * i;
+    printf("%d\n", s);
+    return 0;
+}
+Expected output
+ 10
+
+=== PAGE 12 ===
+CodeSprint 2026 - Question Bank
+Page 12
+H9 (High Roller). Mutable default argument accumulates across calls.
+Python solution
+ def f(x, acc=[]):
+    acc.append(x)
+    return acc
+f(1)
+f(2)
+print(f(3))
+C solution
+ #include <stdio.h>
+static int acc[10];
+static int n = 0;          /* static storage persists between calls */
+void add(int x) { acc[n++] = x; }
+int main(void) {
+    add(1); add(2); add(3);
+    printf("[");
+    for (int i = 0; i < n; i++) printf(i ? ", %d" : "%d", acc[i]);
+    printf("]\n");
+    return 0;
+}
+Expected output
+ [1, 2, 3]
+H10 (High Roller). Operator precedence: ** is right-associative and binds tighter than unary minus on its left.
+Python solution
+ print(2 ** 3 ** 2, -2 ** 2, (-2) ** 2)
+C solution
+ #include <stdio.h>
+#include <math.h>
+int main(void) {
+    printf("%.0f %d %d\n", pow(2, 9), -(2 * 2), (-2) * (-2));  /* compile with -lm */
+    return 0;
+}
+Expected output
+ 512 -4 4
+
+=== PAGE 13 ===
+CodeSprint 2026 - Question Bank
+Page 13
+Table 3: Blackjack: Code Relay
+Collaborative relay. Each teammate continues the same program during a fixed turn. Standard tasks are multi-step but
+small. High Roller tasks are DSA-style problems with more edge cases, where poor structure makes handovers hard.
+The solutions below are written so each step can be picked up by someone else.
+S1 (Standard). Count vowels case-insensitively. Also count a "y" as a vowel only when it ends a word.
+Python solution
+ def count_vowels(s):
+    total = 0
+    for w in s.lower().split():
+        total += sum(ch in 'aeiou' for ch in w) + (1 if w.endswith('y') else 0)
+    return total
+C solution
+ #include <ctype.h>
+#include <string.h>
+int count_vowels(const char *s) {
+    int n = 0;
+    for (size_t i = 0; s[i]; i++) {
+        char c = (char)tolower((unsigned char)s[i]);
+        if (c && strchr("aeiou", c)) n++;
+        else if (c == 'y' && (s[i + 1] == '\0' || isspace((unsigned char)s[i + 1]))) n++;
+    }
+    return n;
+}
+S2 (Standard). Count how many times a whole word appears in a text. Compare after stripping trailing punctuation (.,!?)
+from each word. Matching is case-sensitive.
+Python solution
+ def count_word(text, w):
+    return sum(1 for t in text.split() if t.rstrip('.,!?') == w)
+C solution
+ #include <string.h>
+int count_word(const char *text, const char *w) {
+    char buf[1024];
+    int c = 0;
+    strncpy(buf, text, sizeof buf - 1);
+    buf[sizeof buf - 1] = '\0';
+    for (char *t = strtok(buf, " \t\n"); t; t = strtok(NULL, " \t\n")) {
+        size_t len = strlen(t);
+        while (len && strchr(".,!?", t[len - 1])) t[--len] = '\0';
+        if (strcmp(t, w) == 0) c++;
+    }
+    return c;
+}
+S3 (Standard). Transpose an r x c matrix. Raise ValueError if the rows have different lengths.
+Python solution
+ def transpose(m):
+    if any(len(row) != len(m[0]) for row in m):
+        raise ValueError("ragged matrix")
+    return [list(row) for row in zip(*m)]
+C solution
+ /* a is r x c, b is c x r. The caller guarantees a rectangular matrix. */
+void transpose(int r, int c, const int a[r][c], int b[c][r]) {
+    for (int i = 0; i < r; i++)
+        for (int j = 0; j < c; j++)
+            b[j][i] = a[i][j];
+}
+S4 (Standard). Flatten a list of lists by one level, and drop any value equal to 0 from the output.
+Python solution
+ def flatten(lst):
+    return [x for sub in lst for x in sub if x != 0]
+C solution
+ /* a is r x c. out receives the non-zero values row by row, and returns how many were written. */
+int flatten(int r, int c, const int a[r][c], int out[]) {
+    int k = 0;
+    for (int i = 0; i < r; i++)
+        for (int j = 0; j < c; j++)
+            if (a[i][j] != 0) out[k++] = a[i][j];
+    return k;
+}
+
+=== PAGE 14 ===
+CodeSprint 2026 - Question Bank
+Page 14
+S5 (Standard). Return the first n Fibonacci numbers, starting with 0, in reverse order (largest first).
+Python solution
+ def fib_list(n):
+    a, b = 0, 1
+    out = []
+    for _ in range(n):
+        out.append(a)
+        a, b = b, a + b
+    return out[::-1]
+C solution
+ void fib_list(int n, long long out[]) {
+    long long a = 0, b = 1;
+    for (int i = 0; i < n; i++) {
+        out[n - 1 - i] = a;
+        long long t = a + b;
+        a = b;
+        b = t;
+    }
+}
+S6 (Standard). Average of integer scores, rounded to 2 decimal places. Return 0.0 for an empty list.
+Python solution
+ def average(scores):
+    return round(sum(scores) / len(scores), 2) if scores else 0.0
+C solution
+ #include <math.h>
+double average(const int s[], int n) {
+    if (n == 0) return 0.0;
+    long long t = 0;
+    for (int i = 0; i < n; i++) t += s[i];
+    return round((double)t / n * 100.0) / 100.0;
+}
+S7 (Standard). Palindrome check that ignores case and non-alphanumeric characters. Return False if the string has no
+alphanumeric characters at all.
+Python solution
+ def is_pal(s):
+    t = [ch.lower() for ch in s if ch.isalnum()]
+    return len(t) > 0 and t == t[::-1]
+C solution
+ #include <ctype.h>
+#include <string.h>
+int is_pal(const char *s) {
+    int any = 0;
+    for (const char *p = s; *p; p++)
+        if (isalnum((unsigned char)*p)) { any = 1; break; }
+    if (!any) return 0;
+    int i = 0, j = (int)strlen(s) - 1;
+    while (i < j) {
+        while (i < j && !isalnum((unsigned char)s[i])) i++;
+        while (i < j && !isalnum((unsigned char)s[j])) j--;
+        if (tolower((unsigned char)s[i]) != tolower((unsigned char)s[j])) return 0;
+        i++; j--;
+    }
+    return 1;
+}
+S8 (Standard). Find the first index of target t in a sorted list that may contain duplicates. Return -1 if t is absent.
+Python solution
+ def search(a, t):
+    lo, hi = 0, len(a)
+    while lo < hi:
+        mid = (lo + hi) // 2
+        if a[mid] < t:
+            lo = mid + 1
+        else:
+            hi = mid
+    return lo if lo < len(a) and a[lo] == t else -1
+C solution
+ int search(const int a[], int n, int t) {
+    int lo = 0, hi = n;
+    while (lo < hi) {
+        int mid = lo + (hi - lo) / 2;
+        if (a[mid] < t) lo = mid + 1;
+        else hi = mid;
+    }
+    return (lo < n && a[lo] == t) ? lo : -1;
+}
+
+=== PAGE 15 ===
+CodeSprint 2026 - Question Bank
+Page 15
+S9 (Standard). Check whether two words are anagrams, ignoring case and spaces.
+Python solution
+ def is_anagram(a, b):
+    norm = lambda s: sorted(s.replace(' ', '').lower())
+    return norm(a) == norm(b)
+C solution
+ #include <ctype.h>
+#include <string.h>
+int is_anagram(const char *a, const char *b) {
+    int cnt[256] = {0};
+    for (; *a; a++)
+        if (*a != ' ') cnt[(unsigned char)tolower((unsigned char)*a)]++;
+    for (; *b; b++)
+        if (*b != ' ') cnt[(unsigned char)tolower((unsigned char)*b)]--;
+    for (int i = 0; i < 256; i++)
+        if (cnt[i]) return 0;
+    return 1;
+}
+S10 (Standard). Bank account with withdraw that refuses overdrafts, and a deposit that refuses non-positive amounts.
+Python solution
+ class Account:
+    def __init__(self, balance=0):
+        self.balance = balance
+    def withdraw(self, amount):
+        if amount > self.balance:
+            raise ValueError("insufficient funds")
+        self.balance -= amount
+    def deposit(self, amount):
+        if amount <= 0:
+            raise ValueError("amount must be positive")
+        self.balance += amount
+C solution
+ typedef struct { long long balance; } Account;
+/* 0 on success, -1 on insufficient funds */
+int withdraw(Account *a, long long amount) {
+    if (amount > a->balance) return -1;
+    a->balance -= amount;
+    return 0;
+}
+/* 0 on success, -1 if amount is not positive */
+int deposit(Account *a, long long amount) {
+    if (amount <= 0) return -1;
+    a->balance += amount;
+    return 0;
+}
+H1 (High Roller). Two Sum: indices of two numbers that add to target. Single pass with a hash map (O(n)).
+Python solution
+ def two_sum(nums, target):
+    seen = {}
+    for i, x in enumerate(nums):
+        if target - x in seen:
+            return [seen[target - x], i]
+        seen[x] = i
+    return []
+C solution
+ /* Brute force O(n^2). An O(n) C version needs a hash table, which is
+   usually too much for a relay turn. Returns 1 and fills out[] if found. */
+int two_sum(const int a[], int n, int target, int out[2]) {
+    for (int i = 0; i < n; i++)
+        for (int j = i + 1; j < n; j++)
+            if (a[i] + a[j] == target) {
+                out[0] = i; out[1] = j;
+                return 1;
+            }
+    return 0;
+}
+
+=== PAGE 16 ===
+CodeSprint 2026 - Question Bank
+Page 16
+H2 (High Roller). Length of the longest substring without repeating characters (sliding window, O(n)).
+Python solution
+ def longest_unique(s):
+    last = {}
+    start = best = 0
+    for i, ch in enumerate(s):
+        if ch in last and last[ch] >= start:
+            start = last[ch] + 1
+        last[ch] = i
+        best = max(best, i - start + 1)
+    return best
+C solution
+ #include <string.h>
+int longest_unique(const char *s) {
+    int last[256];
+    for (int i = 0; i < 256; i++) last[i] = -1;
+    int start = 0, best = 0;
+    for (int i = 0; s[i]; i++) {
+        unsigned char c = (unsigned char)s[i];
+        if (last[c] >= start) start = last[c] + 1;
+        last[c] = i;
+        if (i - start + 1 > best) best = i - start + 1;
+    }
+    return best;
+}
+H3 (High Roller). Merge two sorted lists into one sorted list in O(n + m).
+Python solution
+ def merge(a, b):
+    i = j = 0
+    out = []
+    while i < len(a) and j < len(b):
+        if a[i] <= b[j]:
+            out.append(a[i]); i += 1
+        else:
+            out.append(b[j]); j += 1
+    out.extend(a[i:])
+    out.extend(b[j:])
+    return out
+C solution
+ /* out must have room for n + m values */
+void merge(const int a[], int n, const int b[], int m, int out[]) {
+    int i = 0, j = 0, k = 0;
+    while (i < n && j < m)
+        out[k++] = (a[i] <= b[j]) ? a[i++] : b[j++];
+    while (i < n) out[k++] = a[i++];
+    while (j < m) out[k++] = b[j++];
+}
+H4 (High Roller). Next greater element for each position, using a monotonic stack. Return -1 if none.
+Python solution
+ def next_greater(a):
+    res = [-1] * len(a)
+    stack = []                       # indices with decreasing values
+    for i, x in enumerate(a):
+        while stack and a[stack[-1]] < x:
+            res[stack.pop()] = x
+        stack.append(i)
+    return res
+C solution
+ void next_greater(const int a[], int n, int res[]) {
+    int stack[n > 0 ? n : 1], top = 0;
+    for (int i = 0; i < n; i++) res[i] = -1;
+    for (int i = 0; i < n; i++) {
+        while (top > 0 && a[stack[top - 1]] < a[i])
+            res[stack[--top]] = a[i];
+        stack[top++] = i;
+    }
+}
+
+=== PAGE 17 ===
+CodeSprint 2026 - Question Bank
+Page 17
+H5 (High Roller). Length of the longest strictly increasing subsequence in O(n log n), using patience-style tails.
+Python solution
+ import bisect
+def lis_length(a):
+    tails = []
+    for x in a:
+        i = bisect.bisect_left(tails, x)
+        if i == len(tails):
+            tails.append(x)
+        else:
+            tails[i] = x
+    return len(tails)
+C solution
+ int lis_length(const int a[], int n) {
+    int tails[n > 0 ? n : 1], len = 0;
+    for (int k = 0; k < n; k++) {
+        int lo = 0, hi = len;
+        while (lo < hi) {
+            int mid = (lo + hi) / 2;
+            if (tails[mid] < a[k]) lo = mid + 1;
+            else hi = mid;
+        }
+        tails[lo] = a[k];
+        if (lo == len) len++;
+    }
+    return len;
+}
+H6 (High Roller). Minimum number of coins to make an amount (unbounded coin change). Return -1 if impossible.
+Python solution
+ def min_coins(coins, amount):
+    INF = float('inf')
+    dp = [0] + [INF] * amount
+    for a in range(1, amount + 1):
+        for c in coins:
+            if c <= a and dp[a - c] + 1 < dp[a]:
+                dp[a] = dp[a - c] + 1
+    return dp[amount] if dp[amount] < INF else -1
+C solution
+ #include <stdlib.h>
+int min_coins(const int coins[], int k, int amount) {
+    const int INF = 1 << 29;
+    int *dp = malloc((amount + 1) * sizeof *dp);
+    if (!dp) return -1;
+    dp[0] = 0;
+    for (int a = 1; a <= amount; a++) {
+        dp[a] = INF;
+        for (int j = 0; j < k; j++)
+            if (coins[j] <= a && dp[a - coins[j]] + 1 < dp[a])
+                dp[a] = dp[a - coins[j]] + 1;
+    }
+    int r = dp[amount] >= INF ? -1 : dp[amount];
+    free(dp);
+    return r;
+}
+H7 (High Roller). Maximum subarray sum (Kadane). Must handle all-negative arrays, so do not initialise the best sum to
+0.
+Python solution
+ def max_subarray(a):
+    best = cur = a[0]
+    for x in a[1:]:
+        cur = max(x, cur + x)
+        best = max(best, cur)
+    return best
+C solution
+ int max_subarray(const int a[], int n) {
+    int best = a[0], cur = a[0];
+    for (int i = 1; i < n; i++) {
+        cur = (a[i] > cur + a[i]) ? a[i] : cur + a[i];
+        if (cur > best) best = cur;
+    }
+    return best;
+}
+
+=== PAGE 18 ===
+CodeSprint 2026 - Question Bank
+Page 18
+H8 (High Roller). Lowest common ancestor in a BST (both values are present in the tree).
+Python solution
+ class Node:
+    def __init__(self, val, left=None, right=None):
+        self.val, self.left, self.right = val, left, right
+def lca(root, p, q):
+    while root:
+        if p < root.val and q < root.val:
+            root = root.left
+        elif p > root.val and q > root.val:
+            root = root.right
+        else:
+            return root.val
+    return None
+C solution
+ struct Node { int v; struct Node *l, *r; };
+int lca(struct Node *root, int p, int q) {
+    while (root) {
+        if (p < root->v && q < root->v) root = root->l;
+        else if (p > root->v && q > root->v) root = root->r;
+        else return root->v;
+    }
+    return -1;
+}
+H9 (High Roller). Rotate an n x n matrix 90 degrees clockwise in place.
+Python solution
+ def rotate(m):
+    return [list(row) for row in zip(*m[::-1])]   # clockwise
+C solution
+ #define N 3
+void rotate(int a[N][N]) {
+    for (int i = 0; i < N; i++)               /* transpose */
+        for (int j = i + 1; j < N; j++) {
+            int t = a[i][j]; a[i][j] = a[j][i]; a[j][i] = t;
+        }
+    for (int i = 0; i < N; i++)               /* reverse each row */
+        for (int j = 0; j < N / 2; j++) {
+            int t = a[i][j]; a[i][j] = a[i][N - 1 - j]; a[i][N - 1 - j] = t;
+        }
+}
+H10 (High Roller). Edit distance (Levenshtein) between two strings, O(n*m).
+Python solution
+ def edit_distance(a, b):
+    n, m = len(a), len(b)
+    dp = [[0] * (m + 1) for _ in range(n + 1)]
+    for i in range(n + 1):
+        dp[i][0] = i
+    for j in range(m + 1):
+        dp[0][j] = j
+    for i in range(1, n + 1):
+        for j in range(1, m + 1):
+            if a[i - 1] == b[j - 1]:
+                dp[i][j] = dp[i - 1][j - 1]
+            else:
+                dp[i][j] = 1 + min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1])
+    return dp[n][m]
+C solution
+ #include <string.h>
+#define MAXLEN 100   /* inputs up to 100 characters */
+int edit_distance(const char *a, const char *b) {
+    int n = strlen(a), m = strlen(b);
+    static int dp[MAXLEN + 1][MAXLEN + 1];
+    for (int i = 0; i <= n; i++) dp[i][0] = i;
+    for (int j = 0; j <= m; j++) dp[0][j] = j;
+    for (int i = 1; i <= n; i++)
+        for (int j = 1; j <= m; j++) {
+            if (a[i - 1] == b[j - 1]) dp[i][j] = dp[i - 1][j - 1];
+            else {
+                int best = dp[i - 1][j - 1];
+                if (dp[i - 1][j] < best) best = dp[i - 1][j];
+                if (dp[i][j - 1] < best) best = dp[i][j - 1];
+                dp[i][j] = 1 + best;
+            }
+        }
+    return dp[n][m];
+}
+
+=== PAGE 19 ===
+CodeSprint 2026 - Question Bank
+Page 19
+Table 4: Craps: Debug Detective
+Each question gives buggy code. Find the defect and fix it. Standard bugs are common slips such as off-by-one errors
+and wrong initial values. High Roller bugs are subtler, involving state, edge cases and overflow. Every question has three
+clues. Clue 1 reveals about 10% of the approach, clue 2 about 30%, and clue 3 about 50%. No clue shows the full fix.
+S1 (Standard). Buggy code: def count_vowels(s): return sum(c in "aeiou" for c in s) Returns 0 for "AEIOU". Fix it. Also
+count a trailing "y" as a vowel.
+Python solution
+ def count_vowels(s):
+    s = s.lower()
+    return sum(c in 'aeiou' for c in s) + (1 if s.endswith('y') else 0)
+C solution
+ #include <ctype.h>
+#include <string.h>
+int count_vowels(const char *s) {
+    int n = 0;
+    size_t len = strlen(s);
+    for (size_t i = 0; i < len; i++) {
+        char c = (char)tolower((unsigned char)s[i]);
+        if (strchr("aeiou", c)) n++;
+    }
+    if (len && tolower((unsigned char)s[len - 1]) == 'y') n++;
+    return n;
+}
+Clue 1 (reveals about 10% of the approach): Check what the function does with uppercase input.
+Clue 2 (reveals about 30% of the approach): The membership test compares each character with lowercase vowels
+only, so "A" never matches "a". A trailing "y" also needs its own check.
+Clue 3 (reveals about 50% of the approach): Normalize the case of the input first. Then count the vowels, and add one
+more if the last character is "y".
+S2 (Standard). Buggy code: def sum_list(a): total = 0 for i in range(1, len(a)): total += a[i] return total sum_list([5]) returns
+0. Fix it. Also ignore negative numbers.
+Python solution
+ def sum_list(a):
+    return sum(x for x in a if x >= 0)
+C solution
+ int sum_list(const int a[], int n) {
+    int t = 0;
+    for (int i = 0; i < n; i++)
+        if (a[i] >= 0) t += a[i];
+    return t;
+}
+Clue 1 (reveals about 10% of the approach): Test with [5]: what is returned?
+Clue 2 (reveals about 30% of the approach): The loop index starts at 1, so the first element is never added. Negative
+values also need a filter.
+Clue 3 (reveals about 50% of the approach): Iterate over every index from 0 to n-1, and add a value only when it is not
+negative.
+
+=== PAGE 20 ===
+CodeSprint 2026 - Question Bank
+Page 20
+S3 (Standard). Buggy code: def max_val(a): m = 0 for x in a: if x > m: m = x return m max_val([-3, -7]) returns 0. Fix it.
+Also return None for an empty list.
+Python solution
+ def max_val(a):
+    if not a:
+        return None
+    m = a[0]
+    for x in a[1:]:
+        if x > m:
+            m = x
+    return m
+C solution
+ int max_val(const int a[], int n, int *ok) {
+    if (n == 0) { *ok = 0; return 0; }
+    int m = a[0];
+    for (int i = 1; i < n; i++)
+        if (a[i] > m) m = a[i];
+    *ok = 1;
+    return m;
+}
+Clue 1 (reveals about 10% of the approach): Try an input with only negative numbers.
+Clue 2 (reveals about 30% of the approach): The running maximum starts at 0, which is larger than every element in
+that case. An empty list also needs its own case.
+Clue 3 (reveals about 50% of the approach): Seed the maximum with an element of the array, and handle the empty
+list before reading any element.
+S4 (Standard). Buggy code: def is_prime(n): for i in range(2, n): if n % i == 0: return False return True is_prime(1) returns
+True. Fix it. Also stop testing divisors at the square root of n.
+Python solution
+ def is_prime(n):
+    if n < 2:
+        return False
+    i = 2
+    while i * i <= n:
+        if n % i == 0:
+            return False
+        i += 1
+    return True
+C solution
+ int is_prime(int n) {
+    if (n < 2) return 0;
+    for (int i = 2; i * i <= n; i++)
+        if (n % i == 0) return 0;
+    return 1;
+}
+Clue 1 (reveals about 10% of the approach): Check the inputs 0 and 1 against the definition of a prime.
+Clue 2 (reveals about 30% of the approach): The function never rejects values below 2, and it tests far more divisors
+than it needs to.
+Clue 3 (reveals about 50% of the approach): Reject values below 2 first, then test divisors only up to the square root of
+n.
+
+=== PAGE 21 ===
+CodeSprint 2026 - Question Bank
+Page 21
+S5 (Standard). Buggy code: def reverse(s): return s[len(s) - 1:0:-1] reverse("abc") returns "cb". Fix it. Also work on lists
+as well as strings.
+Python solution
+ def reverse(s):
+    return s[::-1]
+C solution
+ #include <string.h>
+void reverse(char *s) {
+    int n = (int)strlen(s);
+    for (int i = 0, j = n - 1; i < j; i++, j--) {
+        char t = s[i];
+        s[i] = s[j];
+        s[j] = t;
+    }
+}
+Clue 1 (reveals about 10% of the approach): Compare the first character of the input with the first character of the
+output.
+Clue 2 (reveals about 30% of the approach): The stop index 0 in the slice is exclusive, so index 0 is never included.
+Clue 3 (reveals about 50% of the approach): The reversal must include both ends of the input, and the slice works the
+same way on lists.
+S6 (Standard). Buggy code: def factorial(n): r = 0 for i in range(1, n + 1): r *= i return r factorial(4) returns 0. Fix it. Also
+raise ValueError for negative n.
+Python solution
+ def factorial(n):
+    if n < 0:
+        raise ValueError("n must be non-negative")
+    r = 1
+    for i in range(1, n + 1):
+        r *= i
+    return r
+C solution
+ unsigned long long factorial(unsigned int n) {
+    unsigned long long r = 1;
+    for (unsigned int k = 2; k <= n; k++) r *= k;
+    return r;
+}
+Clue 1 (reveals about 10% of the approach): Work out what any multiplication does when the running product is zero.
+Clue 2 (reveals about 30% of the approach): Starting with 0 means every product stays 0. Negative inputs are also
+outside the function's domain.
+Clue 3 (reveals about 50% of the approach): Start the running product at 1, and reject negative n before the loop
+starts.
+S7 (Standard). Buggy code: def contains(a, x): for v in a: if v == x: return False return False contains([4, 9], 9) returns
+False. Fix it. Also return False for an empty list.
+Python solution
+ def contains(a, x):
+    for v in a:
+        if v == x:
+            return True
+    return False
+C solution
+ int contains(const int a[], int n, int x) {
+    for (int i = 0; i < n; i++)
+        if (a[i] == x) return 1;
+    return 0;
+}
+Clue 1 (reveals about 10% of the approach): Trace what is returned when x is present in the list.
+Clue 2 (reveals about 30% of the approach): The branch that finds x returns the wrong boolean value.
+Clue 3 (reveals about 50% of the approach): Return the success value on a match, and the failure value only after the
+search has finished.
+
+=== PAGE 22 ===
+CodeSprint 2026 - Question Bank
+Page 22
+S8 (Standard). Buggy code: def avg(a): total = 0 for x in a: total += x return total // len(a) avg([1, 2]) returns 1 but should
+return 1.5. Fix it. Also return 0.0 for an empty list.
+Python solution
+ def avg(a):
+    if not a:
+        return 0.0
+    total = 0
+    for x in a:
+        total += x
+    return total / len(a)
+C solution
+ double avg(const int a[], int n) {
+    if (n == 0) return 0.0;
+    long long t = 0;
+    for (int i = 0; i < n; i++) t += a[i];
+    return (double)t / n;
+}
+Clue 1 (reveals about 10% of the approach): Check the result for [1, 2] and compare it with the true mean.
+Clue 2 (reveals about 30% of the approach): The floor division operator drops the fractional part of the result. An empty
+list would also divide by zero.
+Clue 3 (reveals about 50% of the approach): Use true division so the fractional part of the mean is kept, and return the
+empty-list value before dividing.
+S9 (Standard). Buggy code: def add_item(item, lst=[]): lst.append(item) return lst Calling add_item twice without a
+second argument returns a growing list. Fix it. Also reject duplicate items.
+Python solution
+ def add_item(item, lst=None):
+    if lst is None:
+        lst = []
+    if item not in lst:
+        lst.append(item)
+    return lst
+Clue 1 (reveals about 10% of the approach): Call the function twice in a row without passing a list and compare the
+results.
+Clue 2 (reveals about 30% of the approach): The default list is created once, when the function is defined, and is
+shared between calls. Duplicates also need a check.
+Clue 3 (reveals about 50% of the approach): Use None as the default and create a new list on each call. Append only
+when the item is not already present.
+S10 (Standard). Buggy code: def find(a, x): for i in range(len(a) + 1): if a[i] == x: return i return -1 find([1, 2], 7) raises
+IndexError. Fix it. Also return the last index of x instead of the first.
+Python solution
+ def find(a, x):
+    for i in range(len(a) - 1, -1, -1):
+        if a[i] == x:
+            return i
+    return -1
+C solution
+ int find(const int a[], int n, int x) {
+    for (int i = n - 1; i >= 0; i--)
+        if (a[i] == x) return i;
+    return -1;
+}
+Clue 1 (reveals about 10% of the approach): Check the loop bound against the length of the list.
+Clue 2 (reveals about 30% of the approach): The index runs one past the last valid position, so a[len(a)] is read.
+Searching from the end also changes the direction of the loop.
+Clue 3 (reveals about 50% of the approach): Valid indices run from len(a) - 1 down to 0, so walk backwards from the
+end and return the first match you find.
+
+=== PAGE 23 ===
+CodeSprint 2026 - Question Bank
+Page 23
+H1 (High Roller). Buggy code: def bsearch(a, x): lo, hi = 0, len(a) while lo < hi: mid = (lo + hi) // 2 if a[mid] == x: return mid
+if a[mid] < x: lo = mid else: hi = mid return -1 bsearch([1, 2], 3) never returns. Fix it.
+Python solution
+ def bsearch(a, x):
+    lo, hi = 0, len(a)
+    while lo < hi:
+        mid = (lo + hi) // 2
+        if a[mid] == x:
+            return mid
+        if a[mid] < x:
+            lo = mid + 1
+        else:
+            hi = mid
+    return -1
+C solution
+ int bsearch(const int a[], int n, int x) {
+    int lo = 0, hi = n;
+    while (lo < hi) {
+        int mid = lo + (hi - lo) / 2;
+        if (a[mid] == x) return mid;
+        if (a[mid] < x) lo = mid + 1;
+        else hi = mid;
+    }
+    return -1;
+}
+Clue 1 (reveals about 10% of the approach): Trace the search for x = 3 in [1, 2]. Do lo and hi ever meet?
+Clue 2 (reveals about 30% of the approach): When a[mid] is smaller than x, lo is set to mid, so the same mid can be
+tested again and again.
+Clue 3 (reveals about 50% of the approach): Move the lower bound past the element you have just tested, so the
+range shrinks on every step.
+H2 (High Roller). Buggy code: def merge(a, b): i = j = 0 out = [] while i < len(a) and j < len(b): if a[i] <= b[j]:
+out.append(a[i]); i += 1 else: out.append(b[j]); j += 1 return out merge([1, 3], [2, 4, 6]) returns [1, 2, 3, 4]. Fix it.
+Python solution
+ def merge(a, b):
+    i = j = 0
+    out = []
+    while i < len(a) and j < len(b):
+        if a[i] <= b[j]:
+            out.append(a[i])
+            i += 1
+        else:
+            out.append(b[j])
+            j += 1
+    out.extend(a[i:])
+    out.extend(b[j:])
+    return out
+C solution
+ void merge(const int a[], int na, const int b[], int nb, int out[]) {
+    int i = 0, j = 0, k = 0;
+    while (i < na && j < nb)
+        out[k++] = (a[i] <= b[j]) ? a[i++] : b[j++];
+    while (i < na) out[k++] = a[i++];
+    while (j < nb) out[k++] = b[j++];
+}
+Clue 1 (reveals about 10% of the approach): Find the last element of the output for merge([1, 3], [2, 4, 6]).
+Clue 2 (reveals about 30% of the approach): Once one input list is used up, the remaining items of the other list are
+never copied.
+Clue 3 (reveals about 50% of the approach): After the main loop, append whatever is left in both lists.
+
+=== PAGE 24 ===
+CodeSprint 2026 - Question Bank
+Page 24
+H3 (High Roller). Buggy code: def max_sub(a): best = cur = 0 for x in a: cur = max(x, cur + x) best = max(best, cur)
+return best max_sub([-2, -5]) returns 0 but should return -2. Fix it.
+Python solution
+ def max_sub(a):
+    best = cur = a[0]
+    for x in a[1:]:
+        cur = max(x, cur + x)
+        best = max(best, cur)
+    return best
+C solution
+ int max_sub(const int a[], int n) {   /* n >= 1 */
+    int best = a[0], cur = a[0];
+    for (int i = 1; i < n; i++) {
+        cur = (a[i] > cur + a[i]) ? a[i] : cur + a[i];
+        if (cur > best) best = cur;
+    }
+    return best;
+}
+Clue 1 (reveals about 10% of the approach): Test an array that contains only negative values.
+Clue 2 (reveals about 30% of the approach): best starts at 0, which is not a sum of any non-empty subarray in that
+case.
+Clue 3 (reveals about 50% of the approach): Initialize both running values from the first element, so the answer always
+comes from a real subarray.
+H4 (High Roller). Buggy code: def two_sum(a, t): seen = {} for i, x in enumerate(a): seen[x] = i if t - x in seen: return
+[seen[t - x], i] return None two_sum([3], 6) returns [0, 0]. Fix it.
+Python solution
+ def two_sum(a, t):
+    seen = {}
+    for i, x in enumerate(a):
+        if t - x in seen:
+            return [seen[t - x], i]
+        seen[x] = i
+    return None
+C solution
+ int two_sum(const int a[], int n, int t, int out[2]) {
+    for (int i = 0; i < n; i++)
+        for (int j = i + 1; j < n; j++)
+            if (a[i] + a[j] == t) {
+                out[0] = i;
+                out[1] = j;
+                return 1;
+            }
+    return 0;
+}
+Clue 1 (reveals about 10% of the approach): Test two_sum([3], 6). Which index does it pair with?
+Clue 2 (reveals about 30% of the approach): The current element is stored before it is looked up, so it can pair with
+itself.
+Clue 3 (reveals about 50% of the approach): Look up the complement first, then store the current element for later
+lookups.
+
+=== PAGE 25 ===
+CodeSprint 2026 - Question Bank
+Page 25
+H5 (High Roller). Buggy code: def longest_unique(s): last = {} start = best = 0 for i, c in enumerate(s): if c in last and
+last[c] >= start: start = last[c] last[c] = i best = max(best, i - start + 1) return best longest_unique("abba") returns 3. Fix it.
+Python solution
+ def longest_unique(s):
+    last = {}
+    start = best = 0
+    for i, c in enumerate(s):
+        if c in last and last[c] >= start:
+            start = last[c] + 1
+        last[c] = i
+        best = max(best, i - start + 1)
+    return best
+C solution
+ int longest_unique(const char *s) {
+    int last[256];
+    for (int k = 0; k < 256; k++) last[k] = -1;
+    int start = 0, best = 0;
+    for (int i = 0; s[i]; i++) {
+        unsigned char c = (unsigned char)s[i];
+        if (last[c] >= start) start = last[c] + 1;
+        last[c] = i;
+        if (i - start + 1 > best) best = i - start + 1;
+    }
+    return best;
+}
+Clue 1 (reveals about 10% of the approach): Trace "abba" and write down the window contents at each step.
+Clue 2 (reveals about 30% of the approach): Moving the window start to the previous occurrence keeps that repeated
+character inside the window.
+Clue 3 (reveals about 50% of the approach): The window must begin one position after the earlier occurrence of the
+repeated character.
+H6 (High Roller). Buggy code: def bfs_count(adj, s): q = [s] cnt = 0 while q: u = q.pop(0) cnt += 1 for v in adj[u]:
+q.append(v) return cnt On adj = {0: [1], 1: [0]} this never terminates. Fix it.
+Python solution
+ from collections import deque
+def bfs_count(adj, s):
+    seen = {s}
+    q = deque([s])
+    while q:
+        u = q.popleft()
+        for v in adj[u]:
+            if v not in seen:
+                seen.add(v)
+                q.append(v)
+    return len(seen)
+C solution
+ int bfs_count(int n, int adj[n][n], int s) {
+    int seen[n > 0 ? n : 1], q[n > 0 ? n : 1];
+    for (int i = 0; i < n; i++) seen[i] = 0;
+    int h = 0, t = 0, cnt = 1;
+    seen[s] = 1;
+    q[t++] = s;
+    while (h < t) {
+        int u = q[h++];
+        for (int v = 0; v < n; v++)
+            if (adj[u][v] && !seen[v]) {
+                seen[v] = 1;
+                cnt++;
+                q[t++] = v;
+            }
+    }
+    return cnt;
+}
+Clue 1 (reveals about 10% of the approach): Run the function on a graph with a cycle, such as 0 - 1 - 0.
+Clue 2 (reveals about 30% of the approach): Nothing records that a vertex has already been queued, so the same
+vertices are added forever.
+Clue 3 (reveals about 50% of the approach): Track which vertices have been seen and skip any neighbor you have
+already visited.
+
+=== PAGE 26 ===
+CodeSprint 2026 - Question Bank
+Page 26
+H7 (High Roller). Buggy code: def min_coins(coins, amt): INF = 10**9 dp = [INF] * (amt + 1) dp[0] = 0 for a in range(1,
+amt + 1): for c in coins: if c <= a: dp[a] = min(dp[a], dp[a - c] + 1) return dp[amt] min_coins([2], 3) returns 1000000000
+instead of -1. Fix it.
+Python solution
+ def min_coins(coins, amt):
+    INF = 10**9
+    dp = [INF] * (amt + 1)
+    dp[0] = 0
+    for a in range(1, amt + 1):
+        for c in coins:
+            if c <= a:
+                dp[a] = min(dp[a], dp[a - c] + 1)
+    return dp[amt] if dp[amt] < INF else -1
+C solution
+ #include <stdlib.h>
+int min_coins(const int coins[], int nc, int amount) {
+    int *dp = malloc((size_t)(amount + 1) * sizeof *dp);
+    if (!dp) return -1;
+    const int INF = amount + 1;
+    dp[0] = 0;
+    for (int a = 1; a <= amount; a++) {
+        dp[a] = INF;
+        for (int k = 0; k < nc; k++)
+            if (coins[k] <= a && dp[a - coins[k]] + 1 < dp[a])
+                dp[a] = dp[a - coins[k]] + 1;
+    }
+    int r = (dp[amount] >= INF) ? -1 : dp[amount];
+    free(dp);
+    return r;
+}
+Clue 1 (reveals about 10% of the approach): Test an amount that no combination of the coins can make, such as coins
+[2] and amount 3.
+Clue 2 (reveals about 30% of the approach): The unreachable sentinel is returned as if it were a real coin count.
+Clue 3 (reveals about 50% of the approach): Map the unreachable sentinel to the documented failure value before
+returning.
+H8 (High Roller). Buggy C code: int bsearch_c(const int a[], int n, int x) { int lo = 0, hi = n; while (lo < hi) { int mid = (lo +
+hi) / 2; ... } return -1; } Fails for very large arrays. Identify the defect and fix it.
+Python solution
+ def bsearch_c_reference(a, x):
+    # Python integers never overflow, so the textbook form is already correct here.
+    lo, hi = 0, len(a)
+    while lo < hi:
+        mid = (lo + hi) // 2
+        if a[mid] == x:
+            return mid
+        if a[mid] < x:
+            lo = mid + 1
+        else:
+            hi = mid
+    return -1
+C solution
+ int bsearch_c(const int a[], int n, int x) {
+    int lo = 0, hi = n;
+    while (lo < hi) {
+        int mid = lo + (hi - lo) / 2;      /* lo + hi can overflow int */
+        if (a[mid] == x) return mid;
+        if (a[mid] < x) lo = mid + 1;
+        else hi = mid;
+    }
+    return -1;
+}
+Clue 1 (reveals about 10% of the approach): Consider what happens when lo and hi are both close to the largest int
+value.
+Clue 2 (reveals about 30% of the approach): lo + hi is computed in int before the division, and that sum can exceed the
+int range.
+Clue 3 (reveals about 50% of the approach): Compute the midpoint as lo plus half of the distance between lo and hi.
+
+=== PAGE 27 ===
+CodeSprint 2026 - Question Bank
+Page 27
+H9 (High Roller). Buggy code: def max_profit(p): mn = p[0] best = 0 for x in p: mn = max(mn, x) best = max(best, x - mn)
+return best max_profit([7, 1, 5, 3, 6, 4]) returns 0 but should return 5. Fix it.
+Python solution
+ def max_profit(p):
+    if not p:
+        return 0
+    mn = p[0]
+    best = 0
+    for x in p:
+        mn = min(mn, x)
+        best = max(best, x - mn)
+    return best
+C solution
+ int max_profit(const int p[], int n) {
+    if (n == 0) return 0;
+    int mn = p[0], best = 0;
+    for (int i = 0; i < n; i++) {
+        if (p[i] < mn) mn = p[i];
+        if (p[i] - mn > best) best = p[i] - mn;
+    }
+    return best;
+}
+Clue 1 (reveals about 10% of the approach): Work out the lowest price seen so far at each step for [7, 1, 5, 3, 6, 4].
+Clue 2 (reveals about 30% of the approach): The running minimum should only ever decrease, but the code makes it
+increase.
+Clue 3 (reveals about 50% of the approach): Track the lowest price seen so far, and compare each price against that
+value.
+H10 (High Roller). Buggy code: def compress(s): out = "" cnt = 1 for i in range(1, len(s)): if s[i] == s[i - 1]: cnt += 1 else:
+out += s[i - 1] + str(cnt) cnt = 1 return out compress("aabb") returns "a2". Fix it.
+Python solution
+ def compress(s):
+    if not s:
+        return ""
+    out = ""
+    cnt = 1
+    for i in range(1, len(s)):
+        if s[i] == s[i - 1]:
+            cnt += 1
+        else:
+            out += s[i - 1] + str(cnt)
+            cnt = 1
+    out += s[-1] + str(cnt)
+    return out
+C solution
+ #include <stdio.h>
+void compress(const char *s, char *out) {
+    int len = 0;
+    int n = 0;
+    while (s[n]) n++;
+    for (int i = 0; i < n; ) {
+        int j = i;
+        while (j < n && s[j] == s[i]) j++;
+        len += sprintf(out + len, "%c%d", s[i], j - i);
+        i = j;
+    }
+    out[len] = '\0';
+}
+Clue 1 (reveals about 10% of the approach): Trace "aabb" and list every run that gets written to the output.
+Clue 2 (reveals about 30% of the approach): A run is only written out when a different character is seen, so the last run
+is never written.
+Clue 3 (reveals about 50% of the approach): After the loop, write out the final run using the same logic as the others.
+
+=== PAGE 28 ===
+CodeSprint 2026 - Question Bank
+Page 28
+Table 5: Poker: Cipher Crack
+Decoding chains. Each stage reveals the key or instruction for the next stage. Standard stages use one simple
+transformation (Caesar, binary, XOR, Base64, RLE, hex and similar). High Roller stages chain several transformations
+with less guidance. Every transformation is solvable from the information given, with no obscure cryptography.
+S1 (Standard). Caesar cipher: decode "KHOOR" with a shift of 3 (encoded by shifting each letter forward 3).
+Python solution
+ def caesar(s, k):
+    out = []
+    for c in s:
+        if c.isalpha():
+            base = ord('A') if c.isupper() else ord('a')
+            out.append(chr((ord(c) - base + k) % 26 + base))
+        else:
+            out.append(c)
+    return ''.join(out)
+print(caesar("KHOOR", -3))
+C solution
+ #include <ctype.h>
+void caesar(char *s, int k) {
+    k = ((k % 26) + 26) % 26;          /* normalise negative shifts */
+    for (; *s; s++)
+        if (isalpha((unsigned char)*s)) {
+            char b = isupper((unsigned char)*s) ? 'A' : 'a';
+            *s = (char)((*s - b + k) % 26 + b);
+        }
+}
+Worked result / test vector
+ HELLO
+S2 (Standard). Binary to ASCII: decode the 8-bit groups "01001000 01101001".
+Python solution
+ def bin_to_ascii(s):
+    return ''.join(chr(int(b, 2)) for b in s.split())
+print(bin_to_ascii("01001000 01101001"))
+C solution
+ char bin_to_char(const char *bits) {   /* bits: 8 characters '0' or '1' */
+    int v = 0;
+    for (int i = 0; i < 8; i++)
+        v = v * 2 + (bits[i] - '0');
+    return (char)v;
+}
+Worked result / test vector
+ Hi
+S3 (Standard). XOR decode: every byte of the ciphertext was XORed with the key 0x2A. Recover the plaintext.
+Python solution
+ def xor_decode(data, key=0x2A):
+    return bytes(b ^ key for b in data)
+C solution
+ void xor_buf(unsigned char *d, int n, unsigned char key) {
+    for (int i = 0; i < n; i++)
+        d[i] ^= key;          /* XOR is its own inverse */
+}
+
+=== PAGE 29 ===
+CodeSprint 2026 - Question Bank
+Page 29
+S4 (Standard). Base64: decode the 4-character group "SGVs" into its 3 bytes.
+Python solution
+ import base64
+print(base64.b64decode("SGVs"))   # b'Hel'
+C solution
+ static int b64val(char c) {
+    if (c >= 'A' && c <= 'Z') return c - 'A';
+    if (c >= 'a' && c <= 'z') return c - 'a' + 26;
+    if (c >= '0' && c <= '9') return c - '0' + 52;
+    if (c == '+') return 62;
+    return 63;   /* '/' */
+}
+void b64_decode4(const char in[4], unsigned char out[3]) {
+    int v[4];
+    for (int i = 0; i < 4; i++) v[i] = b64val(in[i]);
+    out[0] = (unsigned char)((v[0] << 2) | (v[1] >> 4));
+    out[1] = (unsigned char)(((v[1] & 15) << 4) | (v[2] >> 2));
+    out[2] = (unsigned char)(((v[2] & 3) << 6) | v[3]);
+}
+Worked result / test vector
+ Hel
+S5 (Standard). Run-length decode: "3a2b" means three a followed by two b.
+Python solution
+ import re
+def rle_decode(s):
+    return ''.join(ch * int(n) for n, ch in re.findall(r'(\d+)(\D)', s))
+C solution
+ #include <ctype.h>
+void rle_decode(const char *s, char *out) {
+    int n = 0;
+    for (; *s; s++) {
+        if (isdigit((unsigned char)*s)) n = n * 10 + (*s - '0');
+        else {
+            for (int i = 0; i < n; i++) *out++ = *s;
+            n = 0;
+        }
+    }
+    *out = '\0';
+}
+Worked result / test vector
+ aaabb
+S6 (Standard). Atbash cipher (a maps to z, b to y, and so on). Decode "Svool".
+Python solution
+ def atbash(s):
+    out = []
+    for c in s:
+        if c.isalpha():
+            base = ord('A') if c.isupper() else ord('a')
+            out.append(chr(base + 25 - (ord(c) - base)))
+        else:
+            out.append(c)
+    return ''.join(out)
+C solution
+ #include <ctype.h>
+void atbash(char *s) {
+    for (; *s; s++)
+        if (isalpha((unsigned char)*s)) {
+            char b = isupper((unsigned char)*s) ? 'A' : 'a';
+            *s = (char)(b + 25 - (*s - b));
+        }
+}
+Worked result / test vector
+ Hello
+
+=== PAGE 30 ===
+CodeSprint 2026 - Question Bank
+Page 30
+S7 (Standard). ROT13: decode "Uryyb" (ROT13 is its own inverse).
+Python solution
+ import codecs
+print(codecs.encode("Uryyb", "rot13"))   # Hello
+C solution
+ #include <ctype.h>
+void rot13(char *s) {
+    for (; *s; s++)
+        if (isalpha((unsigned char)*s)) {
+            char b = isupper((unsigned char)*s) ? 'A' : 'a';
+            *s = (char)((*s - b + 13) % 26 + b);
+        }
+}
+Worked result / test vector
+ Hello
+S8 (Standard). Hex to ASCII: decode "48656c6c6f".
+Python solution
+ print(bytes.fromhex("48656c6c6f").decode())   # Hello
+C solution
+ #include <stdio.h>
+void hex_decode(const char *h, char *out) {
+    int k = 0;
+    unsigned v;
+    for (int i = 0; h[i] && h[i + 1]; i += 2) {
+        sscanf(h + i, "%2x", &v);
+        out[k++] = (char)v;
+    }
+    out[k] = '\0';
+}
+Worked result / test vector
+ Hello
+S9 (Standard). Substitution cipher: the key "QWERTYUIOPASDFGHJKLZXCVBNM" maps plain A-Z to those letters.
+Decode "QWE".
+Python solution
+ KEY = "QWERTYUIOPASDFGHJKLZXCVBNM"
+ALPHA = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+INVERSE = str.maketrans(KEY, ALPHA)
+print("QWE".translate(INVERSE))   # ABC
+C solution
+ static const char KEY[] = "QWERTYUIOPASDFGHJKLZXCVBNM";
+char decode_letter(char c) {          /* c is an uppercase letter */
+    for (int i = 0; i < 26; i++)
+        if (KEY[i] == c) return (char)('A' + i);
+    return c;
+}
+Worked result / test vector
+ ABC
+S10 (Standard). Positional cipher: each number is an alphabet position (1 = A). Decode "8 5 12 12 15".
+Python solution
+ def positions_to_text(s):
+    return ''.join(chr(ord('A') + int(n) - 1) for n in s.split())
+print(positions_to_text("8 5 12 12 15"))   # HELLO
+C solution
+ #include <stdlib.h>
+char position_to_letter(const char *tok) {
+    return (char)('A' + atoi(tok) - 1);
+}
+Worked result / test vector
+ HELLO
+
+=== PAGE 31 ===
+CodeSprint 2026 - Question Bank
+Page 31
+H1 (High Roller). Chain: Base64-decode the ciphertext, then XOR every byte with 0x2A.
+Python solution
+ import base64
+def b64_then_xor(s, key=0x2A):
+    return bytes(b ^ key for b in base64.b64decode(s)).decode()
+print(b64_then_xor("YkM="))   # Hi
+C solution
+ /* XOR stage only. The Base64 stage is b64_decode4 from the Standard
+   question above, repeated per 4-character group. */
+void xor_buf(unsigned char *d, int n, unsigned char key) {
+    for (int i = 0; i < n; i++) d[i] ^= key;
+}
+Worked result / test vector
+ YkM= -> Hi
+H2 (High Roller). Chain: hex-decode, XOR each byte with 0x20 (toggles letter case), then Caesar-shift back by 1.
+Python solution
+ def hex_xor_caesar(h):
+    data = bytes.fromhex(h)
+    text = bytes(b ^ 0x20 for b in data).decode()
+    return caesar(text, -1)     # caesar() from the first Standard question
+C solution
+ /* hex decode and XOR are shown in the Standard questions.
+   The Caesar step is caesar(s, -1). */
+void toggle_case_xor(unsigned char *d, int n) {
+    for (int i = 0; i < n; i++) d[i] ^= 0x20;
+}
+Worked result / test vector
+ 4b -> j
+H3 (High Roller). Chain: Vigenere decode with key "KEY". Ciphertext "RIJVS".
+Python solution
+ def vigenere_decode(s, key):
+    out, j = [], 0
+    for c in s:
+        if c.isalpha():
+            base = ord('A') if c.isupper() else ord('a')
+            k = ord(key[j % len(key)].lower()) - ord('a')
+            out.append(chr((ord(c) - base - k) % 26 + base))
+            j += 1
+        else:
+            out.append(c)
+    return ''.join(out)
+print(vigenere_decode("RIJVS", "KEY"))   # HELLO
+C solution
+ #include <ctype.h>
+#include <string.h>
+void vigenere_decode(char *s, const char *key) {
+    int j = 0, kl = (int)strlen(key);
+    for (; *s; s++)
+        if (isalpha((unsigned char)*s)) {
+            char b = isupper((unsigned char)*s) ? 'A' : 'a';
+            int k = tolower((unsigned char)key[j % kl]) - 'a';
+            *s = (char)((*s - b - k + 26) % 26 + b);
+            j++;
+        }
+}
+Worked result / test vector
+ HELLO
+
+=== PAGE 32 ===
+CodeSprint 2026 - Question Bank
+Page 32
+H4 (High Roller). Chain: rail-fence decode with 3 rails. Ciphertext "HOLELWRDLO".
+Python solution
+ def rail_fence_decode(s, rails):
+    n = len(s)
+    rail = [0] * n
+    row, step = 0, 1
+    for i in range(n):              # zigzag pattern of rails
+        rail[i] = row
+        if row == 0:
+            step = 1
+        elif row == rails - 1:
+            step = -1
+        row += step
+    order = sorted(range(n), key=lambda i: (rail[i], i))
+    out = [''] * n
+    for ch, pos in zip(s, order):
+        out[pos] = ch
+    return ''.join(out)
+print(rail_fence_decode("HOLELWRDLO", 3))   # HELLOWORLD
+C solution
+ #include <string.h>
+void rail_fence_decode(const char *s, char *out, int n, int rails) {
+    int rail[n];
+    int row = 0, step = 1, k = 0;
+    for (int i = 0; i < n; i++) {
+        rail[i] = row;
+        if (row == 0) step = 1;
+        else if (row == rails - 1) step = -1;
+        row += step;
+    }
+    for (int r = 0; r < rails; r++)
+        for (int i = 0; i < n; i++)
+            if (rail[i] == r) out[i] = s[k++];
+    out[n] = '\0';
+}
+Worked result / test vector
+ HELLOWORLD
+H5 (High Roller). Chain: Atbash decode, then ROT13 decode. Test with "Gsviv".
+Python solution
+ def atbash_then_rot13(s):
+    return codecs.encode(atbash(s), "rot13")   # atbash() from the Standard questions
+C solution
+ /* apply atbash() and rot13() from the Standard questions, in that order. */
+Worked result / test vector
+ Gurer
+H6 (High Roller). Chain: XOR with a rotating key. Decrypt the bytes b"AC" with key [0x01, 0x02].
+Python solution
+ def xor_rotating(data, key):
+    return bytes(b ^ key[i % len(key)] for i, b in enumerate(data))
+print(xor_rotating(b"AC", [0x01, 0x02]))   # b'@A'
+C solution
+ void xor_rotating(unsigned char *d, int n, const unsigned char *key, int kl) {
+    for (int i = 0; i < n; i++)
+        d[i] ^= key[i % kl];
+}
+Worked result / test vector
+ @A
+
+=== PAGE 33 ===
+CodeSprint 2026 - Question Bank
+Page 33
+H7 (High Roller). Chain: apply a substitution key (the one in the Standard questions) to uppercase text, then reverse the
+string.
+Python solution
+ def substitute_then_reverse(s):
+    return s.translate(INVERSE)[::-1]   # INVERSE from the Standard questions
+C solution
+ /* decode_letter() from the Standard questions, applied per character,
+   then reverse the string in place. */
+#include <string.h>
+void reverse_inplace(char *s) {
+    int n = (int)strlen(s);
+    for (int i = 0; i < n / 2; i++) {
+        char t = s[i]; s[i] = s[n - 1 - i]; s[n - 1 - i] = t;
+    }
+}
+H8 (High Roller). Chain: hex-decode, Caesar-shift by -3, then reverse. Ciphertext "4b484f4f52".
+Python solution
+ def hex_caesar_reverse(h):
+    text = bytes.fromhex(h).decode()     # "KHOOR"
+    return caesar(text, -3)[::-1]        # "HELLO" reversed -> "OLLEH"
+print(hex_caesar_reverse("4b484f4f52"))
+C solution
+ /* hex decode (see Standard questions), caesar(s, -3), then reverse_inplace(). */
+Worked result / test vector
+ OLLEH
+H9 (High Roller). Chain: take every second character of the decoded text (the hidden message is in the even positions).
+Test: "HxEyLzLw".
+Python solution
+ def extract_hidden(s):
+    return s[1::2]        # odd indices, zero-based: x, y, z, w
+print(extract_hidden("HxEyLzLw"))   # xyzw
+C solution
+ #include <string.h>
+void extract_hidden(const char *s, char *out) {
+    int n = (int)strlen(s), k = 0;
+    for (int i = 1; i < n; i += 2) out[k++] = s[i];
+    out[k] = '\0';
+}
+Worked result / test vector
+ xyzw
+H10 (High Roller). Chain: Base64-decode, then Caesar-shift back by 1. Test: "SGVsbG8=".
+Python solution
+ import base64
+def b64_then_caesar(s):
+    return caesar(base64.b64decode(s).decode(), -1)   # caesar() from the Standard questions
+print(b64_then_caesar("SGVsbG8="))   # Gdkkn
+C solution
+ /* Base64 stage: b64_decode4() per 4-character group (Standard questions).
+   Caesar stage: caesar(s, -1) (Standard questions). */
+Worked result / test vector
+ Gdkkn
+
+=== PAGE 34 ===
+CodeSprint 2026 - Question Bank
+Page 34
+Table 6: Baccarat: SQL Heist
+Multiple-choice SQL round. Each question has four options with exactly one correct answer. Standard questions cover
+filtering, sorting and aggregation. High Roller questions cover joins, grouping with HAVING, and subqueries. All questions
+use the schema below.
+Database schema (shared by all teams)
+ students(id INT PRIMARY KEY, name TEXT, marks INT, class TEXT)
+courses(course_id INT PRIMARY KEY, title TEXT)
+enrollments(student_id INT REFERENCES students(id), course_id INT REFERENCES courses(course_id), grade 
+    INT)
+Q1. Q: Give a command to get all students whose marks > 40.
+A) SELECT * FROM students WHERE marks >= 40;
+B) SELECT * FROM students WHERE marks > 40;
+C) SELECT * FROM students HAVING marks > 40;
+D) SELECT name FROM students WHERE marks = 40;
+Correct answer: B
+Q2. Q: Which command returns the names of students in class "B" with marks above 30, sorted alphabetically by name?
+A) SELECT name FROM students WHERE class = 'B' OR marks > 30 ORDER BY name;
+B) SELECT name FROM students WHERE class = 'B' AND marks > 30 ORDER BY name;
+C) SELECT name FROM students WHERE class = 'B' AND marks > 30 GROUP BY name;
+D) SELECT name FROM students WHERE class = 'B' AND marks > 30 ORDER BY marks;
+Correct answer: B
+Q3. Q: Which command counts students in class "A" whose marks are between 50 and 70 inclusive?
+A) SELECT COUNT(name) FROM students WHERE class = 'A' AND marks IN (50, 70);
+B) SELECT COUNT(*) FROM students WHERE class = 'A' AND marks > 50 AND marks < 70;
+C) SELECT SUM(*) FROM students WHERE class = 'A' AND marks BETWEEN 50, 70;
+D) SELECT COUNT(*) FROM students WHERE class = 'A' AND marks BETWEEN 50 AND 70;
+Correct answer: D
+Q4. Q: Which command returns the highest marks for each class?
+A) SELECT MAX(marks) FROM students WHERE class;
+B) SELECT class, MAX(marks) FROM students ORDER BY class;
+C) SELECT class FROM students GROUP BY class HAVING MAX(marks);
+D) SELECT class, MAX(marks) FROM students GROUP BY class;
+Correct answer: D
+Q5. Q: Which command returns each class with the number of students in it whose marks are above 40?
+A) SELECT class, COUNT(*) FROM students WHERE marks > 40;
+B) SELECT class, COUNT(*) FROM students GROUP BY class HAVING marks > 40;
+C) SELECT class, COUNT(marks > 40) FROM students;
+D) SELECT class, COUNT(*) FROM students WHERE marks > 40 GROUP BY class;
+Correct answer: D
+
+=== PAGE 35 ===
+CodeSprint 2026 - Question Bank
+Page 35
+Q6. Q: Which command finds students whose name starts with "A" and has at least 4 letters?
+A) SELECT name FROM students WHERE name LIKE 'A%' OR LENGTH(name) >= 4;
+B) SELECT name FROM students WHERE name LIKE 'A%' AND LENGTH(name) >= 4;
+C) SELECT name FROM students WHERE name LIKE '%A' AND LENGTH(name) > 4;
+D) SELECT name FROM students WHERE LEFT(name, 1) = A AND LENGTH(name) >= 4;
+Correct answer: B
+Q7. Q: Which command removes students in class "B" whose marks are NULL?
+A) DELETE FROM students WHERE class = 'B' AND marks = NULL;
+B) DELETE FROM students WHERE class = 'B' AND marks IS NULL;
+C) DELETE students WHERE class = 'B' AND NULL marks;
+D) REMOVE FROM students WHERE class = 'B' AND marks IS NULL;
+Correct answer: B
+Q8. Q: Which command returns the top 3 students by marks, highest first, ignoring students with NULL marks?
+A) SELECT name FROM students WHERE marks = 3;
+B) SELECT name FROM students ORDER BY marks DESC LIMIT 3;
+C) SELECT TOP 3 name FROM students ORDER BY marks;
+D) SELECT name FROM students WHERE marks IS NOT NULL ORDER BY marks DESC LIMIT 3;
+Correct answer: D
+Q9. Q: Which command adds a column "grade_letter" of type TEXT with the default value 'NA' to the students table?
+A) INSERT INTO students grade_letter TEXT DEFAULT 'NA';
+B) UPDATE students ADD grade_letter TEXT DEFAULT 'NA';
+C) ALTER students ADD COLUMN grade_letter DEFAULT 'NA';
+D) ALTER TABLE students ADD COLUMN grade_letter TEXT DEFAULT 'NA';
+Correct answer: D
+Q10. Q: Which command returns the average marks of students in class "A", ignoring NULL marks?
+A) SELECT MEAN(marks) FROM students WHERE class = 'A';
+B) SELECT AVG(marks) FROM students WHERE class = 'A';
+C) SELECT AVERAGE marks FROM students WHERE class = 'A';
+D) SELECT SUM(marks) / COUNT(*) FROM students GROUP BY class;
+Correct answer: B
+Q11. Q: Which command returns the names of students enrolled in the course titled "Databases"?
+A) SELECT s.name FROM students s JOIN enrollments e ON s.id = e.student_id JOIN courses c ON c.course_id =
+e.course_id WHERE c.title = 'Databases';
+B) SELECT s.name FROM students s, courses c WHERE c.title = 'Databases';
+C) SELECT name FROM enrollments WHERE title = 'Databases';
+D) SELECT s.name FROM students s JOIN courses c WHERE c.title = 'Databases' AND s.id = c.course_id;
+Correct answer: A
+
+=== PAGE 36 ===
+CodeSprint 2026 - Question Bank
+Page 36
+Q12. Q: Which command returns each course_id that has more than 5 enrollments?
+A) SELECT course_id FROM enrollments GROUP BY course_id HAVING COUNT(*) > 5;
+B) SELECT course_id FROM enrollments WHERE COUNT(*) > 5 GROUP BY course_id;
+C) SELECT course_id FROM enrollments GROUP BY course_id WHERE COUNT(*) > 5;
+D) SELECT course_id FROM enrollments HAVING course_id > 5;
+Correct answer: A
+Q13. Q: Which command returns students who have marks above the average marks of all students?
+A) SELECT name FROM students WHERE marks > (SELECT AVG(marks) FROM students);
+B) SELECT name FROM students WHERE marks > AVG(marks);
+C) SELECT name FROM students WHERE marks > (SELECT marks FROM students);
+D) SELECT name FROM students HAVING marks > AVG(marks);
+Correct answer: A
+Q14. Q: Which command lists students who are enrolled in no course at all?
+A) SELECT s.name FROM students s LEFT JOIN enrollments e ON s.id = e.student_id WHERE e.student_id IS NULL;
+B) SELECT s.name FROM students s INNER JOIN enrollments e ON s.id = e.student_id WHERE e.student_id IS NULL;
+C) SELECT name FROM students WHERE id NOT IN enrollments;
+D) SELECT s.name FROM students s RIGHT JOIN enrollments e ON s.id = e.student_id WHERE e.student_id = NULL;
+Correct answer: A
+Q15. Q: Which command returns each student's name with the average grade they received across all courses?
+A) SELECT s.name, AVG(e.grade) FROM students s JOIN enrollments e ON s.id = e.student_id GROUP BY s.name;
+B) SELECT s.name, AVG(e.grade) FROM students s, enrollments e GROUP BY e.grade;
+C) SELECT name, AVG(grade) FROM enrollments GROUP BY marks;
+D) SELECT s.name, SUM(e.grade) / COUNT(*) FROM students s JOIN enrollments e ON s.id = e.course_id;
+Correct answer: A
+Q16. Q: Which command returns the students who scored more than 80 in at least one course?
+A) SELECT DISTINCT s.name FROM students s JOIN enrollments e ON s.id = e.student_id WHERE e.grade > 80;
+B) SELECT s.name FROM students s JOIN enrollments e ON s.id = e.student_id WHERE e.grade > 80 AND e.grade >
+80 GROUP BY s.name HAVING COUNT(*) = 0;
+C) SELECT name FROM students WHERE marks > 80 INTERSECT enrollments;
+D) SELECT s.name FROM students s WHERE EXISTS (SELECT 1 FROM enrollments e WHERE e.grade < 80);
+Correct answer: A
+Q17. Q: Which command returns the course titles that have no enrollments with a grade below 40?
+A) SELECT c.title FROM courses c WHERE NOT EXISTS (SELECT 1 FROM enrollments e WHERE e.course_id =
+c.course_id AND e.grade < 40);
+B) SELECT c.title FROM courses c WHERE EXISTS (SELECT 1 FROM enrollments e WHERE e.grade < 40);
+C) SELECT title FROM courses WHERE course_id NOT IN (SELECT grade FROM enrollments WHERE grade < 40);
+D) SELECT c.title FROM courses c JOIN enrollments e WHERE e.grade >= 40;
+Correct answer: A
+
+=== PAGE 37 ===
+CodeSprint 2026 - Question Bank
+Page 37
+Q18. Q: Which command returns, for each class, the single student with the highest marks in that class?
+A) SELECT s.class, s.name, s.marks FROM students s WHERE s.marks = (SELECT MAX(t.marks) FROM students t
+WHERE t.class = s.class);
+B) SELECT class, name, MAX(marks) FROM students GROUP BY class, name;
+C) SELECT class, name FROM students WHERE marks = MAX(marks);
+D) SELECT class, name, marks FROM students ORDER BY marks DESC;
+Correct answer: A
+Q19. Q: Which command deletes enrollments for courses that no longer exist in the courses table?
+A) DELETE FROM enrollments WHERE course_id NOT IN (SELECT course_id FROM courses);
+B) DELETE FROM enrollments WHERE course_id IN (SELECT course_id FROM courses);
+C) DELETE enrollments FROM courses WHERE course_id IS NULL;
+D) DELETE FROM courses WHERE course_id NOT IN enrollments;
+Correct answer: A
+Q20. Q: Which command returns each student's rank by marks within their own class, with ties sharing a rank?
+A) SELECT name, class, RANK() OVER (PARTITION BY class ORDER BY marks DESC) FROM students;
+B) SELECT name, class, RANK() OVER (ORDER BY marks DESC) FROM students GROUP BY class;
+C) SELECT name, class, ROW_NUMBER() OVER (ORDER BY class) FROM students;
+D) SELECT name, class, RANK() OVER (PARTITION BY marks ORDER BY class) FROM students;
+Correct answer: A
+
+=== PAGE 38 ===
+CodeSprint 2026 - Question Bank
+Page 38
+Table 7: Dice: Stack Attack
+Stack-based problems. Standard questions use one stack operation pattern, such as push and pop for brackets, undo or
+postfix evaluation. High Roller questions use monotonic stacks, nested expressions, and stacks with extra constraints.
+The stack is always the central tool, and the answer never depends on luck.
+S1 (Standard). Balanced brackets: decide whether the string uses (), [] and {} correctly. Return False if it contains any
+character other than brackets and spaces. Example "{[()]}" is valid.
+Python solution
+ def is_balanced(s):
+    pairs = {')': '(', ']': '[', '}': '{'}
+    stack = []
+    for ch in s:
+        if ch not in '()[]{} ':
+            return False
+        if ch in '([{':
+            stack.append(ch)
+        elif ch in pairs:
+            if not stack or stack.pop() != pairs[ch]:
+                return False
+    return not stack
+C solution
+ #include <string.h>
+int is_balanced(const char *s) {
+    char st[256];
+    int top = 0;
+    for (; *s; s++) {
+        char c = *s;
+        if (!strchr("()[]{} ", c) && c != '\0') return 0;
+        if (c == '(' || c == '[' || c == '{') st[top++] = c;
+        else if (c == ')' || c == ']' || c == '}') {
+            if (top == 0) return 0;
+            char o = st[--top];
+            if ((c == ')' && o != '(') || (c == ']' && o != '[') || (c == '}' && o != '{'))
+                return 0;
+        }
+    }
+    return top == 0;
+}
+Worked example / expected result
+ is_balanced("{[()]}") -> True
+
+=== PAGE 39 ===
+CodeSprint 2026 - Question Bank
+Page 39
+S2 (Standard). Postfix evaluation of tokens such as ["3", "4", "+", "2", "*"] (result 14). Operands may be multi-digit or
+negative. Integer division truncates toward zero.
+Python solution
+ def eval_postfix(tokens):
+    stack = []
+    for t in tokens:
+        if t in ('+', '-', '*', '/'):
+            b = stack.pop()
+            a = stack.pop()
+            if t == '+':   stack.append(a + b)
+            elif t == '-': stack.append(a - b)
+            elif t == '*': stack.append(a * b)
+            else:          stack.append(int(a / b))
+        else:
+            stack.append(int(t))
+    return stack[0]
+C solution
+ #include <stdlib.h>
+#include <string.h>
+int eval_postfix(const char *tokens[], int n) {
+    int st[128], top = 0;
+    for (int i = 0; i < n; i++) {
+        const char *t = tokens[i];
+        if (strlen(t) == 1 && strchr("+-*/", t[0])) {
+            int b = st[--top], a = st[--top], r = 0;
+            switch (t[0]) {
+                case '+': r = a + b; break;
+                case '-': r = a - b; break;
+                case '*': r = a * b; break;
+                default:  r = a / b; break;
+            }
+            st[top++] = r;
+        } else {
+            st[top++] = atoi(t);
+        }
+    }
+    return st[0];
+}
+Worked example / expected result
+ eval_postfix(["12","-7","-","3","*"]) -> 57
+S3 (Standard). Undo system for an integer value. set(v) saves the old value on a history stack. undo() restores the last
+saved value and returns True. If there is no history, undo() returns False and leaves the value unchanged.
+Python solution
+ class Undo:
+    def __init__(self, value=0):
+        self.value = value
+        self.history = []
+    def set(self, v):
+        self.history.append(self.value)
+        self.value = v
+    def undo(self):
+        if not self.history:
+            return False
+        self.value = self.history.pop()
+        return True
+C solution
+ typedef struct {
+    int value;
+    int hist[64];
+    int top;
+} Undo;
+void undo_set(Undo *u, int v) {
+    if (u->top < 64) u->hist[u->top++] = u->value;
+    u->value = v;
+}
+/* returns 1 if a value was restored, 0 if there was no history */
+int undo_undo(Undo *u) {
+    if (u->top == 0) return 0;
+    u->value = u->hist[--u->top];
+    return 1;
+}
+Worked example / expected result
+ set(5), set(7), undo() -> True, value 5
+
+=== PAGE 40 ===
+CodeSprint 2026 - Question Bank
+Page 40
+S4 (Standard). MinStack: push, pop, get_min and top, all in O(1). Each entry stores the running minimum.
+Python solution
+ class MinStack:
+    def __init__(self):
+        self.s, self.m = [], []
+    def push(self, x):
+        self.s.append(x)
+        self.m.append(min(x, self.m[-1]) if self.m else x)
+    def pop(self):
+        self.m.pop()
+        return self.s.pop()
+    def get_min(self):
+        return self.m[-1]
+    def top(self):
+        return self.s[-1]
+C solution
+ #define CAP 1024
+typedef struct {
+    int s[CAP], m[CAP];
+    int top;
+} MinStack;
+void ms_push(MinStack *st, int x) {
+    int mn = (st->top == 0) ? x : (x < st->m[st->top - 1] ? x : st->m[st->top - 1]);
+    st->s[st->top] = x;
+    st->m[st->top] = mn;
+    st->top++;
+}
+int ms_pop(MinStack *st) { return st->s[--st->top]; }
+int ms_get_min(const MinStack *st) { return st->m[st->top - 1]; }
+int ms_top(const MinStack *st) { return st->s[st->top - 1]; }
+S5 (Standard). Reverse a string using a stack: push every character, then pop them all. Convert every letter to
+uppercase in the output.
+Python solution
+ def reverse_with_stack(s):
+    stack = list(s)
+    out = []
+    while stack:
+        out.append(stack.pop())
+    return ''.join(out).upper()
+C solution
+ #include <ctype.h>
+#include <string.h>
+void reverse_with_stack(const char *s, char *out) {
+    char st[256];
+    int top = 0, n = (int)strlen(s), k = 0;
+    for (int i = 0; i < n; i++) st[top++] = s[i];
+    while (top > 0) out[k++] = (char)toupper((unsigned char)st[--top]);
+    out[k] = '\0';
+}
+Worked example / expected result
+ reverse_with_stack("abc") -> "CBA"
+
+=== PAGE 41 ===
+CodeSprint 2026 - Question Bank
+Page 41
+S6 (Standard). Maximum nesting depth of parentheses, for example "(a(b)c)" has depth 2. Return -1 if the parentheses
+are unbalanced.
+Python solution
+ def max_depth(s):
+    depth = best = 0
+    for ch in s:
+        if ch == '(':
+            depth += 1
+            best = max(best, depth)
+        elif ch == ')':
+            depth -= 1
+            if depth < 0:
+                return -1
+    return best if depth == 0 else -1
+C solution
+ int max_depth(const char *s) {
+    int depth = 0, best = 0;
+    for (; *s; s++) {
+        if (*s == '(') { depth++; if (depth > best) best = depth; }
+        else if (*s == ')') {
+            depth--;
+            if (depth < 0) return -1;
+        }
+    }
+    return depth == 0 ? best : -1;
+}
+S7 (Standard). Execute stack commands "PUSH n", "POP" and "TOP". TOP writes the current top to the output. POP on
+an empty stack is ignored.
+Python solution
+ def run(commands):
+    stack, out = [], []
+    for cmd in commands:
+        parts = cmd.split()
+        if parts[0] == 'PUSH':
+            stack.append(int(parts[1]))
+        elif parts[0] == 'POP':
+            if stack:
+                stack.pop()
+        elif parts[0] == 'TOP':
+            out.append(stack[-1])
+    return out
+C solution
+ #include <stdio.h>
+#include <string.h>
+int run(const char *cmds[], int n, int out[]) {
+    int st[256], top = 0, k = 0;
+    for (int i = 0; i < n; i++) {
+        int v;
+        if (sscanf(cmds[i], "PUSH %d", &v) == 1) st[top++] = v;
+        else if (strcmp(cmds[i], "POP") == 0) { if (top > 0) top--; }
+        else if (strcmp(cmds[i], "TOP") == 0) out[k++] = st[top - 1];
+    }
+    return k;
+}
+Worked example / expected result
+ run(["PUSH 3","PUSH 5","TOP","POP","TOP"]) -> [5, 3]
+
+=== PAGE 42 ===
+CodeSprint 2026 - Question Bank
+Page 42
+S8 (Standard). Remove adjacent duplicate letters repeatedly. Return the reduced string and the number of removals
+made. "abbaca" becomes "ca" with 2 removals.
+Python solution
+ def remove_pairs(s):
+    stack = []
+    removed = 0
+    for ch in s:
+        if stack and stack[-1] == ch:
+            stack.pop()
+            removed += 1
+        else:
+            stack.append(ch)
+    return ''.join(stack), removed
+C solution
+ #include <string.h>
+/* writes the reduced string to out and returns the number of removals */
+int remove_pairs(const char *s, char *out) {
+    int top = 0, removed = 0;
+    for (; *s; s++) {
+        if (top > 0 && out[top - 1] == *s) { top--; removed++; }
+        else out[top++] = *s;
+    }
+    out[top] = '\0';
+    return removed;
+}
+Worked example / expected result
+ remove_pairs("abbaca") -> ("ca", 2)
+S9 (Standard). Length of the longest valid (well-formed) parentheses substring. Any character other than "(" or ")" breaks
+a substring, for example ")()())" gives 4 and "()x()" gives 2.
+Python solution
+ def longest_valid(s):
+    stack = [-1]
+    best = 0
+    for i, ch in enumerate(s):
+        if ch == '(':
+            stack.append(i)
+        elif ch == ')':
+            stack.pop()
+            if not stack:
+                stack.append(i)
+            else:
+                best = max(best, i - stack[-1])
+        else:
+            stack = [i]
+    return best
+C solution
+ int longest_valid(const char *s) {
+    int n = strlen(s), st[n + 1], top = 0, best = 0;
+    st[top++] = -1;
+    for (int i = 0; i < n; i++) {
+        if (s[i] == '(') st[top++] = i;
+        else if (s[i] == ')') {
+            top--;
+            if (top == 0) st[top++] = i;
+            else if (i - st[top - 1] > best) best = i - st[top - 1];
+        } else {
+            top = 0;
+            st[top++] = i;
+        }
+    }
+    return best;
+}
+Worked example / expected result
+ longest_valid("()x()") -> 2
+
+=== PAGE 43 ===
+CodeSprint 2026 - Question Bank
+Page 43
+S10 (Standard). Infix to postfix (shunting-yard) for single digits, + - * / and parentheses. Output tokens are separated by
+single spaces. "3+4*2" becomes "3 4 2 * +".
+Python solution
+ def to_postfix(expr):
+    prec = {'+': 1, '-': 1, '*': 2, '/': 2}
+    out, ops = [], []
+    for ch in expr:
+        if ch.isdigit():
+            out.append(ch)
+        elif ch == '(':
+            ops.append(ch)
+        elif ch == ')':
+            while ops[-1] != '(':
+                out.append(ops.pop())
+            ops.pop()
+        else:
+            while ops and ops[-1] != '(' and prec[ops[-1]] >= prec[ch]:
+                out.append(ops.pop())
+            ops.append(ch)
+    while ops:
+        out.append(ops.pop())
+    return ' '.join(out)
+C solution
+ #include <ctype.h>
+#include <string.h>
+static int prec(char c) { return (c == '*' || c == '/') ? 2 : 1; }
+void to_postfix(const char *e, char *out) {
+    char ops[256];
+    int top = 0, k = 0;
+    for (; *e; e++) {
+        char c = *e;
+        if (isdigit((unsigned char)c)) { out[k++] = c; out[k++] = ' '; }
+        else if (c == '(') ops[top++] = c;
+        else if (c == ')') {
+            while (ops[top - 1] != '(') { out[k++] = ops[--top]; out[k++] = ' '; }
+            top--;
+        } else {
+            while (top > 0 && ops[top - 1] != '(' && prec(ops[top - 1]) >= prec(c)) {
+                out[k++] = ops[--top]; out[k++] = ' ';
+            }
+            ops[top++] = c;
+        }
+    }
+    while (top > 0) { out[k++] = ops[--top]; out[k++] = ' '; }
+    if (k > 0) k--;          /* drop the trailing space */
+    out[k] = '\0';
+}
+Worked example / expected result
+ to_postfix("3+4*2") -> "3 4 2 * +"
+
+=== PAGE 44 ===
+CodeSprint 2026 - Question Bank
+Page 44
+H1 (High Roller). Largest rectangle in a histogram. Monotonic stack of (start index, height). Example [2,1,5,6,2,3] gives
+10.
+Python solution
+ def largest_rectangle(h):
+    stack = []                       # (start, height), heights increasing
+    best = 0
+    for i, x in enumerate(h + [0]):  # sentinel 0 flushes the stack
+        start = i
+        while stack and stack[-1][1] >= x:
+            idx, height = stack.pop()
+            best = max(best, height * (i - idx))
+            start = idx
+        stack.append((start, x))
+    return best
+C solution
+ int largest_rectangle(const int h[], int n) {
+    int si[n + 1], sh[n + 1], top = 0, best = 0;
+    for (int i = 0; i <= n; i++) {
+        int x = (i < n) ? h[i] : 0;   /* sentinel 0 */
+        int start = i;
+        while (top > 0 && sh[top - 1] >= x) {
+            top--;
+            int area = sh[top] * (i - si[top]);
+            if (area > best) best = area;
+            start = si[top];
+        }
+        si[top] = start;
+        sh[top] = x;
+        top++;
+    }
+    return best;
+}
+Worked example / expected result
+ largest_rectangle([2,1,5,6,2,3]) -> 10
+H2 (High Roller). Daily temperatures: for each day, how many days until a warmer day (0 if none).
+[73,74,75,71,69,72,76,73] gives [1,1,4,2,1,1,0,0].
+Python solution
+ def wait_days(T):
+    res = [0] * len(T)
+    stack = []                       # indices with decreasing temperatures
+    for i, t in enumerate(T):
+        while stack and T[stack[-1]] < t:
+            j = stack.pop()
+            res[j] = i - j
+        stack.append(i)
+    return res
+C solution
+ void wait_days(const int T[], int n, int res[]) {
+    int st[n > 0 ? n : 1], top = 0;
+    for (int i = 0; i < n; i++) res[i] = 0;
+    for (int i = 0; i < n; i++) {
+        while (top > 0 && T[st[top - 1]] < T[i]) {
+            int j = st[--top];
+            res[j] = i - j;
+        }
+        st[top++] = i;
+    }
+}
+Worked example / expected result
+ [1, 1, 4, 2, 1, 1, 0, 0]
+
+=== PAGE 45 ===
+CodeSprint 2026 - Question Bank
+Page 45
+H3 (High Roller). Stock span: number of consecutive days up to today with price <= today. Prices
+[100,80,60,70,60,75,85] give [1,1,1,2,1,4,6].
+Python solution
+ class StockSpanner:
+    def __init__(self):
+        self.stack = []              # (price, span)
+    def next(self, price):
+        span = 1
+        while self.stack and self.stack[-1][0] <= price:
+            span += self.stack.pop()[1]
+        self.stack.append((price, span))
+        return span
+C solution
+ /* prices are processed in order; spans written to out[] */
+void stock_spans(const int p[], int n, int out[]) {
+    int sp[n > 0 ? n : 1], st[n > 0 ? n : 1], top = 0;
+    for (int i = 0; i < n; i++) {
+        int span = 1;
+        while (top > 0 && p[st[top - 1]] <= p[i]) {
+            span += sp[top - 1];
+            top--;
+        }
+        st[top] = i;
+        sp[top] = span;
+        top++;
+        out[i] = span;
+    }
+}
+Worked example / expected result
+ [1, 1, 1, 2, 1, 4, 6]
+H4 (High Roller). Basic calculator with + - ( ) and multi-digit numbers. Use a stack of (result, sign) for each parenthesis
+level.
+Python solution
+ def calc(s):
+    result, num, sign = 0, 0, 1
+    stack = []
+    for ch in s:
+        if ch.isdigit():
+            num = num * 10 + int(ch)
+        elif ch in '+-':
+            result += sign * num
+            num, sign = 0, (1 if ch == '+' else -1)
+        elif ch == '(':
+            stack.append((result, sign))
+            result, sign = 0, 1
+        elif ch == ')':
+            result += sign * num
+            num = 0
+            prev_result, prev_sign = stack.pop()
+            result = prev_result + prev_sign * result
+    return result + sign * num
+C solution
+ #include <ctype.h>
+int calc(const char *s) {
+    int result = 0, num = 0, sign = 1;
+    int sr[256], ss[256], top = 0;
+    for (; *s; s++) {
+        char c = *s;
+        if (isdigit((unsigned char)c)) num = num * 10 + (c - '0');
+        else if (c == '+' || c == '-') {
+            result += sign * num;
+            num = 0;
+            sign = (c == '+') ? 1 : -1;
+        } else if (c == '(') {
+            sr[top] = result; ss[top] = sign; top++;
+            result = 0; sign = 1;
+        } else if (c == ')') {
+            result += sign * num;
+            num = 0;
+            top--;
+            result = sr[top] + ss[top] * result;
+        }
+    }
+    return result + sign * num;
+}
+Worked example / expected result
+ calc("(1+(4+5+2)-3)+(6+8)") -> 23
+
+=== PAGE 46 ===
+CodeSprint 2026 - Question Bank
+Page 46
+H5 (High Roller). Remove k digits from a number string to make the smallest result. ("1432219", 3) gives "1219".
+Python solution
+ def remove_k_digits(num, k):
+    stack = []
+    for d in num:
+        while k and stack and stack[-1] > d:
+            stack.pop()
+            k -= 1
+        stack.append(d)
+    if k:
+        stack = stack[:-k]           # remaining digits are largest; drop from the end
+    result = ''.join(stack).lstrip('0')
+    return result or "0"
+C solution
+ #include <string.h>
+void remove_k_digits(const char *num, int k, char *out) {
+    int n = strlen(num), top = 0;
+    for (int i = 0; i < n; i++) {
+        while (k > 0 && top > 0 && out[top - 1] > num[i]) { top--; k--; }
+        out[top++] = num[i];
+    }
+    top -= k;                         /* drop remaining from the end */
+    int start = 0;
+    while (start < top - 1 && out[start] == '0') start++;
+    memmove(out, out + start, top - start);
+    out[top - start] = '\0';
+    if (out[0] == '\0') strcpy(out, "0");
+}
+Worked example / expected result
+ remove_k_digits("1432219", 3) -> "1219"
+H6 (High Roller). Asteroid collision: positive moves right, negative moves left. Equal sizes destroy both. Example
+[5,10,-5] gives [5,10]; [8,-8] gives [].
+Python solution
+ def asteroid_collision(asteroids):
+    stack = []
+    for a in asteroids:
+        alive = True
+        while alive and a < 0 and stack and stack[-1] > 0:
+            if stack[-1] < -a:
+                stack.pop()
+            elif stack[-1] == -a:
+                stack.pop()
+                alive = False
+            else:
+                alive = False
+        if alive:
+            stack.append(a)
+    return stack
+C solution
+ /* compacts asteroids in place, returns the surviving count */
+int asteroid_collision(int a[], int n) {
+    int top = 0;
+    for (int i = 0; i < n; i++) {
+        int alive = 1;
+        while (alive && a[i] < 0 && top > 0 && a[top - 1] > 0) {
+            if (a[top - 1] < -a[i]) top--;
+            else if (a[top - 1] == -a[i]) { top--; alive = 0; }
+            else alive = 0;
+        }
+        if (alive) a[top++] = a[i];
+    }
+    return top;
+}
+Worked example / expected result
+ asteroid_collision([10,2,-5]) -> [10]
+
+=== PAGE 47 ===
+CodeSprint 2026 - Question Bank
+Page 47
+H7 (High Roller). Decode nested repeats: "3[a2[c]]" becomes "accaccacc". Two stacks, one for counts and one for
+partial strings.
+Python solution
+ def decode(s):
+    counts, parts = [], []
+    cur, num = '', 0
+    for ch in s:
+        if ch.isdigit():
+            num = num * 10 + int(ch)
+        elif ch == '[':
+            counts.append(num)
+            parts.append(cur)
+            cur, num = '', 0
+        elif ch == ']':
+            cur = parts.pop() + cur * counts.pop()
+        else:
+            cur += ch
+    return cur
+C solution
+ #include <ctype.h>
+#include <string.h>
+/* out must be large enough for the decoded result */
+void decode(const char *s, char *out) {
+    int counts[64], ctop = 0;
+    char parts[64][256];
+    int ptop = 0;
+    char cur[256] = "";
+    int num = 0;
+    for (; *s; s++) {
+        char c = *s;
+        if (isdigit((unsigned char)c)) num = num * 10 + (c - '0');
+        else if (c == '[') {
+            counts[ctop++] = num;
+            strcpy(parts[ptop++], cur);
+            cur[0] = '\0';
+            num = 0;
+        } else if (c == ']') {
+            char tmp[256] = "";
+            int k = counts[--ctop];
+            for (int i = 0; i < k; i++) strcat(tmp, cur);
+            strcpy(cur, parts[--ptop]);
+            strcat(cur, tmp);
+        } else {
+            size_t len = strlen(cur);
+            cur[len] = c;
+            cur[len + 1] = '\0';
+        }
+    }
+    strcpy(out, cur);
+}
+Worked example / expected result
+ decode("3[a2[c]]") -> "accaccacc"
+
+=== PAGE 48 ===
+CodeSprint 2026 - Question Bank
+Page 48
+H8 (High Roller). Simplify a Unix path: "/a/./b/../../c/" becomes "/c". Stack of directory names.
+Python solution
+ def simplify_path(path):
+    stack = []
+    for part in path.split('/'):
+        if part in ('', '.'):
+            continue
+        if part == '..':
+            if stack:
+                stack.pop()
+        else:
+            stack.append(part)
+    return '/' + '/'.join(stack)
+C solution
+ #include <stdio.h>
+#include <string.h>
+void simplify_path(const char *path, char *out) {
+    char copy[1024], *st[256];
+    int top = 0;
+    strncpy(copy, path, sizeof copy - 1);
+    copy[sizeof copy - 1] = '\0';
+    for (char *p = strtok(copy, "/"); p; p = strtok(NULL, "/")) {
+        if (strcmp(p, ".") == 0) continue;
+        if (strcmp(p, "..") == 0) { if (top) top--; }
+        else st[top++] = p;
+    }
+    out[0] = '/';
+    out[1] = '\0';
+    for (int i = 0; i < top; i++) {
+        strcat(out, st[i]);
+        if (i + 1 < top) strcat(out, "/");
+    }
+}
+Worked example / expected result
+ simplify_path("/a/./b/../../c/") -> "/c"
+H9 (High Roller). Queue built from two stacks with amortised O(1) enqueue and dequeue.
+Python solution
+ class TwoStackQueue:
+    def __init__(self):
+        self.inbox, self.outbox = [], []
+    def enqueue(self, x):
+        self.inbox.append(x)
+    def dequeue(self):
+        if not self.outbox:
+            while self.inbox:            # move everything once, reversing order
+                self.outbox.append(self.inbox.pop())
+        return self.outbox.pop()
+C solution
+ #define CAP 256
+typedef struct {
+    int in[CAP], out[CAP];
+    int nin, nout;
+} TwoStackQueue;
+void enqueue(TwoStackQueue *q, int x) { q->in[q->nin++] = x; }
+int dequeue(TwoStackQueue *q) {
+    if (q->nout == 0)
+        while (q->nin > 0) q->out[q->nout++] = q->in[--q->nin];
+    return q->out[--q->nout];
+}
+
+=== PAGE 49 ===
+CodeSprint 2026 - Question Bank
+Page 49
+H10 (High Roller). Sort a stack so the smallest value is on top, using one extra stack.
+Python solution
+ def sort_stack(st):
+    tmp = []
+    while st:
+        x = st.pop()
+        while tmp and tmp[-1] > x:
+            st.append(tmp.pop())
+        tmp.append(x)
+    while tmp:
+        st.append(tmp.pop())
+    return st                    # smallest value is on top
+C solution
+ void sort_stack(int st[], int *top) {
+    int tmp[256], tt = 0;
+    while (*top > 0) {
+        int x = st[--(*top)];
+        while (tt > 0 && tmp[tt - 1] > x) st[(*top)++] = tmp[--tt];
+        tmp[tt++] = x;
+    }
+    while (tt > 0) st[(*top)++] = tmp[--tt];
+}
+
+=== PAGE 50 ===
+CodeSprint 2026 - Question Bank
+Page 50
+Table 8: High Card: Complexity Clash
+Pattern printing. Teams study the expected output and write a program that generates the pattern for any valid N.
+Standard patterns use simple numbers, characters or nested loops. High Roller patterns use spaces, alternating
+characters, pyramids, diamonds, hollow shapes or several conditions. Each question shows a sample output.
+S1 (Standard). Number triangle: row i prints 1 to i, with single spaces between the numbers. Print it for N rows.
+Python solution
+ def number_triangle(n):
+    for i in range(1, n + 1):
+        print(' '.join(str(j) for j in range(1, i + 1)))
+C solution
+ #include <stdio.h>
+void number_triangle(int n) {
+    for (int i = 1; i <= n; i++) {
+        for (int j = 1; j <= i; j++) printf(j == 1 ? "%d" : " %d", j);
+        printf("\n");
+    }
+}
+Sample output
+ 1
+1 2
+1 2 3   (N = 3)
+S2 (Standard). Reverse number triangle: the first row is 1 to N, each row is one shorter, and numbers are separated by
+single spaces.
+Python solution
+ def reverse_number_triangle(n):
+    for i in range(n, 0, -1):
+        print(' '.join(str(j) for j in range(1, i + 1)))
+C solution
+ #include <stdio.h>
+void reverse_number_triangle(int n) {
+    for (int i = n; i >= 1; i--) {
+        for (int j = 1; j <= i; j++) printf(j == 1 ? "%d" : " %d", j);
+        printf("\n");
+    }
+}
+Sample output
+ 1 2 3
+1 2
+1   (N = 3)
+S3 (Standard). Right-angled star triangle: row i has i stars, with a single space between neighbouring stars.
+Python solution
+ def star_triangle(n):
+    for i in range(1, n + 1):
+        print(' '.join('*' * i))
+C solution
+ #include <stdio.h>
+void star_triangle(int n) {
+    for (int i = 1; i <= n; i++) {
+        for (int j = 0; j < i; j++) printf(j == 0 ? "*" : " *");
+        printf("\n");
+    }
+}
+Sample output
+ *
+* *
+* * *   (N = 3)
+
+=== PAGE 51 ===
+CodeSprint 2026 - Question Bank
+Page 51
+S4 (Standard). Inverted star triangle: the first row has N stars, each row is one shorter, and stars are separated by single
+spaces.
+Python solution
+ def inverted_star_triangle(n):
+    for i in range(n, 0, -1):
+        print(' '.join('*' * i))
+C solution
+ #include <stdio.h>
+void inverted_star_triangle(int n) {
+    for (int i = n; i >= 1; i--) {
+        for (int j = 0; j < i; j++) printf(j == 0 ? "*" : " *");
+        printf("\n");
+    }
+}
+Sample output
+ * * *
+* *
+*   (N = 3)
+S5 (Standard). Reverse pyramid of stars, centred. Row i (from N down to 1) has 2i - 1 stars and N - i leading spaces.
+Python solution
+ def reverse_pyramid(n):
+    for i in range(n, 0, -1):
+        print(' ' * (n - i) + '*' * (2 * i - 1))
+C solution
+ #include <stdio.h>
+void reverse_pyramid(int n) {
+    for (int i = n; i >= 1; i--) {
+        for (int s = 0; s < n - i; s++) putchar(' ');
+        for (int j = 0; j < 2 * i - 1; j++) putchar('*');
+        putchar('\n');
+    }
+}
+Sample output
+ *****
+ ***
+  *   (N = 3)
+S6 (Standard). Centred number pyramid: row i is 1..i followed by i-1..1, digits separated by single spaces, and each row
+has N - i leading spaces.
+Python solution
+ def number_pyramid(n):
+    for i in range(1, n + 1):
+        left = [str(j) for j in range(1, i + 1)]
+        right = [str(j) for j in range(i - 1, 0, -1)]
+        print(' ' * (n - i) + ' '.join(left + right))
+C solution
+ #include <stdio.h>
+void number_pyramid(int n) {
+    for (int i = 1; i <= n; i++) {
+        for (int s = 0; s < n - i; s++) putchar(' ');
+        int first = 1;
+        for (int j = 1; j <= i; j++) { printf(first ? "%d" : " %d", j); first = 0; }
+        for (int j = i - 1; j >= 1; j--) printf(" %d", j);
+        putchar('\n');
+    }
+}
+Sample output
+   1
+ 1 2 1
+1 2 3 2 1   (N = 3)
+
+=== PAGE 52 ===
+CodeSprint 2026 - Question Bank
+Page 52
+S7 (Standard). Alternating 1 and 0: row i has i characters. Row i starts with 1 when i is odd and with 0 when i is even,
+then alternates.
+Python solution
+ def alternating(n):
+    for i in range(1, n + 1):
+        start = 1 if i % 2 else 0
+        print(''.join(str((start + j) % 2) for j in range(i)))
+C solution
+ #include <stdio.h>
+void alternating(int n) {
+    for (int i = 1; i <= n; i++) {
+        int start = (i % 2) ? 1 : 0;
+        for (int j = 0; j < i; j++) putchar('0' + (start + j) % 2);
+        putchar('\n');
+    }
+}
+Sample output
+ 1
+01
+101
+0101   (N = 4)
+S8 (Standard). Letter triangle: row i prints the first i letters starting at A, with a single space between letters.
+Python solution
+ def letter_triangle(n):
+    for i in range(1, n + 1):
+        print(' '.join(chr(ord('A') + j) for j in range(i)))
+C solution
+ #include <stdio.h>
+void letter_triangle(int n) {
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j <= i; j++) printf(j == 0 ? "%c" : " %c", 'A' + j);
+        putchar('\n');
+    }
+}
+Sample output
+ A
+A B
+A B C   (N = 3)
+S9 (Standard). Hollow square of stars with side N. Print the border and also the main diagonal from top-left to
+bottom-right.
+Python solution
+ def hollow_square(n):
+    for i in range(n):
+        row = ''
+        for j in range(n):
+            on = i in (0, n - 1) or j in (0, n - 1) or i == j
+            row += '*' if on else ' '
+        print(row)
+C solution
+ #include <stdio.h>
+void hollow_square(int n) {
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++)
+            putchar((i == 0 || i == n - 1 || j == 0 || j == n - 1 || i == j) ? '*' : ' ');
+        putchar('\n');
+    }
+}
+Sample output
+ ****
+** *
+* **
+****   (N = 4)
+
+=== PAGE 53 ===
+CodeSprint 2026 - Question Bank
+Page 53
+S10 (Standard). Right-aligned star triangle: row i has N - i leading spaces and i stars, with a single space between stars.
+Python solution
+ def right_aligned(n):
+    for i in range(1, n + 1):
+        print(' ' * (n - i) + ' '.join('*' * i))
+C solution
+ #include <stdio.h>
+void right_aligned(int n) {
+    for (int i = 1; i <= n; i++) {
+        for (int s = 0; s < n - i; s++) putchar(' ');
+        for (int j = 0; j < i; j++) printf(j == 0 ? "*" : " *");
+        putchar('\n');
+    }
+}
+Sample output
+   *
+ * *
+* * *   (N = 3)
+H1 (High Roller). Diamond of stars with N rows at the widest point. Top half is a pyramid, bottom half mirrors it.
+Python solution
+ def diamond(n):
+    for i in range(1, n + 1):
+        print(' ' * (n - i) + '*' * (2 * i - 1))
+    for i in range(n - 1, 0, -1):
+        print(' ' * (n - i) + '*' * (2 * i - 1))
+C solution
+ #include <stdio.h>
+void diamond(int n) {
+    for (int i = 1; i <= 2 * n - 1; i++) {
+        int rows = (i <= n) ? i : 2 * n - i;   /* row width index */
+        for (int s = 0; s < n - rows; s++) putchar(' ');
+        for (int j = 0; j < 2 * rows - 1; j++) putchar('*');
+        putchar('\n');
+    }
+}
+Sample output
+   *
+ ***
+*****
+ ***
+  *   (N = 3)
+H2 (High Roller). Hollow triangle: row i has stars on the left and right edges. The last row is full.
+Python solution
+ def hollow_triangle(n):
+    for i in range(1, n + 1):
+        row = ''.join('*' if (j == 0 or j == i - 1 or i == n) else ' ' for j in range(i))
+        print(row)
+C solution
+ #include <stdio.h>
+void hollow_triangle(int n) {
+    for (int i = 1; i <= n; i++) {
+        for (int j = 0; j < i; j++)
+            putchar((j == 0 || j == i - 1 || i == n) ? '*' : ' ');
+        putchar('\n');
+    }
+}
+Sample output
+ *
+**
+* *
+****   (N = 4)
+
+=== PAGE 54 ===
+CodeSprint 2026 - Question Bank
+Page 54
+H3 (High Roller). Floyd triangle: consecutive numbers, row i has i numbers.
+Python solution
+ def floyd(n):
+    num = 1
+    for i in range(1, n + 1):
+        row = []
+        for _ in range(i):
+            row.append(str(num))
+            num += 1
+        print(' '.join(row))
+C solution
+ #include <stdio.h>
+void floyd(int n) {
+    int num = 1;
+    for (int i = 1; i <= n; i++) {
+        for (int j = 0; j < i; j++) {
+            printf(j ? " %d" : "%d", num++);
+        }
+        putchar('\n');
+    }
+}
+Sample output
+ 1
+2 3
+4 5 6
+7 8 9 10   (N = 4)
+H4 (High Roller). Pascal triangle: each row is built from the previous one. Print N rows.
+Python solution
+ def pascal(n):
+    row = [1]
+    for _ in range(n):
+        print(' '.join(map(str, row)))
+        row = [1] + [row[k] + row[k + 1] for k in range(len(row) - 1)] + [1]
+C solution
+ #include <stdio.h>
+void pascal(int n) {
+    int row[64] = {1}, len = 1;
+    for (int r = 0; r < n; r++) {
+        for (int j = 0; j < len; j++) printf(j ? " %d" : "%d", row[j]);
+        putchar('\n');
+        for (int j = len; j > 0; j--)
+            row[j] = (j == len ? 0 : row[j]) + row[j - 1];   /* in-place update, right to left */
+        len++;
+    }
+}
+Sample output
+ 1
+1 1
+1 2 1
+1 3 3 1
+1 4 6 4 1   (N = 5)
+H5 (High Roller). Checkerboard of stars: cell (i, j) is a star when i + j is even, otherwise a space.
+Python solution
+ def checkerboard(n):
+    for i in range(n):
+        print(''.join('*' if (i + j) % 2 == 0 else ' ' for j in range(n)))
+C solution
+ #include <stdio.h>
+void checkerboard(int n) {
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) putchar((i + j) % 2 == 0 ? '*' : ' ');
+        putchar('\n');
+    }
+}
+Sample output
+ * *
+ * 
+* *   (N = 3)
+
+=== PAGE 55 ===
+CodeSprint 2026 - Question Bank
+Page 55
+H6 (High Roller). Hourglass: reverse pyramid on top, mirrored pyramid below. Total 2N - 1 rows.
+Python solution
+ def hourglass(n):
+    for i in range(n, 0, -1):
+        print(' ' * (n - i) + '*' * (2 * i - 1))
+    for i in range(2, n + 1):
+        print(' ' * (n - i) + '*' * (2 * i - 1))
+C solution
+ #include <stdio.h>
+void hourglass(int n) {
+    for (int i = n; i >= 1; i--) {
+        for (int s = 0; s < n - i; s++) putchar(' ');
+        for (int j = 0; j < 2 * i - 1; j++) putchar('*');
+        putchar('\n');
+    }
+    for (int i = 2; i <= n; i++) {
+        for (int s = 0; s < n - i; s++) putchar(' ');
+        for (int j = 0; j < 2 * i - 1; j++) putchar('*');
+        putchar('\n');
+    }
+}
+Sample output
+ *****
+ ***
+  *
+ ***
+*****   (N = 3)
+H7 (High Roller). Multiplication table N x N, each cell right-aligned in width 3.
+Python solution
+ def mult_table(n):
+    for i in range(1, n + 1):
+        print(''.join(f'{i * j:>3}' for j in range(1, n + 1)))
+C solution
+ #include <stdio.h>
+void mult_table(int n) {
+    for (int i = 1; i <= n; i++) {
+        for (int j = 1; j <= n; j++) printf("%3d", i * j);
+        putchar('\n');
+    }
+}
+Sample output
+   1  2  3
+  2  4  6
+  3  6  9   (N = 3)
+H8 (High Roller). Alphabet pyramid: row i has the first i letters, then mirrors back down to A. Leading spaces centre it.
+Python solution
+ def alphabet_pyramid(n):
+    for i in range(1, n + 1):
+        s = ''.join(chr(ord('A') + k) for k in range(i))
+        print(' ' * (n - i) + s + s[-2::-1])
+C solution
+ #include <stdio.h>
+void alphabet_pyramid(int n) {
+    for (int i = 1; i <= n; i++) {
+        for (int s = 0; s < n - i; s++) putchar(' ');
+        for (int k = 0; k < i; k++) putchar('A' + k);
+        for (int k = i - 2; k >= 0; k--) putchar('A' + k);
+        putchar('\n');
+    }
+}
+Sample output
+   A
+ ABA
+ABCBA   (N = 3)
+
+=== PAGE 56 ===
+CodeSprint 2026 - Question Bank
+Page 56
+H9 (High Roller). Square numbers in rows: row i holds i consecutive squares, starting from 1.
+Python solution
+ def square_rows(n):
+    num = 1
+    for i in range(1, n + 1):
+        row = []
+        for _ in range(i):
+            row.append(str(num * num))
+            num += 1
+        print(' '.join(row))
+C solution
+ #include <stdio.h>
+void square_rows(int n) {
+    int num = 1;
+    for (int i = 1; i <= n; i++) {
+        for (int j = 0; j < i; j++) { int v = num * num; num++; printf(j ? " %d" : "%d", v); }
+        putchar('\n');
+    }
+}
+Sample output
+ 1
+4 9
+16 25 36
+49 64 81 100   (N = 4)
+H10 (High Roller). Christmas tree: a star pyramid of N rows with a trunk line of "|" under the centre. Trunk width is 1.
+Python solution
+ def christmas_tree(n):
+    for i in range(1, n + 1):
+        print(' ' * (n - i) + '*' * (2 * i - 1))
+    print(' ' * (n - 1) + '|')
+C solution
+ #include <stdio.h>
+void christmas_tree(int n) {
+    for (int i = 1; i <= n; i++) {
+        for (int s = 0; s < n - i; s++) putchar(' ');
+        for (int j = 0; j < 2 * i - 1; j++) putchar('*');
+        putchar('\n');
+    }
+    for (int s = 0; s < n - 1; s++) putchar(' ');
+    puts("|");
+}
+Sample output
+   *
+ ***
+*****
+  |   (N = 3)
+
+=== PAGE 57 ===
+CodeSprint 2026 - Question Bank
+Page 57
+Table 9: Coin Flip: Algorithm Auction
+Algorithm problems with a three-clue ladder. Each question has three clues. Clue 1 reveals about 10% of the approach,
+clue 2 about 30%, and clue 3 about 50%. No clue shows the full solution. High Roller questions require a non-obvious
+technique, such as prefix sums with hashing, monotonic logic or greedy reasoning.
+S1 (Standard). Given a sorted array and a target, return the indices (i, j) with i < j whose values sum to the target, or
+None. Return None if the array has fewer than two elements.
+Python solution
+ def pair_sum(a, t):
+    if len(a) < 2:
+        return None
+    i, j = 0, len(a) - 1
+    while i < j:
+        s = a[i] + a[j]
+        if s == t:
+            return (i, j)
+        if s < t:
+            i += 1
+        else:
+            j -= 1
+    return None
+C solution
+ int pair_sum(const int a[], int n, int t, int out[2]) {
+    if (n < 2) return 0;
+    int i = 0, j = n - 1;
+    while (i < j) {
+        int s = a[i] + a[j];
+        if (s == t) { out[0] = i; out[1] = j; return 1; }
+        if (s < t) i++;
+        else j--;
+    }
+    return 0;
+}
+Clue 1 (reveals about 10% of the approach): Think about what the sorted order lets you do with the two ends.
+Clue 2 (reveals about 30% of the approach): Compare the sum of the two ends with the target and decide which end to
+move.
+Clue 3 (reveals about 50% of the approach): Move the left pointer up when the sum is too small and the right pointer
+down when it is too large. Return None when the array is too short.
+S2 (Standard). The array has n + 1 values. Each value is in the range 1..n, and exactly one value repeats. Return the
+repeated value in O(n) time and O(1) extra space. Return -1 if any value is outside 1..n.
+Python solution
+ def find_duplicate(a):
+    n = len(a) - 1
+    if any(x < 1 or x > n for x in a):
+        return -1
+    return sum(a) - n * (n + 1) // 2
+C solution
+ int find_duplicate(const int a[], int m) {   /* m = n + 1 values */
+    long long n = m - 1;
+    long long s = 0;
+    for (int i = 0; i < m; i++) {
+        if (a[i] < 1 || a[i] > n) return -1;
+        s += a[i];
+    }
+    return (int)(s - n * (n + 1) / 2);
+}
+Clue 1 (reveals about 10% of the approach): Consider what the sum of the values 1..n should be.
+Clue 2 (reveals about 30% of the approach): Subtract the expected sum from the actual sum. That difference is the
+repeated value.
+Clue 3 (reveals about 50% of the approach): Check every value for the range 1..n first, then compute the sum
+difference.
+
+=== PAGE 58 ===
+CodeSprint 2026 - Question Bank
+Page 58
+S3 (Standard). Return the number of 1 bits in the binary form of a non-negative integer. For a negative Python integer,
+count the bits of its 32-bit two's complement form.
+Python solution
+ def popcount(n):
+    n &= 0xFFFFFFFF if n < 0 else -1
+    c = 0
+    while n:
+        n &= n - 1
+        c += 1
+    return c
+C solution
+ /* the C input is already unsigned, so the 32-bit form is the input */
+int popcount(unsigned int n) {
+    int c = 0;
+    while (n) {
+        n &= n - 1;
+        c++;
+    }
+    return c;
+}
+Clue 1 (reveals about 10% of the approach): Think about how a negative number is stored in binary.
+Clue 2 (reveals about 30% of the approach): Mask a negative value to its lowest 32 bits before counting.
+Clue 3 (reveals about 50% of the approach): Apply n AND 0xFFFFFFFF to negative values, then clear the lowest set
+bit on each step until the value is zero.
+S4 (Standard). Return True if n is a power of two greater than 1, otherwise False. The value 1 is excluded.
+Python solution
+ def is_power_of_two(n):
+    return n > 1 and n & (n - 1) == 0
+C solution
+ int is_power_of_two(unsigned long long n) {
+    return n > 1 && (n & (n - 1)) == 0;
+}
+Clue 1 (reveals about 10% of the approach): Look at how powers of two look in binary.
+Clue 2 (reveals about 30% of the approach): A power of two has exactly one set bit, and n AND (n - 1) clears that bit.
+Clue 3 (reveals about 50% of the approach): Require n to be greater than 1, then check that n AND (n - 1) is zero.
+S5 (Standard). Return the majority element of an array (a value that appears more than n/2 times), or None if no such
+value exists. Use O(1) extra space.
+Python solution
+ def majority(a):
+    cand, cnt = None, 0
+    for x in a:
+        if cnt == 0:
+            cand = x
+        cnt += 1 if x == cand else -1
+    if a.count(cand) * 2 > len(a):
+        return cand
+    return None
+C solution
+ /* returns the majority value, or -1 if there is none (values are assumed non-negative) */
+int majority(const int a[], int n) {
+    int cand = 0, cnt = 0;
+    for (int i = 0; i < n; i++) {
+        if (cnt == 0) cand = a[i];
+        cnt += (a[i] == cand) ? 1 : -1;
+    }
+    int c = 0;
+    for (int i = 0; i < n; i++) if (a[i] == cand) c++;
+    return (2 * c > n) ? cand : -1;
+}
+Clue 1 (reveals about 10% of the approach): Think about pairs of different values cancelling each other out.
+Clue 2 (reveals about 30% of the approach): A single candidate with a counter finds the only value that can survive the
+cancellation.
+Clue 3 (reveals about 50% of the approach): After the pass, count how many times the candidate appears and check
+that it is more than n/2.
+
+=== PAGE 59 ===
+CodeSprint 2026 - Question Bank
+Page 59
+S6 (Standard). Every value appears three times except one, which appears once. Return the value that appears once.
+Use O(1) extra space.
+Python solution
+ def single_number(a):
+    ans = 0
+    for bit in range(32):
+        s = sum((x >> bit) & 1 for x in a) % 3
+        if s:
+            ans |= 1 << bit
+    return ans
+C solution
+ int single_number(const int a[], int n) {
+    unsigned int ans = 0;
+    for (int bit = 0; bit < 32; bit++) {
+        int s = 0;
+        for (int i = 0; i < n; i++) s += (a[i] >> bit) & 1;
+        if (s % 3) ans |= 1u << bit;
+    }
+    return (int)ans;
+}
+Clue 1 (reveals about 10% of the approach): Consider each bit position separately.
+Clue 2 (reveals about 30% of the approach): Count the set bits at each position across all values.
+Clue 3 (reveals about 50% of the approach): Values that appear three times add 0 or 3 to each count, so count mod 3
+gives the bit of the answer.
+S7 (Standard). Remove all occurrences of v from an array in place, keeping the order of the rest. Return how many
+values were removed.
+Python solution
+ def remove_value(a, v):
+    k = 0
+    for x in a:
+        if x != v:
+            a[k] = x
+            k += 1
+    removed = len(a) - k
+    del a[k:]
+    return removed
+C solution
+ /* returns the number of values removed */
+int remove_value(int a[], int n, int v) {
+    int k = 0;
+    for (int i = 0; i < n; i++)
+        if (a[i] != v) a[k++] = a[i];
+    return n - k;
+}
+Clue 1 (reveals about 10% of the approach): Consider a write index that only advances on kept values.
+Clue 2 (reveals about 30% of the approach): Copy each kept value forward while reading the array in order.
+Clue 3 (reveals about 50% of the approach): The difference between the old length and the kept count is the number of
+values removed.
+
+=== PAGE 60 ===
+CodeSprint 2026 - Question Bank
+Page 60
+S8 (Standard). Return the number of runs of consecutive 1 bits in the binary form of a non-negative integer. For
+example, 109 (1101101) has 3 runs.
+Python solution
+ def runs_of_ones(n):
+    runs = 0
+    prev = 0
+    while n:
+        bit = n & 1
+        if bit and not prev:
+            runs += 1
+        prev = bit
+        n >>= 1
+    return runs
+C solution
+ int runs_of_ones(unsigned int n) {
+    int runs = 0, prev = 0;
+    while (n) {
+        int bit = n & 1u;
+        if (bit && !prev) runs++;
+        prev = bit;
+        n >>= 1;
+    }
+    return runs;
+}
+Clue 1 (reveals about 10% of the approach): Look at how each bit compares with the bit before it as you scan.
+Clue 2 (reveals about 30% of the approach): A new run starts whenever a 1 follows a 0 or the start of the number.
+Clue 3 (reveals about 50% of the approach): Track the previous bit and add to the count only when the current bit is 1
+and the previous bit was 0.
+S9 (Standard). Return the number of positions where the lowest w bits of x and y differ. Assume 1 <= w <= 31.
+Python solution
+ def hamming(x, y, w):
+    return bin((x ^ y) & ((1 << w) - 1)).count('1')
+C solution
+ int hamming(unsigned int x, unsigned int y, int w) {
+    unsigned int d = (x ^ y) & ((1u << w) - 1u);
+    int c = 0;
+    while (d) {
+        d &= d - 1;
+        c++;
+    }
+    return c;
+}
+Clue 1 (reveals about 10% of the approach): Start with the bits where x and y differ.
+Clue 2 (reveals about 30% of the approach): Only the lowest w bits matter, so mask the XOR result first.
+Clue 3 (reveals about 50% of the approach): Compute (x XOR y) AND ((1 << w) - 1), then count its set bits.
+S10 (Standard). Given a sorted array, return how many elements are strictly less than x. Use binary search.
+Python solution
+ import bisect
+def count_less(a, x):
+    return bisect.bisect_left(a, x)
+C solution
+ int count_less(const int a[], int n, int x) {
+    int lo = 0, hi = n;
+    while (lo < hi) {
+        int mid = lo + (hi - lo) / 2;
+        if (a[mid] < x) lo = mid + 1;
+        else hi = mid;
+    }
+    return lo;
+}
+Clue 1 (reveals about 10% of the approach): Think about the first position where the value is not less than x.
+Clue 2 (reveals about 30% of the approach): Strictly less means you stop at the first element that is equal to or greater
+than x.
+Clue 3 (reveals about 50% of the approach): Use a lower-bound search: move lo past every element that is strictly less
+than x, then return lo.
+
+=== PAGE 61 ===
+CodeSprint 2026 - Question Bank
+Page 61
+H1 (High Roller). Count the contiguous subarrays whose sum equals k. Values may be negative. Aim for O(n) time.
+Python solution
+ from collections import defaultdict
+def count_subarrays_sum_k(a, k):
+    seen = defaultdict(int)
+    seen[0] = 1
+    s = 0
+    count = 0
+    for x in a:
+        s += x
+        count += seen[s - k]
+        seen[s] += 1
+    return count
+C solution
+ /* O(n^2) reference version in C. The hashed O(n) version needs a map. */
+int count_subarrays_sum_k(const int a[], int n, int k) {
+    int count = 0;
+    for (int i = 0; i < n; i++) {
+        long long s = 0;
+        for (int j = i; j < n; j++) {
+            s += a[j];
+            if (s == k) count++;
+        }
+    }
+    return count;
+}
+Clue 1 (reveals about 10% of the approach): A subarray from i to j has sum equal to k exactly when the prefix sum up
+to j minus the prefix sum up to i equals k.
+Clue 2 (reveals about 30% of the approach): For each position, you need to know how many earlier prefix sums equal
+the current prefix sum minus k.
+Clue 3 (reveals about 50% of the approach): Keep a count of each prefix sum seen so far, starting with the empty
+prefix 0. At each element, add the count for (current prefix sum - k) to the answer, then record the current prefix sum.
+H2 (High Roller). Return the length of the longest run of consecutive integers that appears in an unsorted array, in O(n)
+expected time.
+Python solution
+ def longest_consecutive(a):
+    s = set(a)
+    best = 0
+    for x in s:
+        if x - 1 not in s:          # start only at the beginning of a run
+            length = 1
+            while x + length in s:
+                length += 1
+            best = max(best, length)
+    return best
+C solution
+ /* O(n^2) reference version: for each start, check whether x + 1, x + 2, ... exist. */
+int longest_consecutive(const int a[], int n) {
+    int best = 0;
+    for (int i = 0; i < n; i++) {
+        int len = 1;
+        int found = 1;
+        while (found) {
+            found = 0;
+            for (int j = 0; j < n; j++)
+                if (a[j] == a[i] + len) { found = 1; break; }
+            if (found) len++;
+        }
+        if (len > best) best = len;
+    }
+    return best;
+}
+Clue 1 (reveals about 10% of the approach): Consider how to avoid restarting counts from every number in the middle
+of a run.
+Clue 2 (reveals about 30% of the approach): If you only start counting at numbers whose predecessor is missing, each
+run is counted exactly once.
+Clue 3 (reveals about 50% of the approach): Put all values in a hash set. For each value whose predecessor is not in
+the set, count upward while the next value is present.
+
+=== PAGE 62 ===
+CodeSprint 2026 - Question Bank
+Page 62
+H3 (High Roller). Return how much water is trapped between bars of given heights after rain. Use O(1) extra space with
+two pointers.
+Python solution
+ def trap(h):
+    if not h:
+        return 0
+    i, j = 0, len(h) - 1
+    left_max = right_max = 0
+    water = 0
+    while i < j:
+        if h[i] < h[j]:
+            left_max = max(left_max, h[i])
+            water += left_max - h[i]
+            i += 1
+        else:
+            right_max = max(right_max, h[j])
+            water += right_max - h[j]
+            j -= 1
+    return water
+C solution
+ long long trap(const int h[], int n) {
+    if (n == 0) return 0;
+    int i = 0, j = n - 1, lmax = 0, rmax = 0;
+    long long water = 0;
+    while (i < j) {
+        if (h[i] < h[j]) {
+            if (h[i] > lmax) lmax = h[i];
+            water += lmax - h[i];
+            i++;
+        } else {
+            if (h[j] > rmax) rmax = h[j];
+            water += rmax - h[j];
+            j--;
+        }
+    }
+    return water;
+}
+Clue 1 (reveals about 10% of the approach): Water above a bar depends on the tallest bar on its left and on its right.
+Clue 2 (reveals about 30% of the approach): The side with the smaller current height is limited by its own running
+maximum, so its water can be decided without knowing the other side.
+Clue 3 (reveals about 50% of the approach): Use two pointers and two running maxima. Always advance the pointer
+on the lower side, and add the running maximum minus the current height to the total.
+
+=== PAGE 63 ===
+CodeSprint 2026 - Question Bank
+Page 63
+H4 (High Roller). Given an array, return an array where each position holds the product of all other elements, without
+using division. Zeros may appear.
+Python solution
+ def product_except_self(a):
+    n = len(a)
+    out = [1] * n
+    prefix = 1
+    for i in range(n):
+        out[i] = prefix
+        prefix *= a[i]
+    suffix = 1
+    for i in range(n - 1, -1, -1):
+        out[i] *= suffix
+        suffix *= a[i]
+    return out
+C solution
+ void product_except_self(const int a[], int n, long long out[]) {
+    long long prefix = 1;
+    for (int i = 0; i < n; i++) {
+        out[i] = prefix;
+        prefix *= a[i];
+    }
+    long long suffix = 1;
+    for (int i = n - 1; i >= 0; i--) {
+        out[i] *= suffix;
+        suffix *= a[i];
+    }
+}
+Clue 1 (reveals about 10% of the approach): Each output value combines what is to its left with what is to its right.
+Clue 2 (reveals about 30% of the approach): Two passes can compute the left product and the right product
+separately, and no division is needed.
+Clue 3 (reveals about 50% of the approach): First pass: store the product of everything to the left of each index.
+Second pass, from the right: multiply each stored value by the product of everything to its right.
+
+=== PAGE 64 ===
+CodeSprint 2026 - Question Bank
+Page 64
+H5 (High Roller). Return True if some three distinct indices of the array have values that sum to zero. Use O(n^2) time.
+Python solution
+ def has_zero_triplet(a):
+    a = sorted(a)
+    n = len(a)
+    for i in range(n - 2):
+        lo, hi = i + 1, n - 1
+        while lo < hi:
+            s = a[i] + a[lo] + a[hi]
+            if s == 0:
+                return True
+            if s < 0:
+                lo += 1
+            else:
+                hi -= 1
+    return False
+C solution
+ #include <stdlib.h>
+static int cmp_int(const void *x, const void *y) {
+    int a = *(const int *)x, b = *(const int *)y;
+    return (a > b) - (a < b);
+}
+int has_zero_triplet(int a[], int n) {
+    qsort(a, n, sizeof a[0], cmp_int);
+    for (int i = 0; i + 2 < n; i++) {
+        int lo = i + 1, hi = n - 1;
+        while (lo < hi) {
+            int s = a[i] + a[lo] + a[hi];
+            if (s == 0) return 1;
+            if (s < 0) lo++;
+            else hi--;
+        }
+    }
+    return 0;
+}
+Clue 1 (reveals about 10% of the approach): Fix one value and look for two others that complete it to zero.
+Clue 2 (reveals about 30% of the approach): After sorting, the two remaining values can be found with two pointers,
+moving one of them depending on the sign of the partial sum.
+Clue 3 (reveals about 50% of the approach): Sort the array. For each index i, put one pointer just after i and one at the
+end, then move them inward according to whether the sum is below or above zero.
+
+=== PAGE 65 ===
+CodeSprint 2026 - Question Bank
+Page 65
+H6 (High Roller). Given start and end times of meetings (equal-length lists), return the minimum number of rooms
+needed so no two overlapping meetings share a room.
+Python solution
+ def min_rooms(starts, ends):
+    s = sorted(starts)
+    e = sorted(ends)
+    rooms = best = 0
+    i = j = 0
+    while i < len(s):
+        if s[i] < e[j]:
+            rooms += 1
+            best = max(best, rooms)
+            i += 1
+        else:
+            rooms -= 1
+            j += 1
+    return best
+C solution
+ #include <stdlib.h>
+static int cmp_int(const void *x, const void *y) {
+    int a = *(const int *)x, b = *(const int *)y;
+    return (a > b) - (a < b);
+}
+int min_rooms(int starts[], int ends[], int n) {
+    qsort(starts, n, sizeof starts[0], cmp_int);
+    qsort(ends, n, sizeof ends[0], cmp_int);
+    int rooms = 0, best = 0, i = 0, j = 0;
+    while (i < n) {
+        if (starts[i] < ends[j]) {
+            rooms++;
+            if (rooms > best) best = rooms;
+            i++;
+        } else {
+            rooms--;
+            j++;
+        }
+    }
+    return best;
+}
+Clue 1 (reveals about 10% of the approach): Count how many meetings are active at the moment each meeting starts.
+Clue 2 (reveals about 30% of the approach): Sorting starts and ends separately lets you sweep through time and track
+the number of active meetings.
+Clue 3 (reveals about 50% of the approach): Sort the start times and the end times separately. Walk through the starts:
+a start before the next end adds a room, and an end removes one. The largest room count seen is the answer.
+
+=== PAGE 66 ===
+CodeSprint 2026 - Question Bank
+Page 66
+H7 (High Roller). Return the length of the longest palindromic substring of s. Aim for O(n^2) time and O(1) extra space.
+Python solution
+ def longest_palindrome(s):
+    if not s:
+        return 0
+    best = 1
+    def expand(l, r):
+        while l >= 0 and r < len(s) and s[l] == s[r]:
+            l -= 1
+            r += 1
+        return r - l - 1
+    for c in range(len(s)):
+        best = max(best, expand(c, c), expand(c, c + 1))
+    return best
+C solution
+ static int expand(const char *s, int n, int l, int r) {
+    while (l >= 0 && r < n && s[l] == s[r]) {
+        l--;
+        r++;
+    }
+    return r - l - 1;
+}
+int longest_palindrome(const char *s) {
+    int n = 0;
+    while (s[n]) n++;
+    if (n == 0) return 0;
+    int best = 1;
+    for (int c = 0; c < n; c++) {
+        int a = expand(s, n, c, c);
+        int b = expand(s, n, c, c + 1);
+        if (a > best) best = a;
+        if (b > best) best = b;
+    }
+    return best;
+}
+Clue 1 (reveals about 10% of the approach): Palindromes grow outward from a center, which can be a character or a
+gap between two characters.
+Clue 2 (reveals about 30% of the approach): For each possible center, expanding outward while the characters match
+finds the longest palindrome at that center.
+Clue 3 (reveals about 50% of the approach): Try every center, both single-character centers and gaps between
+neighbors. From each center, expand left and right while the characters match, and record the length.
+
+=== PAGE 67 ===
+CodeSprint 2026 - Question Bank
+Page 67
+H8 (High Roller). Count the islands in a grid of "1" (land) and "0" (water). Islands are groups of land cells connected
+horizontally or vertically.
+Python solution
+ def count_islands(grid):
+    if not grid:
+        return 0
+    rows, cols = len(grid), len(grid[0])
+    seen = [[False] * cols for _ in range(rows)]
+    count = 0
+    for r in range(rows):
+        for c in range(cols):
+            if grid[r][c] == '1' and not seen[r][c]:
+                count += 1
+                stack = [(r, c)]
+                seen[r][c] = True
+                while stack:
+                    y, x = stack.pop()
+                    for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                        ny, nx = y + dy, x + dx
+                        if 0 <= ny < rows and 0 <= nx < cols and grid[ny][nx] == '1' and not 
+    seen[ny][nx]:
+                            seen[ny][nx] = True
+                            stack.append((ny, nx))
+    return count
+C solution
+ #include <string.h>
+#define ROWS 64
+#define COLS 64
+int count_islands(int rows, int cols, const char grid[ROWS][COLS]) {
+    static int seen[ROWS][COLS];
+    static int st[ROWS * COLS][2];
+    memset(seen, 0, sizeof seen);
+    int count = 0;
+    for (int r = 0; r < rows; r++)
+        for (int c = 0; c < cols; c++) {
+            if (grid[r][c] != '1' || seen[r][c]) continue;
+            count++;
+            int top = 0;
+            st[top][0] = r; st[top][1] = c; top++;
+            seen[r][c] = 1;
+            while (top > 0) {
+                top--;
+                int y = st[top][0], x = st[top][1];
+                int dy[4] = {1, -1, 0, 0}, dx[4] = {0, 0, 1, -1};
+                for (int k = 0; k < 4; k++) {
+                    int ny = y + dy[k], nx = x + dx[k];
+                    if (ny >= 0 && ny < rows && nx >= 0 && nx < cols &&
+                        grid[ny][nx] == '1' && !seen[ny][nx]) {
+                        seen[ny][nx] = 1;
+                        st[top][0] = ny; st[top][1] = nx; top++;
+                    }
+                }
+            }
+        }
+    return count;
+}
+Clue 1 (reveals about 10% of the approach): Treat the grid as a graph, where land cells are connected to neighboring
+land cells.
+Clue 2 (reveals about 30% of the approach): Each island is one connected component, so you can count components
+by starting a search from each unvisited land cell.
+Clue 3 (reveals about 50% of the approach): Scan every cell. On each unvisited land cell, increase the count and run a
+depth-first search (with an explicit stack) that marks all connected land cells as visited.
+
+=== PAGE 68 ===
+CodeSprint 2026 - Question Bank
+Page 68
+H9 (High Roller). Return the k-th largest element of an array (k is 1-based). Duplicates count separately.
+Python solution
+ import heapq
+def kth_largest(a, k):
+    return heapq.nlargest(k, a)[-1]
+C solution
+ #include <stdlib.h>
+static int cmp_desc(const void *x, const void *y) {
+    int a = *(const int *)x, b = *(const int *)y;
+    return (b > a) - (b < a);
+}
+int kth_largest(int a[], int n, int k) {   /* sorts a in place */
+    qsort(a, n, sizeof a[0], cmp_desc);
+    return a[k - 1];
+}
+Clue 1 (reveals about 10% of the approach): Think about which elements you need to keep around to answer the
+question.
+Clue 2 (reveals about 30% of the approach): You do not need a full ordering. Keeping a small structure of the k largest
+values is enough.
+Clue 3 (reveals about 50% of the approach): Maintain a min-heap of size k. Push each value, pop when the heap
+grows past k, and the heap root then holds the answer.
+H10 (High Roller). Given an array where each value is the maximum jump length from that position, return the minimum
+number of jumps needed to reach the last index. Assume the last index is reachable.
+Python solution
+ def min_jumps(a):
+    jumps = end = far = 0
+    for i in range(len(a) - 1):
+        far = max(far, i + a[i])
+        if i == end:
+            jumps += 1
+            end = far
+    return jumps
+C solution
+ int min_jumps(const int a[], int n) {
+    int jumps = 0, end = 0, far = 0;
+    for (int i = 0; i < n - 1; i++) {
+        if (i + a[i] > far) far = i + a[i];
+        if (i == end) {
+            jumps++;
+            end = far;
+        }
+    }
+    return jumps;
+}
+Clue 1 (reveals about 10% of the approach): Think of the positions reachable with exactly one jump, then with two, and
+so on.
+Clue 2 (reveals about 30% of the approach): Each jump covers a window of positions, and the next jump should start
+from the farthest point you can reach inside the current window.
+Clue 3 (reveals about 50% of the approach): Track the end of the current window and the farthest index reachable so
+far. Each time you reach the end of the window, count one jump and extend the window to the farthest index.
+
+=== PAGE 69 ===
+CodeSprint 2026 - Question Bank
+Page 69
+Table 10: The Vault: DSA
+A clean technical table with no theme on the answers. Standard questions cover arrays, strings, hashing, linked lists,
+trees, graphs and basic DP. High Roller questions use tighter constraints: sliding windows, shortest paths, tree traversal,
+subset enumeration and dynamic programming. Solutions state the intended complexity.
+S1 (Standard). Contains duplicate: return the smallest value that appears at least twice, or None if every value is unique.
+Target O(n) time with a set.
+Python solution
+ def smallest_duplicate(a):
+    seen, dup = set(), set()
+    for x in a:
+        if x in seen:
+            dup.add(x)
+        else:
+            seen.add(x)
+    return min(dup) if dup else None
+C solution
+ #include <stdlib.h>
+static int cmp(const void *a, const void *b) {
+    int x = *(const int *)a, y = *(const int *)b;
+    return (x > y) - (x < y);
+}
+/* O(n log n) time, O(1) extra. Returns -1 if there is no duplicate. */
+int smallest_duplicate(int a[], int n) {
+    qsort(a, n, sizeof a[0], cmp);
+    for (int i = 1; i < n; i++)
+        if (a[i] == a[i - 1]) return a[i];
+    return -1;
+}
+Complexity
+ smallest_duplicate([4,1,3,1,4]) -> 1
+S2 (Standard). Count the leaves of a binary tree. An empty tree has 0 leaves, and a single node is one leaf.
+Python solution
+ def count_leaves(root):
+    if root is None:
+        return 0
+    if root.left is None and root.right is None:
+        return 1
+    return count_leaves(root.left) + count_leaves(root.right)
+C solution
+ struct Node { int val; struct Node *left, *right; };
+int count_leaves(const struct Node *root) {
+    if (!root) return 0;
+    if (!root->left && !root->right) return 1;
+    return count_leaves(root->left) + count_leaves(root->right);
+}
+
+=== PAGE 70 ===
+CodeSprint 2026 - Question Bank
+Page 70
+S3 (Standard). Shortest path length from top-left to bottom-right in a grid (0 = open, 1 = wall). Moves are allowed in all 8
+directions, including diagonals. Return -1 if unreachable.
+Python solution
+ from collections import deque
+def shortest_path(grid):
+    R, C = len(grid), len(grid[0])
+    if grid[0][0] or grid[R - 1][C - 1]:
+        return -1
+    dist = [[-1] * C for _ in range(R)]
+    dist[0][0] = 0
+    q = deque([(0, 0)])
+    while q:
+        r, c = q.popleft()
+        if (r, c) == (R - 1, C - 1):
+            return dist[r][c]
+        for dr in (-1, 0, 1):
+            for dc in (-1, 0, 1):
+                nr, nc = r + dr, c + dc
+                if (dr or dc) and 0 <= nr < R and 0 <= nc < C and grid[nr][nc] == 0 and dist[nr][nc] == 
+    -1:
+                    dist[nr][nc] = dist[r][c] + 1
+                    q.append((nr, nc))
+    return -1
+C solution
+ #include <string.h>
+#define MAXR 50
+#define MAXC 50
+int shortest_path(int R, int C, int g[MAXR][MAXC]) {
+    int dist[MAXR][MAXC], qr[MAXR * MAXC], qc[MAXR * MAXC], head = 0, tail = 0;
+    if (g[0][0] || g[R - 1][C - 1]) return -1;
+    memset(dist, -1, sizeof dist);
+    dist[0][0] = 0;
+    qr[tail] = 0; qc[tail] = 0; tail++;
+    while (head < tail) {
+        int r = qr[head], c = qc[head]; head++;
+        if (r == R - 1 && c == C - 1) return dist[r][c];
+        for (int dr = -1; dr <= 1; dr++)
+            for (int dc = -1; dc <= 1; dc++) {
+                int nr = r + dr, nc = c + dc;
+                if ((dr || dc) && nr >= 0 && nr < R && nc >= 0 && nc < C &&
+                    g[nr][nc] == 0 && dist[nr][nc] == -1) {
+                    dist[nr][nc] = dist[r][c] + 1;
+                    qr[tail] = nr; qc[tail] = nc; tail++;
+                }
+            }
+    }
+    return -1;
+}
+Complexity
+ shortest_path([[0,0],[0,0]]) -> 1 (one diagonal move)
+
+=== PAGE 71 ===
+CodeSprint 2026 - Question Bank
+Page 71
+S4 (Standard). Detect a cycle in a singly linked list (Floyd tortoise and hare). Return the length of the cycle, or 0 if the list
+does not loop back.
+Python solution
+ def cycle_length(head):
+    slow = fast = head
+    while fast and fast.next:
+        slow = slow.next
+        fast = fast.next.next
+        if slow is fast:
+            length = 1
+            p = slow.next
+            while p is not slow:
+                p = p.next
+                length += 1
+            return length
+    return 0
+C solution
+ struct LNode { int val; struct LNode *next; };
+int cycle_length(struct LNode *head) {
+    struct LNode *slow = head, *fast = head;
+    while (fast && fast->next) {
+        slow = slow->next;
+        fast = fast->next->next;
+        if (slow == fast) {
+            int length = 1;
+            for (struct LNode *p = slow->next; p != slow; p = p->next) length++;
+            return length;
+        }
+    }
+    return 0;
+}
+S5 (Standard). Reverse a singly linked list and return the new head and the number of nodes as a pair.
+Python solution
+ def reverse_list(head):
+    prev = None
+    count = 0
+    while head:
+        head.next, prev, head = prev, head, head.next
+        count += 1
+    return prev, count
+C solution
+ #include <stddef.h>
+struct LNode { int val; struct LNode *next; };
+/* returns the new head; *count receives the number of nodes */
+struct LNode *reverse_list(struct LNode *head, int *count) {
+    struct LNode *prev = NULL;
+    *count = 0;
+    while (head) {
+        struct LNode *next = head->next;
+        head->next = prev;
+        prev = head;
+        head = next;
+        (*count)++;
+    }
+    return prev;
+}
+Complexity
+ reverse_list of 1 -> 2 -> 3 returns (3-node head, 3)
+
+=== PAGE 72 ===
+CodeSprint 2026 - Question Bank
+Page 72
+S6 (Standard). Merge overlapping intervals, after dropping intervals with zero length (start equal to end).
+[[1,3],[2,6],[8,10],[15,18],[4,4]] gives [[1,6],[8,10],[15,18]].
+Python solution
+ def merge_intervals(iv):
+    iv = sorted(x for x in iv if x[0] != x[1])
+    out = []
+    for s, e in iv:
+        if out and s <= out[-1][1]:
+            out[-1][1] = max(out[-1][1], e)
+        else:
+            out.append([s, e])
+    return out
+C solution
+ #include <stdlib.h>
+typedef struct { int s, e; } Iv;
+static int by_start(const void *a, const void *b) {
+    const Iv *x = a, *y = b;
+    return (x->s > y->s) - (x->s < y->s);
+}
+/* removes zero-length intervals, merges in place, returns the new count */
+int merge_intervals(Iv iv[], int n) {
+    int m = 0;
+    for (int i = 0; i < n; i++)
+        if (iv[i].s != iv[i].e) iv[m++] = iv[i];
+    if (m == 0) return 0;
+    qsort(iv, m, sizeof iv[0], by_start);
+    int k = 0;
+    for (int i = 1; i < m; i++) {
+        if (iv[i].s <= iv[k].e) {
+            if (iv[i].e > iv[k].e) iv[k].e = iv[i].e;
+        } else iv[++k] = iv[i];
+    }
+    return k + 1;
+}
+S7 (Standard). Find the second smallest positive integer that is missing from an unsorted array, in O(n) time and O(1)
+extra space. Example: [3, 4, -1, 1] gives 5, because 2 is the first missing and 5 is the next.
+Python solution
+ def second_missing_positive(a):
+    n = len(a)
+    for i in range(n):
+        while 1 <= a[i] <= n and a[a[i] - 1] != a[i]:
+            j = a[i] - 1
+            a[i], a[j] = a[j], a[i]
+    missing = [i + 1 for i in range(n) if a[i] != i + 1]
+    if len(missing) >= 2:
+        return missing[1]
+    return n + 1 if missing else n + 2
+C solution
+ int second_missing_positive(int a[], int n) {
+    for (int i = 0; i < n; i++)
+        while (a[i] >= 1 && a[i] <= n && a[a[i] - 1] != a[i]) {
+            int j = a[i] - 1, t = a[i];
+            a[i] = a[j];
+            a[j] = t;
+        }
+    int found = 0;
+    for (int i = 0; i < n; i++)
+        if (a[i] != i + 1) {
+            found++;
+            if (found == 2) return i + 1;
+        }
+    return found == 1 ? n + 1 : n + 2;
+}
+Complexity
+ second_missing_positive([3,4,-1,1]) -> 5
+
+=== PAGE 73 ===
+CodeSprint 2026 - Question Bank
+Page 73
+S8 (Standard). Search for a target in a rotated sorted array (no duplicates). Return the index of the target, or -1. Also
+return the index of the smallest element (the rotation point). Use a linear scan for the second part.
+Python solution
+ def search_rotated(a, t):
+    lo, hi = 0, len(a) - 1
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        if a[mid] == t:
+            break
+        if a[lo] <= a[mid]:
+            if a[lo] <= t < a[mid]:
+                hi = mid - 1
+            else:
+                lo = mid + 1
+        else:
+            if a[mid] < t <= a[hi]:
+                lo = mid + 1
+            else:
+                hi = mid - 1
+    else:
+        idx = -1
+    if lo <= hi:
+        idx = mid
+    rot = a.index(min(a)) if a else -1
+    return idx, rot
+C solution
+ int search_rotated(const int a[], int n, int t, int *rot) {
+    int lo = 0, hi = n - 1, idx = -1;
+    while (lo <= hi) {
+        int mid = lo + (hi - lo) / 2;
+        if (a[mid] == t) { idx = mid; break; }
+        if (a[lo] <= a[mid]) {
+            if (a[lo] <= t && t < a[mid]) hi = mid - 1;
+            else lo = mid + 1;
+        } else {
+            if (a[mid] < t && t <= a[hi]) lo = mid + 1;
+            else hi = mid - 1;
+        }
+    }
+    *rot = -1;
+    for (int i = 0; i < n; i++)
+        if (*rot < 0 || a[i] < a[*rot]) *rot = i;
+    return idx;
+}
+S9 (Standard). Climbing stairs: number of ways to reach step n taking 1, 2 or 3 steps at a time.
+Python solution
+ def climb_stairs(n):
+    if n == 0:
+        return 1
+    w = [1, 1, 2]
+    if n < 3:
+        return w[n]
+    for _ in range(3, n + 1):
+        w.append(w[-1] + w[-2] + w[-3])
+    return w[n]
+C solution
+ long long climb_stairs(int n) {
+    if (n == 0) return 1;
+    if (n <= 2) return n == 1 ? 1 : 2;
+    long long a = 1, b = 1, c = 2;
+    for (int i = 3; i <= n; i++) {
+        long long t = a + b + c;
+        a = b;
+        b = c;
+        c = t;
+    }
+    return c;
+}
+Complexity
+ climb_stairs(3) -> 4
+
+=== PAGE 74 ===
+CodeSprint 2026 - Question Bank
+Page 74
+S10 (Standard). Longest common suffix of a list of strings. Return "" if there is none. Example: ["flower", "tower", "power"]
+gives "ower".
+Python solution
+ def longest_common_suffix(strs):
+    if not strs:
+        return ''
+    suffix = strs[0]
+    for s in strs[1:]:
+        while not s.endswith(suffix):
+            suffix = suffix[1:]
+    return suffix
+C solution
+ #include <string.h>
+/* writes the suffix into out (out must be at least as long as strs[0]) */
+void longest_common_suffix(const char *strs[], int n, char *out) {
+    if (n == 0) { out[0] = '\0'; return; }
+    int l0 = (int)strlen(strs[0]);
+    int len = l0;
+    for (int i = 1; i < n && len > 0; i++) {
+        int li = (int)strlen(strs[i]);
+        int k = 0;
+        while (k < len && k < li && strs[i][li - 1 - k] == strs[0][l0 - 1 - k]) k++;
+        len = k;
+    }
+    memcpy(out, strs[0] + l0 - len, len);
+    out[len] = '\0';
+}
+H1 (High Roller). Longest subarray containing at most k zeros (window with two pointers). Example [1,0,1,1,0,1] with k =
+1 gives 4.
+Python solution
+ def longest_at_most_k_zeros(a, k):
+    lo = zeros = best = 0
+    for hi, x in enumerate(a):
+        zeros += (x == 0)
+        while zeros > k:
+            zeros -= (a[lo] == 0)
+            lo += 1
+        best = max(best, hi - lo + 1)
+    return best
+C solution
+ int longest_at_most_k_zeros(const int a[], int n, int k) {
+    int lo = 0, zeros = 0, best = 0;
+    for (int hi = 0; hi < n; hi++) {
+        if (a[hi] == 0) zeros++;
+        while (zeros > k) {
+            if (a[lo] == 0) zeros--;
+            lo++;
+        }
+        if (hi - lo + 1 > best) best = hi - lo + 1;
+    }
+    return best;
+}
+Complexity
+ Time O(n), space O(1). The window only grows or shrinks monotonically.
+
+=== PAGE 75 ===
+CodeSprint 2026 - Question Bank
+Page 75
+H2 (High Roller). Dijkstra: shortest distance from source to every node in a weighted graph with non-negative edges.
+Return the distance to target.
+Python solution
+ import heapq
+def dijkstra(n, edges, src, dst):
+    adj = [[] for _ in range(n)]
+    for u, v, w in edges:
+        adj[u].append((v, w))
+    INF = float('inf')
+    dist = [INF] * n
+    dist[src] = 0
+    pq = [(0, src)]
+    while pq:
+        d, u = heapq.heappop(pq)
+        if d > dist[u]:
+            continue                       # stale entry
+        for v, w in adj[u]:
+            if d + w < dist[v]:
+                dist[v] = d + w
+                heapq.heappush(pq, (dist[v], v))
+    return dist[dst] if dist[dst] < INF else -1
+C solution
+ #include <limits.h>
+#define MAXN 100
+/* adjacency matrix version: O(V^2), w[u][v] = 0 means no edge */
+int dijkstra(int n, int w[MAXN][MAXN], int src, int dst) {
+    int dist[MAXN], done[MAXN] = {0};
+    for (int i = 0; i < n; i++) dist[i] = INT_MAX;
+    dist[src] = 0;
+    for (int it = 0; it < n; it++) {
+        int u = -1;
+        for (int i = 0; i < n; i++)
+            if (!done[i] && dist[i] != INT_MAX && (u == -1 || dist[i] < dist[u])) u = i;
+        if (u == -1) break;
+        done[u] = 1;
+        for (int v = 0; v < n; v++)
+            if (w[u][v] > 0 && dist[u] + w[u][v] < dist[v]) dist[v] = dist[u] + w[u][v];
+    }
+    return dist[dst] == INT_MAX ? -1 : dist[dst];
+}
+Complexity
+ Heap version: O((V + E) log V). Matrix version: O(V^2). Only valid for non-negative weights.
+H3 (High Roller). Kth smallest value in a BST (k is 1-based). Stop as soon as the answer is found.
+Python solution
+ def kth_smallest(root, k):
+    stack, cur = [], root
+    while stack or cur:
+        while cur:
+            stack.append(cur)
+            cur = cur.left
+        cur = stack.pop()
+        k -= 1
+        if k == 0:
+            return cur.val
+        cur = cur.right
+    return None
+C solution
+ struct Node { int val; struct Node *left, *right; };
+static int found, answer;
+static void inorder(struct Node *n, int *k) {
+    if (!n || found) return;
+    inorder(n->left, k);
+    if (!found && --(*k) == 0) { found = 1; answer = n->val; return; }
+    inorder(n->right, k);
+}
+int kth_smallest(struct Node *root, int k) {
+    found = 0;
+    inorder(root, &k);
+    return found ? answer : -1;
+}
+Complexity
+ Time O(h + k), space O(h). In-order traversal of a BST is sorted.
+
+=== PAGE 76 ===
+CodeSprint 2026 - Question Bank
+Page 76
+H4 (High Roller). Longest common subsequence of two strings (not necessarily contiguous).
+Python solution
+ def lcs(a, b):
+    n, m = len(a), len(b)
+    dp = [[0] * (m + 1) for _ in range(n + 1)]
+    for i in range(1, n + 1):
+        for j in range(1, m + 1):
+            if a[i - 1] == b[j - 1]:
+                dp[i][j] = dp[i - 1][j - 1] + 1
+            else:
+                dp[i][j] = max(dp[i - 1][j], dp[i][j - 1])
+    return dp[n][m]
+C solution
+ #include <string.h>
+#define MAXLEN 200
+int lcs(const char *a, const char *b) {
+    int n = strlen(a), m = strlen(b);
+    static int dp[MAXLEN + 1][MAXLEN + 1];
+    for (int i = 0; i <= n; i++)
+        for (int j = 0; j <= m; j++) {
+            if (i == 0 || j == 0) dp[i][j] = 0;
+            else if (a[i - 1] == b[j - 1]) dp[i][j] = dp[i - 1][j - 1] + 1;
+            else dp[i][j] = dp[i - 1][j] > dp[i][j - 1] ? dp[i - 1][j] : dp[i][j - 1];
+        }
+    return dp[n][m];
+}
+Complexity
+ Time O(n*m), space O(n*m) (can drop to O(min(n,m)) with rolling rows).
+H5 (High Roller). All subsets of a list (power set). Order of the output does not matter.
+Python solution
+ def subsets(nums):
+    out = [[]]
+    for x in nums:
+        out += [s + [x] for s in out]
+    return out
+C solution
+ #include <stdio.h>
+/* prints every subset of a[0..n-1]; n up to 20 */
+void subsets(const int a[], int n) {
+    for (unsigned mask = 0; mask < (1u << n); mask++) {
+        printf("[");
+        int first = 1;
+        for (int i = 0; i < n; i++)
+            if (mask & (1u << i)) {
+                printf(first ? "%d" : ", %d", a[i]);
+                first = 0;
+            }
+        printf("]\n");
+    }
+}
+Complexity
+ Time O(2^n * n) output-bound. Each subset is produced exactly once.
+H6 (High Roller). 0/1 knapsack: maximum value with total weight at most W. Each item can be used at most once.
+Python solution
+ def knapsack(items, W):
+    dp = [0] * (W + 1)
+    for w, v in items:
+        for cap in range(W, w - 1, -1):   # reverse: each item used once
+            dp[cap] = max(dp[cap], dp[cap - w] + v)
+    return dp[W]
+C solution
+ int knapsack(const int w[], const int v[], int n, int W) {
+    int dp[W + 1];
+    for (int c = 0; c <= W; c++) dp[c] = 0;
+    for (int i = 0; i < n; i++)
+        for (int cap = W; cap >= w[i]; cap--)   /* reverse order: 0/1 */
+            if (dp[cap - w[i]] + v[i] > dp[cap]) dp[cap] = dp[cap - w[i]] + v[i];
+    return dp[W];
+}
+Complexity
+ Time O(n*W), space O(W). Iterating capacity downward prevents reusing an item.
+
+=== PAGE 77 ===
+CodeSprint 2026 - Question Bank
+Page 77
+H7 (High Roller). Most frequent element of an array (ties: any). Use counting, then find the maximum count.
+Python solution
+ from collections import Counter
+def most_frequent(a):
+    return Counter(a).most_common(1)[0][0]
+C solution
+ #include <stdlib.h>
+static int cmp(const void *a, const void *b) {
+    int x = *(const int *)a, y = *(const int *)b;
+    return (x > y) - (x < y);
+}
+/* sorts a in place, then scans runs: O(n log n) */
+int most_frequent(int a[], int n) {
+    qsort(a, n, sizeof a[0], cmp);
+    int best = a[0], best_cnt = 0;
+    for (int i = 0; i < n;) {
+        int j = i;
+        while (j < n && a[j] == a[i]) j++;
+        if (j - i > best_cnt) { best_cnt = j - i; best = a[i]; }
+        i = j;
+    }
+    return best;
+}
+Complexity
+ Time O(n) with a hash map; O(n log n) with sorting in C.
+H8 (High Roller). Longest increasing path in an R x C matrix (moves to 4 neighbours with a strictly larger value).
+Memoise DFS results.
+Python solution
+ def longest_increasing_path(m):
+    if not m:
+        return 0
+    R, C = len(m), len(m[0])
+    memo = [[0] * C for _ in range(R)]
+    def dfs(r, c):
+        if memo[r][c]:
+            return memo[r][c]
+        best = 1
+        for dr, dc in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            nr, nc = r + dr, c + dc
+            if 0 <= nr < R and 0 <= nc < C and m[nr][nc] > m[r][c]:
+                best = max(best, 1 + dfs(nr, nc))
+        memo[r][c] = best
+        return best
+    return max(dfs(r, c) for r in range(R) for c in range(C))
+C solution
+ #define R 4
+#define C 4
+static int memo[R][C];
+static int dfs(int g[R][C], int r, int c) {
+    if (memo[r][c]) return memo[r][c];
+    int best = 1;
+    int dr[4] = {1, -1, 0, 0}, dc[4] = {0, 0, 1, -1};
+    for (int k = 0; k < 4; k++) {
+        int nr = r + dr[k], nc = c + dc[k];
+        if (nr >= 0 && nr < R && nc >= 0 && nc < C && g[nr][nc] > g[r][c]) {
+            int cand = 1 + dfs(g, nr, nc);
+            if (cand > best) best = cand;
+        }
+    }
+    return memo[r][c] = best;
+}
+int longest_increasing_path(int g[R][C]) {
+    int best = 0;
+    for (int r = 0; r < R; r++)
+        for (int c = 0; c < C; c++) {
+            int d = dfs(g, r, c);
+            if (d > best) best = d;
+        }
+    return best;
+}
+Complexity
+ Time O(R*C), each cell computed once. Space O(R*C) for the memo.
+
+=== PAGE 78 ===
+CodeSprint 2026 - Question Bank
+Page 78
+H9 (High Roller). Decode ways: number of ways to decode a digit string where "1" to "26" map to letters A to Z. Example
+"226" has 3 ways.
+Python solution
+ def num_decodings(s):
+    if not s or s[0] == '0':
+        return 0
+    prev, cur = 1, 1                       # ways for empty prefix, first char
+    for i in range(1, len(s)):
+        nxt = 0
+        if s[i] != '0':
+            nxt += cur
+        if 10 <= int(s[i - 1:i + 1]) <= 26:
+            nxt += prev
+        prev, cur = cur, nxt
+    return cur
+C solution
+ long long num_decodings(const char *s) {
+    int n = 0;
+    while (s[n]) n++;
+    if (n == 0 || s[0] == '0') return 0;
+    long long prev = 1, cur = 1;
+    for (int i = 1; i < n; i++) {
+        long long nxt = 0;
+        if (s[i] != '0') nxt += cur;
+        int two = (s[i - 1] - '0') * 10 + (s[i] - '0');
+        if (two >= 10 && two <= 26) nxt += prev;
+        prev = cur;
+        cur = nxt;
+    }
+    return cur;
+}
+Complexity
+ Time O(n), space O(1).
+H10 (High Roller). Unique paths in an m x n grid with obstacles (1 = obstacle), moving only right or down.
+Python solution
+ def unique_paths(grid):
+    if not grid or grid[0][0] == 1:
+        return 0
+    R, C = len(grid), len(grid[0])
+    dp = [0] * C
+    dp[0] = 1
+    for r in range(R):
+        for c in range(C):
+            if grid[r][c] == 1:
+                dp[c] = 0
+            elif c > 0:
+                dp[c] += dp[c - 1]
+    return dp[C - 1]
+C solution
+ long long unique_paths(int R, int C, const int g[][10]) {
+    long long dp[10] = {0};
+    if (g[0][0] == 1) return 0;
+    dp[0] = 1;
+    for (int r = 0; r < R; r++)
+        for (int c = 0; c < C; c++) {
+            if (g[r][c] == 1) dp[c] = 0;
+            else if (c > 0) dp[c] += dp[c - 1];
+        }
+    return dp[C - 1];
+}
+Complexity
+ Time O(R*C), space O(C) with a rolling row. Obstacles reset the cell to 0.

@@ -497,13 +497,65 @@ export async function reshuffleAllQuestions() {
     return { success: true }
 }
 
+function formatQuestionPayload(q: any, defaultGameType?: string, defaultDifficulty?: string) {
+    // 1. Detect game_type
+    let gType = (q.game_type || defaultGameType || '').toUpperCase()
+    if (!gType && q.title) {
+        const titleLower = q.title.toLowerCase()
+        if (titleLower.includes('slots')) gType = 'SLOTS'
+        else if (titleLower.includes('roulette')) gType = 'ROULETTE'
+        else if (titleLower.includes('blackjack')) gType = 'BLACKJACK'
+        else if (titleLower.includes('craps')) gType = 'CRAPS'
+        else if (titleLower.includes('poker')) gType = 'POKER'
+        else if (titleLower.includes('baccarat')) gType = 'BACCARAT'
+        else if (titleLower.includes('dice')) gType = 'DICE'
+        else if (titleLower.includes('high card') || titleLower.includes('highcard')) gType = 'HIGHCARD'
+        else if (titleLower.includes('coin flip') || titleLower.includes('coinflip')) gType = 'COINFLIP'
+        else if (titleLower.includes('vault')) gType = 'VAULT'
+        else if (titleLower.includes('final')) gType = 'FINAL'
+    }
+    if (!gType) gType = 'SLOTS'
+
+    // 2. Detect difficulty
+    let diff = (q.difficulty || defaultDifficulty || 'STANDARD').toUpperCase()
+    if (diff !== 'HIGH' && diff !== 'STANDARD') diff = 'STANDARD'
+
+    // 3. Format test_cases jsonb
+    const rawTestCases = q.test_cases
+    const casesArray = Array.isArray(rawTestCases) ? rawTestCases : (rawTestCases?.cases || [])
+    const clues = q.clues || (rawTestCases && !Array.isArray(rawTestCases) ? rawTestCases.clues : []) || []
+    const options = q.options || (rawTestCases && !Array.isArray(rawTestCases) ? rawTestCases.options : null) || null
+    const expectedOutput = q.expected_output || (rawTestCases && !Array.isArray(rawTestCases) ? rawTestCases.expected_output : null) || (casesArray[0]?.expected ?? null)
+
+    const testCasesPayload = {
+        cases: casesArray,
+        clues: clues,
+        options: options,
+        expected_output: expectedOutput,
+        correct_option: q.correct_option || null,
+        solution_python: q.solution_python || null,
+        solution_c: q.solution_c || null,
+    }
+
+    return {
+        title: q.title || 'Untitled',
+        problem_statement: q.description || q.problem_statement || '',
+        starter_code: q.starter || q.starter_code || '# Write your solution here\n',
+        test_cases: testCasesPayload,
+        constraints: q.constraints || '',
+        game_type: gType,
+        difficulty: diff,
+        is_active: q.is_active !== undefined ? q.is_active : true,
+        is_used: false
+    }
+}
+
 export async function bulkUploadQuestions(questionsJson: string) {
     if (!isAdminAuthenticated()) return { error: 'UNAUTHORIZED' }
 
     try {
         let questions = JSON.parse(questionsJson)
 
-        // Auto-wrap single objects in an array seamlessly!
         if (!Array.isArray(questions)) {
             if (typeof questions === 'object' && questions !== null) {
                 questions = [questions]
@@ -512,24 +564,50 @@ export async function bulkUploadQuestions(questionsJson: string) {
             }
         }
 
-        // Strip any manual states so they don't immediately crash the table draw logic
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        questions = questions.map((q: any) => ({
-            ...q,
-            is_active: false,
-            is_used: false
-        }))
+        const formattedQuestions = questions.map((q: any) => formatQuestionPayload(q))
 
-        const { error } = await supabaseAdmin
-            .from('question_bank')
-            .insert(questions)
+        // Insert in chunks of 50 to prevent timeouts/limits
+        const BATCH_SIZE = 50
+        for (let i = 0; i < formattedQuestions.length; i += BATCH_SIZE) {
+            const chunk = formattedQuestions.slice(i, i + BATCH_SIZE)
+            const { error } = await supabaseAdmin
+                .from('question_bank')
+                .insert(chunk)
+            if (error) return { error: `Batch insert error (items ${i + 1}-${i + chunk.length}): ${error.message}` }
+        }
 
-        if (error) return { error: error.message }
-        return { success: true, count: questions.length }
-    } catch {
-        return { error: 'INVALID JSON FORMAT' }
+        return { success: true, count: formattedQuestions.length }
+    } catch (e: any) {
+        return { error: e.message || 'INVALID JSON FORMAT' }
     }
 }
+
+export async function uploadDefaultQuestionBank() {
+    if (!isAdminAuthenticated()) return { error: 'UNAUTHORIZED' }
+    try {
+        const fs = await import('fs')
+        const path = await import('path')
+        const filePath = path.join(process.cwd(), 'questions_all_tables_complete.json')
+        if (!fs.existsSync(filePath)) {
+            return { error: 'questions_all_tables_complete.json file not found on server.' }
+        }
+        const content = fs.readFileSync(filePath, 'utf8')
+        return await bulkUploadQuestions(content)
+    } catch (err: any) {
+        return { error: err.message || 'Failed to read questions_all_tables_complete.json' }
+    }
+}
+
+export async function purgeAllQuestions() {
+    if (!isAdminAuthenticated()) return { error: 'UNAUTHORIZED' }
+    const { error } = await supabaseAdmin
+        .from('question_bank')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000')
+    if (error) return { error: error.message }
+    return { success: true }
+}
+
 
 export async function uploadQuestionsForTable(gameType: string, difficulty: string, questionsJson: string) {
     if (!isAdminAuthenticated()) return { error: 'UNAUTHORIZED' }
@@ -545,28 +623,14 @@ export async function uploadQuestionsForTable(gameType: string, difficulty: stri
             }
         }
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        questions = questions.map((q: any) => ({
-            title: q.title || 'Untitled',
-            problem_statement: q.problem_statement || q.description || '',
-            starter_code: q.starter_code || q.starter || '',
-            test_cases: q.test_cases || [],
-            constraints: q.constraints || '',
-            clues: q.clues || [],
-            expected_output: q.expected_output || null,
-            options: q.options || null,
-            game_type: gameType.toUpperCase(),
-            difficulty: difficulty.toUpperCase(),
-            is_active: false,
-            is_used: false
-        }))
+        const formattedQuestions = questions.map((q: any) => formatQuestionPayload(q, gameType, difficulty))
 
         const { error } = await supabaseAdmin
             .from('question_bank')
-            .insert(questions)
+            .insert(formattedQuestions)
 
         if (error) return { error: error.message }
-        return { success: true, count: questions.length }
+        return { success: true, count: formattedQuestions.length }
     } catch {
         return { error: 'INVALID JSON FORMAT' }
     }

@@ -10,37 +10,74 @@ type TeamRow = {
   access_code: string;
 }
 
+import { AVATAR_LIST } from '@/lib/avatars'
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function loginAction(prevState: any, formData: FormData) {
-  let code = formData.get('access_code') as string
+  let rawCode = formData.get('access_code') as string
 
-  if (!code) return { error: "Please enter a code." }
-  code = code.toUpperCase()
+  if (!rawCode) return { error: "Please enter your Syndicate Code or Team Number." }
+  rawCode = rawCode.trim().toUpperCase()
 
-  // 1. Fetch data
-  const { data, error } = await supabaseAdmin
+  // 1. Resolve aliases
+  let targetCode = rawCode.replace(/[\s-]+/g, '_')
+
+  // Check if numeric or TEAM-xx alias
+  const teamNumMatch = rawCode.match(/^(?:TEAM|T)?\s*0*([1-9]|[12][0-9]|3[0-2])$/i)
+  const testNumMatch = rawCode.match(/^(?:TEST)\s*0*([12])$/i)
+
+  if (teamNumMatch) {
+    const num = parseInt(teamNumMatch[1], 10)
+    const matched = AVATAR_LIST.find(a => a.teamNum === num)
+    if (matched) targetCode = matched.code
+  } else if (testNumMatch) {
+    const num = parseInt(testNumMatch[1], 10)
+    const matched = AVATAR_LIST.find(a => a.teamNum === (30 + num))
+    if (matched) targetCode = matched.code
+  } else {
+    // Check if matches an avatar name or code
+    const matched = AVATAR_LIST.find(a =>
+      a.code === targetCode ||
+      a.code === rawCode ||
+      a.name.toUpperCase().replace(/[\s-]+/g, '_') === targetCode ||
+      a.name.toUpperCase() === rawCode
+    )
+    if (matched) targetCode = matched.code
+  }
+
+  // 2. Fetch team by resolved targetCode or fallback to rawCode
+  let { data, error } = await supabaseAdmin
     .from('teams')
     .select('*')
-    .eq('access_code', code)
+    .eq('access_code', targetCode)
     .maybeSingle()
+
+  if (!data && targetCode !== rawCode) {
+    const fallbackRes = await supabaseAdmin
+      .from('teams')
+      .select('*')
+      .eq('access_code', rawCode)
+      .maybeSingle()
+    data = fallbackRes.data
+    error = fallbackRes.error
+  }
 
   if (error) {
     console.error("Database Error:", error)
     return { error: "System Error." }
   }
 
-  // 2. Cast data to our manual type (The Fix)
   const team = data as (TeamRow & { is_logged_in?: boolean }) | null
 
   if (!team) {
-    return { error: "INVALID CODE" }
+    return { error: `INVALID SYNDICATE CODE: "${rawCode}". Check the Syndicate Roster below.` }
   }
 
   if (team.is_logged_in) {
-    return { error: "TEAM IS ALREADY LOGGED IN ON ANOTHER DEVICE." }
+    return { error: "SYNDICATE IS ALREADY LOGGED IN ON ANOTHER DEVICE." }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // 3. Update logged in state
   const payload = { is_logged_in: true } as any;
   await supabaseAdmin
     .from('teams')
@@ -48,14 +85,14 @@ export async function loginAction(prevState: any, formData: FormData) {
     .update(payload)
     .eq('id', team.id)
 
-  // 3. Set Session
+  // 4. Set Session
   cookies().set('team_id', team.id, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     maxAge: 60 * 60 * 24
   })
 
-  // 4. Redirect
+  // 5. Redirect
   redirect('/avatar')
 }
 
@@ -108,16 +145,44 @@ export async function fetchQuestionData(gameId: string, difficultyStr: string = 
       return { error: "No active questions found for this table/difficulty." };
     }
 
+    // Extract test_cases, clues, options, expected_output from either top-level or test_cases JSONB
+    const rawTestCases = questionData.test_cases;
+    let extractedCases: any[] = [];
+    let extractedClues: string[] = questionData.clues || [];
+    let extractedOptions: string[] | null = questionData.options || null;
+    let extractedExpected: string | null = questionData.expected_output || null;
+
+    if (Array.isArray(rawTestCases)) {
+      extractedCases = rawTestCases;
+      if (!extractedExpected && rawTestCases.length > 0) {
+        extractedExpected = rawTestCases[0].expected || null;
+      }
+    } else if (typeof rawTestCases === 'object' && rawTestCases !== null) {
+      extractedCases = rawTestCases.cases || [];
+      if (!extractedClues || extractedClues.length === 0) {
+        extractedClues = rawTestCases.clues || [];
+      }
+      if (!extractedOptions) {
+        extractedOptions = rawTestCases.options || null;
+      }
+      if (!extractedExpected) {
+        extractedExpected = rawTestCases.expected_output || (extractedCases[0]?.expected ?? null);
+      }
+    }
+
     return {
       success: true,
       question: {
         id: questionData.id,
-        content: questionData.problem_statement || questionData.content, // Support both schemas
+        title: questionData.title,
+        content: questionData.problem_statement || questionData.content,
         starter_code: questionData.starter_code,
-        constraints: questionData.constraints, // This could be a string of banned words/symbols separated by commas
-        expected_output: questionData.test_cases && questionData.test_cases.length > 0 ? questionData.test_cases[0].expected : null,
-        test_cases: questionData.test_cases || [], // Raw payload for the UI
-        clues_total: questionData.clues ? questionData.clues.length : 0
+        constraints: questionData.constraints,
+        expected_output: extractedExpected,
+        test_cases: extractedCases,
+        clues: extractedClues,
+        clues_total: extractedClues.length,
+        options: extractedOptions
       }
     };
   } catch {
@@ -239,25 +304,37 @@ export async function updateRound2Status(teamId: string, inRound2: boolean = tru
 }
 
 export async function submitFinalBet(teamId: string, amount: number) {
-  // 1. Deduct from wallet_balance
-  // 2. Add round_2_bet
-  const { data } = await supabaseAdmin.from('teams').select('wallet_balance').eq('id', teamId).single()
-  const team = data as any
-  if (!team) return { error: 'Team not found' }
-  const newBalance = (team.wallet_balance || 0) - amount
-  if (newBalance < 0) return { error: 'Insufficient funds' }
+  try {
+    if (isNaN(amount) || amount < 500) {
+      return { error: 'Minimum bet is 500 credits.' }
+    }
+    const { data, error: fetchErr } = await supabaseAdmin.from('teams').select('wallet_balance').eq('id', teamId).single()
+    if (fetchErr || !data) return { error: 'Team not found.' }
+    const team = data as any
+    const newBalance = (team.wallet_balance || 0) - amount
+    if (newBalance < 0) return { error: 'Insufficient funds. Minimum bet is 500 credits.' }
 
-  const payload: any = { wallet_balance: newBalance, round_2_bet: amount }
-  // @ts-expect-error: Next.js/Supabase inference bug
-  await supabaseAdmin.from('teams').update(payload).eq('id', teamId)
+    const payload: any = {
+      wallet_balance: newBalance,
+      round_2_bet: amount,
+      current_locked_table: 'final'
+    }
+    // @ts-expect-error: Next.js/Supabase inference bug
+    const { error: updateErr } = await supabaseAdmin.from('teams').update(payload).eq('id', teamId)
+    if (updateErr) return { error: 'Failed to record wager.' }
 
-  // Log transaction
-  const txPayload: any = {
-    team_id: teamId,
-    amount: -Math.abs(amount),
-    description: `Placed Final Round Wager: ALL IN`
+    // Log transaction
+    const txPayload: any = {
+      team_id: teamId,
+      amount: -Math.abs(amount),
+      description: `Final Round Wager: $${amount}`
+    }
+    await supabaseAdmin.from('transactions').insert(txPayload)
+
+    return { success: true, newBalance }
+  } catch (err: any) {
+    return { error: err.message || 'System error placing final bet.' }
   }
-  await supabaseAdmin.from('transactions').insert(txPayload)
 }
 
 // --- NEW: SPIN WHEEL LOGIC ---
@@ -269,21 +346,25 @@ export async function spinWheel(teamId: string, gameId: string) {
     const team = data as any
     if (!team) return { error: 'Team not found' }
     
-    const newBalance = (team.wallet_balance || 0) - 150
-    if (newBalance < 0) return { error: 'Insufficient funds (150 Credits required for Wheel + Entry).' }
+    // In the final round, spin wheel is a free bonus multiplier included for all top 6 finalists
+    const cost = gameId === 'final' ? 0 : 150
+    const newBalance = (team.wallet_balance || 0) - cost
+    if (newBalance < 0) return { error: 'Insufficient funds (150 Credits required for Wheel).' }
 
     const payload: any = { wallet_balance: newBalance, current_locked_table: gameId }
     // @ts-expect-error: Next.js/Supabase inference bug
     const { error: updateErr } = await supabaseAdmin.from('teams').update(payload).eq('id', teamId)
     console.log(`DEBUG: spinWheel updateErr:`, updateErr)
 
-    // Log transaction
-    const txPayload: any = {
-      team_id: teamId,
-      amount: -150,
-      description: `Wheel Spin + Entry Fee for ${gameId.toUpperCase()}`
+    if (cost > 0) {
+      // Log transaction
+      const txPayload: any = {
+        team_id: teamId,
+        amount: -cost,
+        description: `Wheel Spin Fee for ${gameId.toUpperCase()}`
+      }
+      await supabaseAdmin.from('transactions').insert(txPayload)
     }
-    await supabaseAdmin.from('transactions').insert(txPayload)
 
     return { success: true, newBalance }
   } catch (error: any) {
@@ -316,8 +397,9 @@ export async function claimAutomatedReward(teamId: string, payout: number, gameI
       .limit(1)
       .single();
 
-    if (recentTx) {
-      const txTime = new Date(recentTx.created_at).getTime();
+    const recentTxData = recentTx as any
+    if (recentTxData) {
+      const txTime = new Date(recentTxData.created_at).getTime();
       if (Date.now() - txTime < 5000) { // Reduced to 5 seconds to prevent double-click/strict-mode fires
          return { success: true, newBalance: teamData.wallet_balance };
       }
@@ -354,59 +436,75 @@ export async function claimAutomatedReward(teamId: string, payout: number, gameI
 export async function buyClue(teamId: string, questionId: string, clueIndex: number) {
   const cost = (clueIndex + 1) * 50;
   
-  const { data: team, error: teamErr } = await supabaseAdmin.from('teams').select('wallet_balance').eq('id', teamId).single();
+  const { data: teamData, error: teamErr } = await supabaseAdmin.from('teams').select('wallet_balance').eq('id', teamId).single();
+  const team = teamData as any;
   if (teamErr || !team) return { error: 'Team not found' };
   
   if (team.wallet_balance < cost) {
     return { error: `Not enough coins. Need ${cost} coins.` };
   }
 
-  const { data: question, error: qErr } = await supabaseAdmin.from('question_bank').select('clues').eq('id', questionId).single();
+  const { data: question } = await supabaseAdmin.from('question_bank').select('test_cases').eq('id', questionId).maybeSingle();
   
   let actualClue = '';
-  const cluesArray = question && question.clues ? question.clues : [];
+  let cluesArray: string[] = [];
+  const tc = (question as any)?.test_cases;
+  if (tc) {
+    if (Array.isArray(tc)) {
+      // test_cases is just cases array
+    } else if (typeof tc === 'object' && tc.clues && Array.isArray(tc.clues)) {
+      cluesArray = tc.clues;
+    }
+  }
 
   if (!Array.isArray(cluesArray) || clueIndex >= cluesArray.length) {
-    // For testing purposes: allow up to 3 clues even if they don't exist in DB
     if (clueIndex >= 3) {
       return { error: 'No more clues available for this challenge!' };
     }
-    actualClue = `[TEST CLUE ${clueIndex + 1}] This is a dummy clue because no clues were uploaded (or column is missing).`;
+    actualClue = `[CLUE ${clueIndex + 1}] Check your logic against edge case constraints.`;
   } else {
     actualClue = cluesArray[clueIndex];
   }
 
-  const { error: updateErr } = await supabaseAdmin.from('teams').update({ wallet_balance: team.wallet_balance - cost }).eq('id', teamId);
+  // @ts-expect-error: Next.js/Supabase inference bug
+  const { error: updateErr } = await supabaseAdmin.from('teams').update({ wallet_balance: team.wallet_balance - cost } as any).eq('id', teamId);
   if (updateErr) return { error: 'Failed to deduct coins' };
 
-  // Log to event_control or wallet history if needed, but not strictly required
   return { clue: actualClue };
 }
 
 export async function buyVaultClues(teamId: string, questionId: string, level: number) {
   const cost = level * 50;
   
-  const { data: team, error: teamErr } = await supabaseAdmin.from('teams').select('wallet_balance').eq('id', teamId).single();
+  const { data: teamData, error: teamErr } = await supabaseAdmin.from('teams').select('wallet_balance').eq('id', teamId).single();
+  const team = teamData as any;
   if (teamErr || !team) return { error: 'Team not found' };
   
   if (team.wallet_balance < cost) {
     return { error: `Not enough coins. Need ${cost} coins.` };
   }
 
-  const { data: question, error: qErr } = await supabaseAdmin.from('question_bank').select('clues').eq('id', questionId).single();
+  const { data: question } = await supabaseAdmin.from('question_bank').select('test_cases').eq('id', questionId).maybeSingle();
   
   let actualClues: string[] = [];
-  const cluesArray = question && question.clues ? question.clues : [];
+  let cluesArray: string[] = [];
+  const tc = (question as any)?.test_cases;
+  if (tc) {
+    if (typeof tc === 'object' && !Array.isArray(tc) && tc.clues && Array.isArray(tc.clues)) {
+      cluesArray = tc.clues;
+    }
+  }
 
   for (let i = 0; i < level; i++) {
     if (!Array.isArray(cluesArray) || i >= cluesArray.length) {
-      actualClues.push(`[TEST CLUE ${i + 1}] This is a dummy clue because no clues were uploaded (or column is missing).`);
+      actualClues.push(`[VAULT CLUE ${i + 1}] Consider an optimal data structure like a stack or priority queue.`);
     } else {
       actualClues.push(cluesArray[i]);
     }
   }
 
-  const { error: updateErr } = await supabaseAdmin.from('teams').update({ wallet_balance: team.wallet_balance - cost }).eq('id', teamId);
+  // @ts-expect-error: Next.js/Supabase inference bug
+  const { error: updateErr } = await supabaseAdmin.from('teams').update({ wallet_balance: team.wallet_balance - cost } as any).eq('id', teamId);
   if (updateErr) return { error: 'Failed to deduct coins' };
 
   return { clues: actualClues };

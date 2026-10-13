@@ -4,6 +4,7 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { supabaseAdmin } from '@/lib/supabase/server'
+import { AVATAR_LIST } from '@/lib/avatars'
 
 export async function selectAvatarAction(formData: FormData) {
   const teamId = cookies().get('team_id')?.value
@@ -15,36 +16,43 @@ export async function selectAvatarAction(formData: FormData) {
   }
 
   // CASE 2: SELECTING AN AVATAR
-  const avatarId = Number(formData.get('avatar_id'))
+  const submittedAvatarId = Number(formData.get('avatar_id'))
 
-  // 1. Check if taken (Double check server-side)
-  const { data } = await supabaseAdmin
+  // 1. Fetch team's current record
+  const { data: teamData, error: teamErr } = await supabaseAdmin
     .from('teams')
-    .select('id')
-    .eq('avatar_id', avatarId)
-    .neq('id', teamId)
-    .maybeSingle()
+    .select('id, access_code, avatar_id')
+    .eq('id', teamId)
+    .single()
 
-  // Explicit Cast to fix TypeScript error
-  const existingOwner = data as { id: string } | null
+  const team = teamData as any
+  if (teamErr || !team) redirect('/')
 
-  if (existingOwner) {
-    // Already taken, refresh page to show lock
+  // Determine this team's designated avatar
+  const designatedAvatar = AVATAR_LIST.find(a =>
+    a.code === team.access_code ||
+    a.teamNum === team.avatar_id ||
+    a.id === team.avatar_id
+  ) || AVATAR_LIST[0]
+
+  // Enforce rule: Team can ONLY choose their designated avatar!
+  if (submittedAvatarId && submittedAvatarId !== designatedAvatar.id) {
+    console.warn(`Security: Team ${team.access_code} attempted to select unauthorized avatar ${submittedAvatarId}`)
     revalidatePath('/avatar')
     return
   }
 
-  // 2. Claim it
+  // 2. Claim / lock designated avatar
   const { error } = await supabaseAdmin
     .from('teams')
-    // Fix TypeScript 'never' error by disabling type-check here or casting to expected shape
-    // @ts-expect-error: Supabase type inference bug
-    .update({ avatar_id: avatarId })
+    // @ts-expect-error: Supabase inference bug
+    .update({ avatar_id: designatedAvatar.id })
     .eq('id', teamId)
 
   if (error) {
     console.error('Avatar Update Error:', error)
   }
 
-  revalidatePath('/avatar')
+  // Direct redirect into map
+  redirect('/map')
 }
