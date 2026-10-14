@@ -12,10 +12,19 @@
     "solution_c": "int find_max(const int a[], int n, int *ok) {\n    if (n == 0) { *ok = 0; return 0; }\n    int m = a[0];\n    for (int i = 1; i < n; i++)\n        if (a[i] > m) m = a[i];\n    *ok = 1;\n    return m;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "[1, 5, 3, 9, 2]",
+        "expected": "9"
+      },
+      {
+        "input": "[]",
+        "expected": "None"
+      },
+      {
+        "input": "[-10, -5, -20]",
+        "expected": "-5"
       }
-    ]
+    ],
+    "expected_output": "9"
   },
   {
     "id": "table_1_s2",
@@ -30,10 +39,19 @@
     "solution_c": "int total(const int a[], int n) {\n    int s = 0;\n    for (int i = 0; i < n; i++)\n        if (a[i] > 0) s += a[i];\n    return s;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "[1, 2, 3, 4]",
+        "expected": "10"
+      },
+      {
+        "input": "[-2, 5, -1, 3]",
+        "expected": "8"
+      },
+      {
+        "input": "[]",
+        "expected": "0"
       }
-    ]
+    ],
+    "expected_output": "10"
   },
   {
     "id": "table_1_s3",
@@ -48,10 +66,19 @@
     "solution_c": "int is_even(int n) {\n    return n >= 0 && n % 2 == 0;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "4",
+        "expected": "True"
+      },
+      {
+        "input": "7",
+        "expected": "False"
+      },
+      {
+        "input": "-2",
+        "expected": "False"
       }
-    ]
+    ],
+    "expected_output": "True"
   },
   {
     "id": "table_1_s4",
@@ -66,10 +93,19 @@
     "solution_c": "#include <string.h>\nint is_done(const char *s) {\n    while (*s == ' ') s++;\n    if (strncmp(s, \"done\", 4) != 0) return 0;\n    s += 4;\n    while (*s == ' ') s++;\n    return *s == '\\0';\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "\"done\"",
+        "expected": "True"
+      },
+      {
+        "input": "\"  done  \"",
+        "expected": "True"
+      },
+      {
+        "input": "\"pending\"",
+        "expected": "False"
       }
-    ]
+    ],
+    "expected_output": "True"
   },
   {
     "id": "table_1_s5",
@@ -84,10 +120,19 @@
     "solution_c": "/* C has no default arguments. The caller owns the storage. Returns 1 if added, 0 if duplicate. */\nint add(int *lst, int *len, int item) {\n    for (int i = 0; i < *len; i++)\n        if (lst[i] == item) return 0;\n    lst[(*len)++] = item;\n    return 1;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "1, [2, 3]",
+        "expected": "[2, 3, 1]"
+      },
+      {
+        "input": "2, [1, 2]",
+        "expected": "[1, 2]"
+      },
+      {
+        "input": "5",
+        "expected": "[5]"
       }
-    ]
+    ],
+    "expected_output": "[2, 3, 1]"
   },
   {
     "id": "table_1_s6",
@@ -102,10 +147,19 @@
     "solution_c": "#include <math.h>\ndouble average(const int a[], int n) {\n    if (n == 0) return 0.0;\n    long long s = 0;\n    for (int i = 0; i < n; i++) s += a[i];\n    return round((double)s / n * 100.0) / 100.0;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "[1, 2, 3, 4, 5]",
+        "expected": "3.0"
+      },
+      {
+        "input": "[1, 2]",
+        "expected": "1.5"
+      },
+      {
+        "input": "[]",
+        "expected": "0.0"
       }
-    ]
+    ],
+    "expected_output": "3.0"
   },
   {
     "id": "table_1_s7",
@@ -120,10 +174,19 @@
     "solution_c": "#include <string.h>\nchar name[12];                    /* up to 10 letters + '\\0' */\nint set_name(const char *src) {\n    if (strlen(src) > 10) return 0;\n    strcpy(name, src);\n    return 1;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "\"Alice\", 10",
+        "expected": "True"
+      },
+      {
+        "input": "\"VeryLongNameExceedingLimit\", 20",
+        "expected": "False"
+      },
+      {
+        "input": "\"Alice\", 5",
+        "expected": "False"
       }
-    ]
+    ],
+    "expected_output": "True"
   },
   {
     "id": "table_1_s8",
@@ -138,10 +201,19 @@
     "solution_c": "int sum_squares_down(int n) {\n    int t = 0;\n    while (n > 0) {\n        t += n * n;\n        n--;\n    }\n    return t;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "3",
+        "expected": "14"
+      },
+      {
+        "input": "1",
+        "expected": "1"
+      },
+      {
+        "input": "0",
+        "expected": "0"
       }
-    ]
+    ],
+    "expected_output": "14"
   },
   {
     "id": "table_1_s9",
@@ -156,10 +228,15 @@
     "solution_c": "#include <stdlib.h>\n#include <string.h>\n/* Reverses the word order in place. Words are separated by single spaces. */\nvoid reverse_words(char *s) {\n    size_t n = strlen(s);\n    char *tmp = malloc(n + 1);\n    if (!tmp) return;\n    strcpy(tmp, s);\n    char *tok[256];\n    int k = 0;\n    for (char *p = strtok(tmp, \" \"); p && k < 256; p = strtok(NULL, \" \")) tok[k++] = p;\n    s[0] = '\\0';\n    for (int i = k - 1; i >= 0; i--) {\n        strcat(s, tok[i]);\n        if (i > 0) strcat(s, \" \");\n    }\n    free(tmp);\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "\"hello world\"",
+        "expected": "world hello"
+      },
+      {
+        "input": "\"one two three\"",
+        "expected": "three two one"
       }
-    ]
+    ],
+    "expected_output": "world hello"
   },
   {
     "id": "table_1_s10",
@@ -174,10 +251,19 @@
     "solution_c": "#include <stddef.h>\nint is_zero(const int *p) {\n    return p != NULL && *p == 0;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "0",
+        "expected": "True"
+      },
+      {
+        "input": "5",
+        "expected": "False"
+      },
+      {
+        "input": "None",
+        "expected": "False"
       }
-    ]
+    ],
+    "expected_output": "True"
   },
   {
     "id": "table_1_h1",
@@ -192,10 +278,19 @@
     "solution_c": "/* In-place compaction. Returns the new length. */\nint remove_evens(int a[], int n) {\n    int k = 0;\n    for (int i = 0; i < n; i++)\n        if (a[i] % 2 != 0) a[k++] = a[i];\n    return k;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "[1, 2, 3, 4, 5, 6]",
+        "expected": "[1, 3, 5]"
+      },
+      {
+        "input": "[2, 4, 6]",
+        "expected": "[]"
+      },
+      {
+        "input": "[1, 3, 5]",
+        "expected": "[1, 3, 5]"
       }
-    ]
+    ],
+    "expected_output": "[1, 3, 5]"
   },
   {
     "id": "table_1_h2",
@@ -210,10 +305,15 @@
     "solution_c": "#include <string.h>\nint grid[3][3];\nvoid init_grid(void) {\n    memset(grid, 0, sizeof grid);   /* each cell is independent */\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "2, 3",
+        "expected": "[[0, 0, 0], [0, 0, 0]]"
+      },
+      {
+        "input": "1, 1",
+        "expected": "[[0]]"
       }
-    ]
+    ],
+    "expected_output": "[[0, 0, 0], [0, 0, 0]]"
   },
   {
     "id": "table_1_h3",
@@ -228,10 +328,11 @@
     "solution_c": "/* C has no closures. The equivalent fix is to store values, not references. */\n#include <stdio.h>\nint main(void) {\n    int vals[3];\n    for (int i = 0; i < 3; i++) vals[i] = i;   /* copy the value */\n    for (int i = 0; i < 3; i++) printf(\"%d\\n\", vals[i]);\n    return 0;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "[f() for f in funcs]",
+        "expected": "[0, 1, 2]"
       }
-    ]
+    ],
+    "expected_output": "[0, 1, 2]"
   },
   {
     "id": "table_1_h4",
@@ -246,10 +347,15 @@
     "solution_c": "int bin_search(const int a[], int n, int t) {\n    int lo = 0, hi = n - 1;\n    while (lo <= hi) {\n        int mid = lo + (hi - lo) / 2;   /* no overflow */\n        if (a[mid] == t) return mid;\n        if (a[mid] < t) lo = mid + 1;\n        else hi = mid - 1;\n    }\n    return -1;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "[1, 3, 5, 7, 9], 5",
+        "expected": "2"
+      },
+      {
+        "input": "[1, 3, 5, 7, 9], 4",
+        "expected": "-1"
       }
-    ]
+    ],
+    "expected_output": "2"
   },
   {
     "id": "table_1_h5",
@@ -264,10 +370,15 @@
     "solution_c": "long long fact(int n) {\n    long long r = 1;\n    for (int i = 2; i <= n; i++) r *= i;\n    return r;           /* valid up to n = 20 */\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "5",
+        "expected": "120"
+      },
+      {
+        "input": "13",
+        "expected": "6227020800"
       }
-    ]
+    ],
+    "expected_output": "120"
   },
   {
     "id": "table_1_h6",
@@ -282,10 +393,11 @@
     "solution_c": "/* C analogue: compact the array in place, keeping non-negative values. */\nint drop_negative(int v[], int n) {\n    int k = 0;\n    for (int i = 0; i < n; i++)\n        if (v[i] >= 0) v[k++] = v[i];\n    return k;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "{\"a\": 5, \"b\": -2, \"c\": 0}",
+        "expected": "{'a': 5, 'c': 0}"
       }
-    ]
+    ],
+    "expected_output": "{'a': 5, 'c': 0}"
   },
   {
     "id": "table_1_h7",
@@ -300,10 +412,15 @@
     "solution_c": "int is_thousand(int x) {\n    return x == 1000;     /* C only has value comparison for ints */\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "1000",
+        "expected": "True"
+      },
+      {
+        "input": "999",
+        "expected": "False"
       }
-    ]
+    ],
+    "expected_output": "True"
   },
   {
     "id": "table_1_h8",
@@ -318,10 +435,15 @@
     "solution_c": "int sum_positive(const int a[], int n) {\n    int s = 0;             /* was uninitialised */\n    for (int i = 0; i < n; i++)\n        if (a[i] > 0) s += a[i];\n    return s;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "[1, -2, 3]",
+        "expected": "4"
+      },
+      {
+        "input": "[-1, -2, -3]",
+        "expected": "0"
       }
-    ]
+    ],
+    "expected_output": "4"
   },
   {
     "id": "table_1_h9",
@@ -336,10 +458,19 @@
     "solution_c": "long long fib(int n) {\n    if (n <= 1) return n;\n    return fib(n - 1) + fib(n - 2);\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "0",
+        "expected": "0"
+      },
+      {
+        "input": "1",
+        "expected": "1"
+      },
+      {
+        "input": "6",
+        "expected": "8"
       }
-    ]
+    ],
+    "expected_output": "0"
   },
   {
     "id": "table_1_h10",
@@ -354,10 +485,15 @@
     "solution_c": "#include <math.h>\nint approx_equal(double a, double b) {\n    return fabs(a - b) < 1e-9;   /* compile with -lm */\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "0.1 * 3, 0.3",
+        "expected": "True"
+      },
+      {
+        "input": "1.0, 2.0",
+        "expected": "False"
       }
-    ]
+    ],
+    "expected_output": "True"
   },
   {
     "id": "table_2_s1",
@@ -752,10 +888,19 @@
     "solution_c": "#include <ctype.h>\n#include <string.h>\nint count_vowels(const char *s) {\n    int n = 0;\n    for (size_t i = 0; s[i]; i++) {\n        char c = (char)tolower((unsigned char)s[i]);\n        if (c && strchr(\"aeiou\", c)) n++;\n        else if (c == 'y' && (s[i + 1] == '\\0' || isspace((unsigned char)s[i + 1]))) n++;\n    }\n    return n;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "\"hello world\"",
+        "expected": "3"
+      },
+      {
+        "input": "\"sky fly by\"",
+        "expected": "3"
+      },
+      {
+        "input": "\"AEIOU\"",
+        "expected": "5"
       }
-    ]
+    ],
+    "expected_output": "3"
   },
   {
     "id": "table_3_s2",
@@ -770,10 +915,15 @@
     "solution_c": "#include <string.h>\nint count_word(const char *text, const char *w) {\n    char buf[1024];\n    int c = 0;\n    strncpy(buf, text, sizeof buf - 1);\n    buf[sizeof buf - 1] = '\\0';\n    for (char *t = strtok(buf, \" \\t\\n\"); t; t = strtok(NULL, \" \\t\\n\")) {\n        size_t len = strlen(t);\n        while (len && strchr(\".,!?\", t[len - 1])) t[--len] = '\\0';\n        if (strcmp(t, w) == 0) c++;\n    }\n    return c;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "\"apple banana apple orange apple\", \"apple\"",
+        "expected": "3"
+      },
+      {
+        "input": "\"hello there\", \"world\"",
+        "expected": "0"
       }
-    ]
+    ],
+    "expected_output": "3"
   },
   {
     "id": "table_3_s3",
@@ -788,10 +938,15 @@
     "solution_c": "/* a is r x c, b is c x r. The caller guarantees a rectangular matrix. */\nvoid transpose(int r, int c, const int a[r][c], int b[c][r]) {\n    for (int i = 0; i < r; i++)\n        for (int j = 0; j < c; j++)\n            b[j][i] = a[i][j];\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "[[1, 2], [3, 4]]",
+        "expected": "[[1, 3], [2, 4]]"
+      },
+      {
+        "input": "[[1, 2, 3], [4, 5, 6]]",
+        "expected": "[[1, 4], [2, 5], [3, 6]]"
       }
-    ]
+    ],
+    "expected_output": "[[1, 3], [2, 4]]"
   },
   {
     "id": "table_3_s4",
@@ -806,10 +961,11 @@
     "solution_c": "/* a is r x c. out receives the non-zero values row by row, and returns how many were written. */\nint flatten(int r, int c, const int a[r][c], int out[]) {\n    int k = 0;\n    for (int i = 0; i < r; i++)\n        for (int j = 0; j < c; j++)\n            if (a[i][j] != 0) out[k++] = a[i][j];\n    return k;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "[[1, [2, 3]], [4, 5]]",
+        "expected": "[1, [2, 3], 4, 5]"
       }
-    ]
+    ],
+    "expected_output": "[1, [2, 3], 4, 5]"
   },
   {
     "id": "table_3_s5",
@@ -824,10 +980,23 @@
     "solution_c": "void fib_list(int n, long long out[]) {\n    long long a = 0, b = 1;\n    for (int i = 0; i < n; i++) {\n        out[n - 1 - i] = a;\n        long long t = a + b;\n        a = b;\n        b = t;\n    }\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "0",
+        "expected": "[]"
+      },
+      {
+        "input": "1",
+        "expected": "[0]"
+      },
+      {
+        "input": "5",
+        "expected": "[3, 2, 1, 1, 0]"
+      },
+      {
+        "input": "7",
+        "expected": "[8, 5, 3, 2, 1, 1, 0]"
       }
-    ]
+    ],
+    "expected_output": "[]"
   },
   {
     "id": "table_3_s6",
@@ -842,10 +1011,11 @@
     "solution_c": "#include <math.h>\ndouble average(const int s[], int n) {\n    if (n == 0) return 0.0;\n    long long t = 0;\n    for (int i = 0; i < n; i++) t += s[i];\n    return round((double)t / n * 100.0) / 100.0;\n}",
     "test_cases": [
       {
-        "input": "Sample",
+        "input": "",
         "expected": "Passed"
       }
-    ]
+    ],
+    "expected_output": "Passed"
   },
   {
     "id": "table_3_s7",
@@ -860,10 +1030,19 @@
     "solution_c": "#include <ctype.h>\n#include <string.h>\nint is_pal(const char *s) {\n    int any = 0;\n    for (const char *p = s; *p; p++)\n        if (isalnum((unsigned char)*p)) { any = 1; break; }\n    if (!any) return 0;\n    int i = 0, j = (int)strlen(s) - 1;\n    while (i < j) {\n        while (i < j && !isalnum((unsigned char)s[i])) i++;\n        while (i < j && !isalnum((unsigned char)s[j])) j--;\n        if (tolower((unsigned char)s[i]) != tolower((unsigned char)s[j])) return 0;\n        i++; j--;\n    }\n    return 1;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "\"racecar\"",
+        "expected": "True"
+      },
+      {
+        "input": "\"hello\"",
+        "expected": "False"
+      },
+      {
+        "input": "\"A man a plan a canal Panama\"",
+        "expected": "True"
       }
-    ]
+    ],
+    "expected_output": "True"
   },
   {
     "id": "table_3_s8",
@@ -878,10 +1057,11 @@
     "solution_c": "int search(const int a[], int n, int t) {\n    int lo = 0, hi = n;\n    while (lo < hi) {\n        int mid = lo + (hi - lo) / 2;\n        if (a[mid] < t) lo = mid + 1;\n        else hi = mid;\n    }\n    return (lo < n && a[lo] == t) ? lo : -1;\n}",
     "test_cases": [
       {
-        "input": "Sample",
+        "input": "",
         "expected": "Passed"
       }
-    ]
+    ],
+    "expected_output": "Passed"
   },
   {
     "id": "table_3_s9",
@@ -896,10 +1076,15 @@
     "solution_c": "#include <ctype.h>\n#include <string.h>\nint is_anagram(const char *a, const char *b) {\n    int cnt[256] = {0};\n    for (; *a; a++)\n        if (*a != ' ') cnt[(unsigned char)tolower((unsigned char)*a)]++;\n    for (; *b; b++)\n        if (*b != ' ') cnt[(unsigned char)tolower((unsigned char)*b)]--;\n    for (int i = 0; i < 256; i++)\n        if (cnt[i]) return 0;\n    return 1;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "\"listen\", \"silent\"",
+        "expected": "True"
+      },
+      {
+        "input": "\"hello\", \"world\"",
+        "expected": "False"
       }
-    ]
+    ],
+    "expected_output": "True"
   },
   {
     "id": "table_3_s10",
@@ -914,10 +1099,11 @@
     "solution_c": "typedef struct { long long balance; } Account;\n/* 0 on success, -1 on insufficient funds */\nint withdraw(Account *a, long long amount) {\n    if (amount > a->balance) return -1;\n    a->balance -= amount;\n    return 0;\n}\n/* 0 on success, -1 if amount is not positive */\nint deposit(Account *a, long long amount) {\n    if (amount <= 0) return -1;\n    a->balance += amount;\n    return 0;\n}",
     "test_cases": [
       {
-        "input": "Sample",
+        "input": "",
         "expected": "Passed"
       }
-    ]
+    ],
+    "expected_output": "Passed"
   },
   {
     "id": "table_3_h1",
@@ -932,10 +1118,15 @@
     "solution_c": "/* Brute force O(n^2). An O(n) C version needs a hash table, which is\n   usually too much for a relay turn. Returns 1 and fills out[] if found. */\nint two_sum(const int a[], int n, int target, int out[2]) {\n    for (int i = 0; i < n; i++)\n        for (int j = i + 1; j < n; j++)\n            if (a[i] + a[j] == target) {\n                out[0] = i; out[1] = j;\n                return 1;\n            }\n    return 0;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "[2, 7, 11, 15], 9",
+        "expected": "[0, 1]"
+      },
+      {
+        "input": "[1, 2, 3, 9], 8",
+        "expected": "[]"
       }
-    ]
+    ],
+    "expected_output": "[0, 1]"
   },
   {
     "id": "table_3_h2",
@@ -950,10 +1141,19 @@
     "solution_c": "#include <string.h>\nint longest_unique(const char *s) {\n    int last[256];\n    for (int i = 0; i < 256; i++) last[i] = -1;\n    int start = 0, best = 0;\n    for (int i = 0; s[i]; i++) {\n        unsigned char c = (unsigned char)s[i];\n        if (last[c] >= start) start = last[c] + 1;\n        last[c] = i;\n        if (i - start + 1 > best) best = i - start + 1;\n    }\n    return best;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "\"abcabcbb\"",
+        "expected": "3"
+      },
+      {
+        "input": "\"bbbbb\"",
+        "expected": "1"
+      },
+      {
+        "input": "\"pwwkew\"",
+        "expected": "3"
       }
-    ]
+    ],
+    "expected_output": "3"
   },
   {
     "id": "table_3_h3",
@@ -968,10 +1168,11 @@
     "solution_c": "/* out must have room for n + m values */\nvoid merge(const int a[], int n, const int b[], int m, int out[]) {\n    int i = 0, j = 0, k = 0;\n    while (i < n && j < m)\n        out[k++] = (a[i] <= b[j]) ? a[i++] : b[j++];\n    while (i < n) out[k++] = a[i++];\n    while (j < m) out[k++] = b[j++];\n}",
     "test_cases": [
       {
-        "input": "Sample",
+        "input": "",
         "expected": "Passed"
       }
-    ]
+    ],
+    "expected_output": "Passed"
   },
   {
     "id": "table_3_h4",
@@ -986,10 +1187,19 @@
     "solution_c": "void next_greater(const int a[], int n, int res[]) {\n    int stack[n > 0 ? n : 1], top = 0;\n    for (int i = 0; i < n; i++) res[i] = -1;\n    for (int i = 0; i < n; i++) {\n        while (top > 0 && a[stack[top - 1]] < a[i])\n            res[stack[--top]] = a[i];\n        stack[top++] = i;\n    }\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "[1, 2, 3, 4]",
+        "expected": "[2, 3, 4, -1]"
+      },
+      {
+        "input": "[5, 1, 8, 2]",
+        "expected": "[8, 8, -1, -1]"
+      },
+      {
+        "input": "[10]",
+        "expected": "[-1]"
       }
-    ]
+    ],
+    "expected_output": "[2, 3, 4, -1]"
   },
   {
     "id": "table_3_h5",
@@ -1004,10 +1214,19 @@
     "solution_c": "int lis_length(const int a[], int n) {\n    int tails[n > 0 ? n : 1], len = 0;\n    for (int k = 0; k < n; k++) {\n        int lo = 0, hi = len;\n        while (lo < hi) {\n            int mid = (lo + hi) / 2;\n            if (tails[mid] < a[k]) lo = mid + 1;\n            else hi = mid;\n        }\n        tails[lo] = a[k];\n        if (lo == len) len++;\n    }\n    return len;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "[1, 2, 3, 4]",
+        "expected": "4"
+      },
+      {
+        "input": "[5, 1, 8, 2]",
+        "expected": "2"
+      },
+      {
+        "input": "[10]",
+        "expected": "1"
       }
-    ]
+    ],
+    "expected_output": "4"
   },
   {
     "id": "table_3_h6",
@@ -1022,10 +1241,19 @@
     "solution_c": "#include <stdlib.h>\nint min_coins(const int coins[], int k, int amount) {\n    const int INF = 1 << 29;\n    int *dp = malloc((amount + 1) * sizeof *dp);\n    if (!dp) return -1;\n    dp[0] = 0;\n    for (int a = 1; a <= amount; a++) {\n        dp[a] = INF;\n        for (int j = 0; j < k; j++)\n            if (coins[j] <= a && dp[a - coins[j]] + 1 < dp[a])\n                dp[a] = dp[a - coins[j]] + 1;\n    }\n    int r = dp[amount] >= INF ? -1 : dp[amount];\n    free(dp);\n    return r;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "[1, 2, 5], 11",
+        "expected": "3"
+      },
+      {
+        "input": "[2], 3",
+        "expected": "-1"
+      },
+      {
+        "input": "[1], 0",
+        "expected": "0"
       }
-    ]
+    ],
+    "expected_output": "3"
   },
   {
     "id": "table_3_h7",
@@ -1040,10 +1268,19 @@
     "solution_c": "int max_subarray(const int a[], int n) {\n    int best = a[0], cur = a[0];\n    for (int i = 1; i < n; i++) {\n        cur = (a[i] > cur + a[i]) ? a[i] : cur + a[i];\n        if (cur > best) best = cur;\n    }\n    return best;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "[-2, 1, -3, 4, -1, 2, 1, -5, 4]",
+        "expected": "6"
+      },
+      {
+        "input": "[1, 2, 3, 4]",
+        "expected": "10"
+      },
+      {
+        "input": "[-1, -2, -3]",
+        "expected": "-1"
       }
-    ]
+    ],
+    "expected_output": "6"
   },
   {
     "id": "table_3_h8",
@@ -1058,10 +1295,11 @@
     "solution_c": "struct Node { int v; struct Node *l, *r; };\nint lca(struct Node *root, int p, int q) {\n    while (root) {\n        if (p < root->v && q < root->v) root = root->l;\n        else if (p > root->v && q > root->v) root = root->r;\n        else return root->v;\n    }\n    return -1;\n}",
     "test_cases": [
       {
-        "input": "Sample",
+        "input": "",
         "expected": "Passed"
       }
-    ]
+    ],
+    "expected_output": "Passed"
   },
   {
     "id": "table_3_h9",
@@ -1076,10 +1314,11 @@
     "solution_c": "#define N 3\nvoid rotate(int a[N][N]) {\n    for (int i = 0; i < N; i++)               /* transpose */\n        for (int j = i + 1; j < N; j++) {\n            int t = a[i][j]; a[i][j] = a[j][i]; a[j][i] = t;\n        }\n    for (int i = 0; i < N; i++)               /* reverse each row */\n        for (int j = 0; j < N / 2; j++) {\n            int t = a[i][j]; a[i][j] = a[i][N - 1 - j]; a[i][N - 1 - j] = t;\n        }\n}",
     "test_cases": [
       {
-        "input": "Sample",
+        "input": "",
         "expected": "Passed"
       }
-    ]
+    ],
+    "expected_output": "Passed"
   },
   {
     "id": "table_3_h10",
@@ -1094,10 +1333,11 @@
     "solution_c": "#include <string.h>\n#define MAXLEN 100   /* inputs up to 100 characters */\nint edit_distance(const char *a, const char *b) {\n    int n = strlen(a), m = strlen(b);\n    static int dp[MAXLEN + 1][MAXLEN + 1];\n    for (int i = 0; i <= n; i++) dp[i][0] = i;\n    for (int j = 0; j <= m; j++) dp[0][j] = j;\n    for (int i = 1; i <= n; i++)\n        for (int j = 1; j <= m; j++) {\n            if (a[i - 1] == b[j - 1]) dp[i][j] = dp[i - 1][j - 1];\n            else {\n                int best = dp[i - 1][j - 1];\n                if (dp[i - 1][j] < best) best = dp[i - 1][j];\n                if (dp[i][j - 1] < best) best = dp[i][j - 1];\n                dp[i][j] = 1 + best;\n            }\n        }\n    return dp[n][m];\n}",
     "test_cases": [
       {
-        "input": "Sample",
+        "input": "",
         "expected": "Passed"
       }
-    ]
+    ],
+    "expected_output": "Passed"
   },
   {
     "id": "table_4_s1",
@@ -1112,15 +1352,24 @@
     "solution_c": "#include <ctype.h>\n#include <string.h>\nint count_vowels(const char *s) {\n    int n = 0;\n    size_t len = strlen(s);\n    for (size_t i = 0; i < len; i++) {\n        char c = (char)tolower((unsigned char)s[i]);\n        if (strchr(\"aeiou\", c)) n++;\n    }\n    if (len && tolower((unsigned char)s[len - 1]) == 'y') n++;\n    return n;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "\"hello world\"",
+        "expected": "3"
+      },
+      {
+        "input": "\"sky fly by\"",
+        "expected": "1"
+      },
+      {
+        "input": "\"AEIOU\"",
+        "expected": "5"
       }
     ],
     "clues": [
       "Check what the function does with uppercase input.",
       "The membership test compares each character with lowercase vowels\nonly, so \"A\" never matches \"a\". A trailing \"y\" also needs its own check.",
       "Normalize the case of the input first. Then count the vowels, and add one\nmore if the last character is \"y\"."
-    ]
+    ],
+    "expected_output": "3"
   },
   {
     "id": "table_4_s2",
@@ -1135,15 +1384,24 @@
     "solution_c": "int sum_list(const int a[], int n) {\n    int t = 0;\n    for (int i = 0; i < n; i++)\n        if (a[i] >= 0) t += a[i];\n    return t;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "[1, 2, 3, 4]",
+        "expected": "10"
+      },
+      {
+        "input": "[10, -5, 20]",
+        "expected": "30"
+      },
+      {
+        "input": "[]",
+        "expected": "0"
       }
     ],
     "clues": [
       "Test with [5]: what is returned?",
       "The loop index starts at 1, so the first element is never added. Negative\nvalues also need a filter.",
       "Iterate over every index from 0 to n-1, and add a value only when it is not\nnegative."
-    ]
+    ],
+    "expected_output": "10"
   },
   {
     "id": "table_4_s3",
@@ -1158,15 +1416,24 @@
     "solution_c": "int max_val(const int a[], int n, int *ok) {\n    if (n == 0) { *ok = 0; return 0; }\n    int m = a[0];\n    for (int i = 1; i < n; i++)\n        if (a[i] > m) m = a[i];\n    *ok = 1;\n    return m;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "[1, 5, 3, 9, 2]",
+        "expected": "9"
+      },
+      {
+        "input": "[-5, -2, -10]",
+        "expected": "-2"
+      },
+      {
+        "input": "[42]",
+        "expected": "42"
       }
     ],
     "clues": [
       "Try an input with only negative numbers.",
       "The running maximum starts at 0, which is larger than every element in\nthat case. An empty list also needs its own case.",
       ""
-    ]
+    ],
+    "expected_output": "9"
   },
   {
     "id": "table_4_s4",
@@ -1181,15 +1448,28 @@
     "solution_c": "int is_prime(int n) {\n    if (n < 2) return 0;\n    for (int i = 2; i * i <= n; i++)\n        if (n % i == 0) return 0;\n    return 1;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "7",
+        "expected": "True"
+      },
+      {
+        "input": "4",
+        "expected": "False"
+      },
+      {
+        "input": "1",
+        "expected": "False"
+      },
+      {
+        "input": "13",
+        "expected": "True"
       }
     ],
     "clues": [
       "Check the inputs 0 and 1 against the definition of a prime.",
       "The function never rejects values below 2, and it tests far more divisors\nthan it needs to.",
       "Reject values below 2 first, then test divisors only up to the square root of\nn."
-    ]
+    ],
+    "expected_output": "True"
   },
   {
     "id": "table_4_s5",
@@ -1204,15 +1484,20 @@
     "solution_c": "#include <string.h>\nvoid reverse(char *s) {\n    int n = (int)strlen(s);\n    for (int i = 0, j = n - 1; i < j; i++, j--) {\n        char t = s[i];\n        s[i] = s[j];\n        s[j] = t;\n    }\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "\"hello\"",
+        "expected": "olleh"
+      },
+      {
+        "input": "\"CodeSprint\"",
+        "expected": "tnirpSedoC"
       }
     ],
     "clues": [
       "Compare the first character of the input with the first character of the\noutput.",
       "The stop index 0 in the slice is exclusive, so index 0 is never included.",
       "The reversal must include both ends of the input, and the slice works the\nsame way on lists."
-    ]
+    ],
+    "expected_output": "olleh"
   },
   {
     "id": "table_4_s6",
@@ -1227,15 +1512,24 @@
     "solution_c": "unsigned long long factorial(unsigned int n) {\n    unsigned long long r = 1;\n    for (unsigned int k = 2; k <= n; k++) r *= k;\n    return r;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "1",
+        "expected": "1"
+      },
+      {
+        "input": "4",
+        "expected": "24"
+      },
+      {
+        "input": "6",
+        "expected": "720"
       }
     ],
     "clues": [
       "Work out what any multiplication does when the running product is zero.",
       "Starting with 0 means every product stays 0. Negative inputs are also\noutside the function's domain.",
       ""
-    ]
+    ],
+    "expected_output": "1"
   },
   {
     "id": "table_4_s7",
@@ -1250,7 +1544,7 @@
     "solution_c": "int contains(const int a[], int n, int x) {\n    for (int i = 0; i < n; i++)\n        if (a[i] == x) return 1;\n    return 0;\n}",
     "test_cases": [
       {
-        "input": "Sample",
+        "input": "",
         "expected": "Passed"
       }
     ],
@@ -1258,7 +1552,8 @@
       "Trace what is returned when x is present in the list.",
       "The branch that finds x returns the wrong boolean value.",
       "Return the success value on a match, and the failure value only after the\nsearch has finished."
-    ]
+    ],
+    "expected_output": "Passed"
   },
   {
     "id": "table_4_s8",
@@ -1273,15 +1568,24 @@
     "solution_c": "double avg(const int a[], int n) {\n    if (n == 0) return 0.0;\n    long long t = 0;\n    for (int i = 0; i < n; i++) t += a[i];\n    return (double)t / n;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "[1, 2, 3, 4]",
+        "expected": "2.5"
+      },
+      {
+        "input": "[5, 1, 8, 2]",
+        "expected": "4.0"
+      },
+      {
+        "input": "[10]",
+        "expected": "10.0"
       }
     ],
     "clues": [
       "Check the result for [1, 2] and compare it with the true mean.",
       "The floor division operator drops the fractional part of the result. An empty\nlist would also divide by zero.",
       "Use true division so the fractional part of the mean is kept, and return the\nempty-list value before dividing."
-    ]
+    ],
+    "expected_output": "2.5"
   },
   {
     "id": "table_4_s9",
@@ -1296,7 +1600,7 @@
     "solution_c": "",
     "test_cases": [
       {
-        "input": "Sample",
+        "input": "",
         "expected": "Passed"
       }
     ],
@@ -1304,7 +1608,8 @@
       "Call the function twice in a row without passing a list and compare the\nresults.",
       "The default list is created once, when the function is defined, and is\nshared between calls. Duplicates also need a check.",
       "Use None as the default and create a new list on each call. Append only\nwhen the item is not already present."
-    ]
+    ],
+    "expected_output": "Passed"
   },
   {
     "id": "table_4_s10",
@@ -1319,7 +1624,7 @@
     "solution_c": "int find(const int a[], int n, int x) {\n    for (int i = n - 1; i >= 0; i--)\n        if (a[i] == x) return i;\n    return -1;\n}",
     "test_cases": [
       {
-        "input": "Sample",
+        "input": "",
         "expected": "Passed"
       }
     ],
@@ -1327,7 +1632,8 @@
       "Check the loop bound against the length of the list.",
       "The index runs one past the last valid position, so a[len(a)] is read.\nSearching from the end also changes the direction of the loop.",
       "Valid indices run from len(a) - 1 down to 0, so walk backwards from the\nend and return the first match you find."
-    ]
+    ],
+    "expected_output": "Passed"
   },
   {
     "id": "table_4_h1",
@@ -1342,7 +1648,7 @@
     "solution_c": "int bsearch(const int a[], int n, int x) {\n    int lo = 0, hi = n;\n    while (lo < hi) {\n        int mid = lo + (hi - lo) / 2;\n        if (a[mid] == x) return mid;\n        if (a[mid] < x) lo = mid + 1;\n        else hi = mid;\n    }\n    return -1;\n}",
     "test_cases": [
       {
-        "input": "Sample",
+        "input": "",
         "expected": "Passed"
       }
     ],
@@ -1350,7 +1656,8 @@
       "Trace the search for x = 3 in [1, 2]. Do lo and hi ever meet?",
       "When a[mid] is smaller than x, lo is set to mid, so the same mid can be\ntested again and again.",
       "Move the lower bound past the element you have just tested, so the\nrange shrinks on every step."
-    ]
+    ],
+    "expected_output": "Passed"
   },
   {
     "id": "table_4_h2",
@@ -1365,7 +1672,7 @@
     "solution_c": "void merge(const int a[], int na, const int b[], int nb, int out[]) {\n    int i = 0, j = 0, k = 0;\n    while (i < na && j < nb)\n        out[k++] = (a[i] <= b[j]) ? a[i++] : b[j++];\n    while (i < na) out[k++] = a[i++];\n    while (j < nb) out[k++] = b[j++];\n}",
     "test_cases": [
       {
-        "input": "Sample",
+        "input": "",
         "expected": "Passed"
       }
     ],
@@ -1373,7 +1680,8 @@
       "Find the last element of the output for merge([1, 3], [2, 4, 6]).",
       "Once one input list is used up, the remaining items of the other list are\nnever copied.",
       "After the main loop, append whatever is left in both lists."
-    ]
+    ],
+    "expected_output": "Passed"
   },
   {
     "id": "table_4_h3",
@@ -1388,15 +1696,24 @@
     "solution_c": "int max_sub(const int a[], int n) {   /* n >= 1 */\n    int best = a[0], cur = a[0];\n    for (int i = 1; i < n; i++) {\n        cur = (a[i] > cur + a[i]) ? a[i] : cur + a[i];\n        if (cur > best) best = cur;\n    }\n    return best;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "[-2, 1, -3, 4, -1, 2, 1, -5, 4]",
+        "expected": "6"
+      },
+      {
+        "input": "[1, 2, 3, 4]",
+        "expected": "10"
+      },
+      {
+        "input": "[-1, -2, -3]",
+        "expected": "-1"
       }
     ],
     "clues": [
       "Test an array that contains only negative values.",
       "best starts at 0, which is not a sum of any non-empty subarray in that\ncase.",
       "Initialize both running values from the first element, so the answer always\ncomes from a real subarray."
-    ]
+    ],
+    "expected_output": "6"
   },
   {
     "id": "table_4_h4",
@@ -1411,15 +1728,20 @@
     "solution_c": "int two_sum(const int a[], int n, int t, int out[2]) {\n    for (int i = 0; i < n; i++)\n        for (int j = i + 1; j < n; j++)\n            if (a[i] + a[j] == t) {\n                out[0] = i;\n                out[1] = j;\n                return 1;\n            }\n    return 0;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "[2, 7, 11, 15], 9",
+        "expected": "[0, 1]"
+      },
+      {
+        "input": "[1, 2, 3, 9], 8",
+        "expected": "None"
       }
     ],
     "clues": [
       "Test two_sum([3], 6). Which index does it pair with?",
       "The current element is stored before it is looked up, so it can pair with\nitself.",
       "Look up the complement first, then store the current element for later\nlookups."
-    ]
+    ],
+    "expected_output": "[0, 1]"
   },
   {
     "id": "table_4_h5",
@@ -1434,15 +1756,24 @@
     "solution_c": "int longest_unique(const char *s) {\n    int last[256];\n    for (int k = 0; k < 256; k++) last[k] = -1;\n    int start = 0, best = 0;\n    for (int i = 0; s[i]; i++) {\n        unsigned char c = (unsigned char)s[i];\n        if (last[c] >= start) start = last[c] + 1;\n        last[c] = i;\n        if (i - start + 1 > best) best = i - start + 1;\n    }\n    return best;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "\"abcabcbb\"",
+        "expected": "3"
+      },
+      {
+        "input": "\"bbbbb\"",
+        "expected": "1"
+      },
+      {
+        "input": "\"pwwkew\"",
+        "expected": "3"
       }
     ],
     "clues": [
       "Trace \"abba\" and write down the window contents at each step.",
       "Moving the window start to the previous occurrence keeps that repeated\ncharacter inside the window.",
       "The window must begin one position after the earlier occurrence of the\nrepeated character."
-    ]
+    ],
+    "expected_output": "3"
   },
   {
     "id": "table_4_h6",
@@ -1457,7 +1788,7 @@
     "solution_c": "int bfs_count(int n, int adj[n][n], int s) {\n    int seen[n > 0 ? n : 1], q[n > 0 ? n : 1];\n    for (int i = 0; i < n; i++) seen[i] = 0;\n    int h = 0, t = 0, cnt = 1;\n    seen[s] = 1;\n    q[t++] = s;\n    while (h < t) {\n        int u = q[h++];\n        for (int v = 0; v < n; v++)\n            if (adj[u][v] && !seen[v]) {\n                seen[v] = 1;\n                cnt++;\n                q[t++] = v;\n            }\n    }\n    return cnt;\n}",
     "test_cases": [
       {
-        "input": "Sample",
+        "input": "",
         "expected": "Passed"
       }
     ],
@@ -1465,7 +1796,8 @@
       "Run the function on a graph with a cycle, such as 0 - 1 - 0.",
       "Nothing records that a vertex has already been queued, so the same\nvertices are added forever.",
       "Track which vertices have been seen and skip any neighbor you have\nalready visited."
-    ]
+    ],
+    "expected_output": "Passed"
   },
   {
     "id": "table_4_h7",
@@ -1480,15 +1812,24 @@
     "solution_c": "#include <stdlib.h>\nint min_coins(const int coins[], int nc, int amount) {\n    int *dp = malloc((size_t)(amount + 1) * sizeof *dp);\n    if (!dp) return -1;\n    const int INF = amount + 1;\n    dp[0] = 0;\n    for (int a = 1; a <= amount; a++) {\n        dp[a] = INF;\n        for (int k = 0; k < nc; k++)\n            if (coins[k] <= a && dp[a - coins[k]] + 1 < dp[a])\n                dp[a] = dp[a - coins[k]] + 1;\n    }\n    int r = (dp[amount] >= INF) ? -1 : dp[amount];\n    free(dp);\n    return r;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "[1, 2, 5], 11",
+        "expected": "3"
+      },
+      {
+        "input": "[2], 3",
+        "expected": "-1"
+      },
+      {
+        "input": "[1], 0",
+        "expected": "0"
       }
     ],
     "clues": [
       "Test an amount that no combination of the coins can make, such as coins\n[2] and amount 3.",
       "The unreachable sentinel is returned as if it were a real coin count.",
       "Map the unreachable sentinel to the documented failure value before\nreturning."
-    ]
+    ],
+    "expected_output": "3"
   },
   {
     "id": "table_4_h8",
@@ -1503,7 +1844,7 @@
     "solution_c": "int bsearch_c(const int a[], int n, int x) {\n    int lo = 0, hi = n;\n    while (lo < hi) {\n        int mid = lo + (hi - lo) / 2;      /* lo + hi can overflow int */\n        if (a[mid] == x) return mid;\n        if (a[mid] < x) lo = mid + 1;\n        else hi = mid;\n    }\n    return -1;\n}",
     "test_cases": [
       {
-        "input": "Sample",
+        "input": "",
         "expected": "Passed"
       }
     ],
@@ -1511,7 +1852,8 @@
       "Consider what happens when lo and hi are both close to the largest int\nvalue.",
       "lo + hi is computed in int before the division, and that sum can exceed the\nint range.",
       ""
-    ]
+    ],
+    "expected_output": "Passed"
   },
   {
     "id": "table_4_h9",
@@ -1526,7 +1868,7 @@
     "solution_c": "int max_profit(const int p[], int n) {\n    if (n == 0) return 0;\n    int mn = p[0], best = 0;\n    for (int i = 0; i < n; i++) {\n        if (p[i] < mn) mn = p[i];\n        if (p[i] - mn > best) best = p[i] - mn;\n    }\n    return best;\n}",
     "test_cases": [
       {
-        "input": "Sample",
+        "input": "",
         "expected": "Passed"
       }
     ],
@@ -1534,7 +1876,8 @@
       "Work out the lowest price seen so far at each step for [7, 1, 5, 3, 6, 4].",
       "The running minimum should only ever decrease, but the code makes it\nincrease.",
       "Track the lowest price seen so far, and compare each price against that\nvalue."
-    ]
+    ],
+    "expected_output": "Passed"
   },
   {
     "id": "table_4_h10",
@@ -1549,15 +1892,20 @@
     "solution_c": "#include <stdio.h>\nvoid compress(const char *s, char *out) {\n    int len = 0;\n    int n = 0;\n    while (s[n]) n++;\n    for (int i = 0; i < n; ) {\n        int j = i;\n        while (j < n && s[j] == s[i]) j++;\n        len += sprintf(out + len, \"%c%d\", s[i], j - i);\n        i = j;\n    }\n    out[len] = '\\0';\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "\"hello\"",
+        "expected": "h1e1l2o1"
+      },
+      {
+        "input": "\"CodeSprint\"",
+        "expected": "C1o1d1e1S1p1r1i1n1t1"
       }
     ],
     "clues": [
       "Trace \"aabb\" and list every run that gets written to the output.",
       "A run is only written out when a different character is seen, so the last run\nis never written.",
       "After the loop, write out the final run using the same logic as the others."
-    ]
+    ],
+    "expected_output": "h1e1l2o1"
   },
   {
     "id": "table_5_s1",
@@ -1572,10 +1920,15 @@
     "solution_c": "#include <ctype.h>\nvoid caesar(char *s, int k) {\n    k = ((k % 26) + 26) % 26;          /* normalise negative shifts */\n    for (; *s; s++)\n        if (isalpha((unsigned char)*s)) {\n            char b = isupper((unsigned char)*s) ? 'A' : 'a';\n            *s = (char)((*s - b + k) % 26 + b);\n        }\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "\"KHOOR\", -3",
+        "expected": "HELLO"
+      },
+      {
+        "input": "\"HELLO\", 3",
+        "expected": "KHOOR"
       }
-    ]
+    ],
+    "expected_output": "HELLO"
   },
   {
     "id": "table_5_s2",
@@ -1590,10 +1943,11 @@
     "solution_c": "char bin_to_char(const char *bits) {   /* bits: 8 characters '0' or '1' */\n    int v = 0;\n    for (int i = 0; i < 8; i++)\n        v = v * 2 + (bits[i] - '0');\n    return (char)v;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "\"01001000 01101001\"",
+        "expected": "Hi"
       }
-    ]
+    ],
+    "expected_output": "Hi"
   },
   {
     "id": "table_5_s3",
@@ -1608,10 +1962,11 @@
     "solution_c": "void xor_buf(unsigned char *d, int n, unsigned char key) {\n    for (int i = 0; i < n; i++)\n        d[i] ^= key;          /* XOR is its own inverse */\n}",
     "test_cases": [
       {
-        "input": "Sample",
+        "input": "",
         "expected": "Passed"
       }
-    ]
+    ],
+    "expected_output": "Passed"
   },
   {
     "id": "table_5_s4",
@@ -1626,10 +1981,11 @@
     "solution_c": "static int b64val(char c) {\n    if (c >= 'A' && c <= 'Z') return c - 'A';\n    if (c >= 'a' && c <= 'z') return c - 'a' + 26;\n    if (c >= '0' && c <= '9') return c - '0' + 52;\n    if (c == '+') return 62;\n    return 63;   /* '/' */\n}\nvoid b64_decode4(const char in[4], unsigned char out[3]) {\n    int v[4];\n    for (int i = 0; i < 4; i++) v[i] = b64val(in[i]);\n    out[0] = (unsigned char)((v[0] << 2) | (v[1] >> 4));\n    out[1] = (unsigned char)(((v[1] & 15) << 4) | (v[2] >> 2));\n    out[2] = (unsigned char)(((v[2] & 3) << 6) | v[3]);\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "base64.b64decode(\"SGVs\")",
+        "expected": "b'Hel'"
       }
-    ]
+    ],
+    "expected_output": "b'Hel'"
   },
   {
     "id": "table_5_s5",
@@ -1663,10 +2019,15 @@
     "solution_c": "#include <ctype.h>\nvoid atbash(char *s) {\n    for (; *s; s++)\n        if (isalpha((unsigned char)*s)) {\n            char b = isupper((unsigned char)*s) ? 'A' : 'a';\n            *s = (char)(b + 25 - (*s - b));\n        }\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "\"hello\"",
+        "expected": "svool"
+      },
+      {
+        "input": "\"CodeSprint\"",
+        "expected": "XlwvHkirmg"
       }
-    ]
+    ],
+    "expected_output": "svool"
   },
   {
     "id": "table_5_s7",
@@ -1681,10 +2042,11 @@
     "solution_c": "#include <ctype.h>\nvoid rot13(char *s) {\n    for (; *s; s++)\n        if (isalpha((unsigned char)*s)) {\n            char b = isupper((unsigned char)*s) ? 'A' : 'a';\n            *s = (char)((*s - b + 13) % 26 + b);\n        }\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "codecs.encode(\"Uryyb\", \"rot13\")",
+        "expected": "Hello"
       }
-    ]
+    ],
+    "expected_output": "Hello"
   },
   {
     "id": "table_5_s8",
@@ -1699,10 +2061,11 @@
     "solution_c": "#include <stdio.h>\nvoid hex_decode(const char *h, char *out) {\n    int k = 0;\n    unsigned v;\n    for (int i = 0; h[i] && h[i + 1]; i += 2) {\n        sscanf(h + i, \"%2x\", &v);\n        out[k++] = (char)v;\n    }\n    out[k] = '\\0';\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "bytes.fromhex(\"48656c6c6f\").decode()",
+        "expected": "Hello"
       }
-    ]
+    ],
+    "expected_output": "Hello"
   },
   {
     "id": "table_5_s9",
@@ -1736,10 +2099,11 @@
     "solution_c": "#include <stdlib.h>\nchar position_to_letter(const char *tok) {\n    return (char)('A' + atoi(tok) - 1);\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "\"8 5 12 12 15\"",
+        "expected": "HELLO"
       }
-    ]
+    ],
+    "expected_output": "HELLO"
   },
   {
     "id": "table_5_h1",
@@ -1792,10 +2156,11 @@
     "solution_c": "#include <ctype.h>\n#include <string.h>\nvoid vigenere_decode(char *s, const char *key) {\n    int j = 0, kl = (int)strlen(key);\n    for (; *s; s++)\n        if (isalpha((unsigned char)*s)) {\n            char b = isupper((unsigned char)*s) ? 'A' : 'a';\n            int k = tolower((unsigned char)key[j % kl]) - 'a';\n            *s = (char)((*s - b - k + 26) % 26 + b);\n            j++;\n        }\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "\"RIJVS\", \"KEY\"",
+        "expected": "HELLO"
       }
-    ]
+    ],
+    "expected_output": "HELLO"
   },
   {
     "id": "table_5_h4",
@@ -1810,10 +2175,11 @@
     "solution_c": "#include <string.h>\nvoid rail_fence_decode(const char *s, char *out, int n, int rails) {\n    int rail[n];\n    int row = 0, step = 1, k = 0;\n    for (int i = 0; i < n; i++) {\n        rail[i] = row;\n        if (row == 0) step = 1;\n        else if (row == rails - 1) step = -1;\n        row += step;\n    }\n    for (int r = 0; r < rails; r++)\n        for (int i = 0; i < n; i++)\n            if (rail[i] == r) out[i] = s[k++];\n    out[n] = '\\0';\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "\"HOLELWRDLO\", 3",
+        "expected": "HELLOWORLD"
       }
-    ]
+    ],
+    "expected_output": "HELLOWORLD"
   },
   {
     "id": "table_5_h5",
@@ -1866,10 +2232,11 @@
     "solution_c": "/* decode_letter() from the Standard questions, applied per character,\n   then reverse the string in place. */\n#include <string.h>\nvoid reverse_inplace(char *s) {\n    int n = (int)strlen(s);\n    for (int i = 0; i < n / 2; i++) {\n        char t = s[i]; s[i] = s[n - 1 - i]; s[n - 1 - i] = t;\n    }\n}",
     "test_cases": [
       {
-        "input": "Sample",
+        "input": "",
         "expected": "Passed"
       }
-    ]
+    ],
+    "expected_output": "Passed"
   },
   {
     "id": "table_5_h8",
@@ -2478,10 +2845,11 @@
     "solution_c": "#define CAP 1024\ntypedef struct {\n    int s[CAP], m[CAP];\n    int top;\n} MinStack;\nvoid ms_push(MinStack *st, int x) {\n    int mn = (st->top == 0) ? x : (x < st->m[st->top - 1] ? x : st->m[st->top - 1]);\n    st->s[st->top] = x;\n    st->m[st->top] = mn;\n    st->top++;\n}\nint ms_pop(MinStack *st) { return st->s[--st->top]; }\nint ms_get_min(const MinStack *st) { return st->m[st->top - 1]; }\nint ms_top(const MinStack *st) { return st->s[st->top - 1]; }",
     "test_cases": [
       {
-        "input": "Sample",
+        "input": "",
         "expected": "Passed"
       }
-    ]
+    ],
+    "expected_output": "Passed"
   },
   {
     "id": "table_7_s5",
@@ -2515,10 +2883,15 @@
     "solution_c": "int max_depth(const char *s) {\n    int depth = 0, best = 0;\n    for (; *s; s++) {\n        if (*s == '(') { depth++; if (depth > best) best = depth; }\n        else if (*s == ')') {\n            depth--;\n            if (depth < 0) return -1;\n        }\n    }\n    return depth == 0 ? best : -1;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "\"hello\"",
+        "expected": "0"
+      },
+      {
+        "input": "\"CodeSprint\"",
+        "expected": "0"
       }
-    ]
+    ],
+    "expected_output": "0"
   },
   {
     "id": "table_7_s7",
@@ -2761,10 +3134,11 @@
     "solution_c": "#define CAP 256\ntypedef struct {\n    int in[CAP], out[CAP];\n    int nin, nout;\n} TwoStackQueue;\nvoid enqueue(TwoStackQueue *q, int x) { q->in[q->nin++] = x; }\nint dequeue(TwoStackQueue *q) {\n    if (q->nout == 0)\n        while (q->nin > 0) q->out[q->nout++] = q->in[--q->nin];\n    return q->out[--q->nout];\n}",
     "test_cases": [
       {
-        "input": "Sample",
+        "input": "",
         "expected": "Passed"
       }
-    ]
+    ],
+    "expected_output": "Passed"
   },
   {
     "id": "table_7_h10",
@@ -2779,10 +3153,11 @@
     "solution_c": "void sort_stack(int st[], int *top) {\n    int tmp[256], tt = 0;\n    while (*top > 0) {\n        int x = st[--(*top)];\n        while (tt > 0 && tmp[tt - 1] > x) st[(*top)++] = tmp[--tt];\n        tmp[tt++] = x;\n    }\n    while (tt > 0) st[(*top)++] = tmp[--tt];\n}",
     "test_cases": [
       {
-        "input": "Sample",
+        "input": "",
         "expected": "Passed"
       }
-    ]
+    ],
+    "expected_output": "Passed"
   },
   {
     "id": "table_8_s1",
@@ -3177,15 +3552,20 @@
     "solution_c": "int pair_sum(const int a[], int n, int t, int out[2]) {\n    if (n < 2) return 0;\n    int i = 0, j = n - 1;\n    while (i < j) {\n        int s = a[i] + a[j];\n        if (s == t) { out[0] = i; out[1] = j; return 1; }\n        if (s < t) i++;\n        else j--;\n    }\n    return 0;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "[2, 7, 11, 15], 9",
+        "expected": "(0, 1)"
+      },
+      {
+        "input": "[1, 2, 3, 9], 8",
+        "expected": "None"
       }
     ],
     "clues": [
       "Think about what the sorted order lets you do with the two ends.",
       "Compare the sum of the two ends with the target and decide which end to\nmove.",
       "Move the left pointer up when the sum is too small and the right pointer\ndown when it is too large. Return None when the array is too short."
-    ]
+    ],
+    "expected_output": "(0, 1)"
   },
   {
     "id": "table_9_s2",
@@ -3200,15 +3580,24 @@
     "solution_c": "int find_duplicate(const int a[], int m) {   /* m = n + 1 values */\n    long long n = m - 1;\n    long long s = 0;\n    for (int i = 0; i < m; i++) {\n        if (a[i] < 1 || a[i] > n) return -1;\n        s += a[i];\n    }\n    return (int)(s - n * (n + 1) / 2);\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "[1, 2, 3, 4]",
+        "expected": "-1"
+      },
+      {
+        "input": "[5, 1, 8, 2]",
+        "expected": "-1"
+      },
+      {
+        "input": "[10]",
+        "expected": "-1"
       }
     ],
     "clues": [
       "Consider what the sum of the values 1..n should be.",
       "Subtract the expected sum from the actual sum. That difference is the\nrepeated value.",
       ""
-    ]
+    ],
+    "expected_output": "-1"
   },
   {
     "id": "table_9_s3",
@@ -3223,15 +3612,28 @@
     "solution_c": "/* the C input is already unsigned, so the 32-bit form is the input */\nint popcount(unsigned int n) {\n    int c = 0;\n    while (n) {\n        n &= n - 1;\n        c++;\n    }\n    return c;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "7",
+        "expected": "3"
+      },
+      {
+        "input": "0",
+        "expected": "0"
+      },
+      {
+        "input": "16",
+        "expected": "1"
+      },
+      {
+        "input": "255",
+        "expected": "8"
       }
     ],
     "clues": [
       "Think about how a negative number is stored in binary.",
       "Mask a negative value to its lowest 32 bits before counting.",
       "Apply n AND 0xFFFFFFFF to negative values, then clear the lowest set\nbit on each step until the value is zero."
-    ]
+    ],
+    "expected_output": "3"
   },
   {
     "id": "table_9_s4",
@@ -3246,15 +3648,28 @@
     "solution_c": "int is_power_of_two(unsigned long long n) {\n    return n > 1 && (n & (n - 1)) == 0;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "16",
+        "expected": "True"
+      },
+      {
+        "input": "18",
+        "expected": "False"
+      },
+      {
+        "input": "1",
+        "expected": "False"
+      },
+      {
+        "input": "0",
+        "expected": "False"
       }
     ],
     "clues": [
       "Look at how powers of two look in binary.",
       "A power of two has exactly one set bit, and n AND (n - 1) clears that bit.",
       "Require n to be greater than 1, then check that n AND (n - 1) is zero."
-    ]
+    ],
+    "expected_output": "True"
   },
   {
     "id": "table_9_s5",
@@ -3269,15 +3684,20 @@
     "solution_c": "/* returns the majority value, or -1 if there is none (values are assumed non-negative) */\nint majority(const int a[], int n) {\n    int cand = 0, cnt = 0;\n    for (int i = 0; i < n; i++) {\n        if (cnt == 0) cand = a[i];\n        cnt += (a[i] == cand) ? 1 : -1;\n    }\n    int c = 0;\n    for (int i = 0; i < n; i++) if (a[i] == cand) c++;\n    return (2 * c > n) ? cand : -1;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "[3, 2, 3]",
+        "expected": "3"
+      },
+      {
+        "input": "[2, 2, 1, 1, 1, 2, 2]",
+        "expected": "2"
       }
     ],
     "clues": [
       "Think about pairs of different values cancelling each other out.",
       "A single candidate with a counter finds the only value that can survive the\ncancellation.",
       "After the pass, count how many times the candidate appears and check\nthat it is more than n/2."
-    ]
+    ],
+    "expected_output": "3"
   },
   {
     "id": "table_9_s6",
@@ -3292,15 +3712,20 @@
     "solution_c": "int single_number(const int a[], int n) {\n    unsigned int ans = 0;\n    for (int bit = 0; bit < 32; bit++) {\n        int s = 0;\n        for (int i = 0; i < n; i++) s += (a[i] >> bit) & 1;\n        if (s % 3) ans |= 1u << bit;\n    }\n    return (int)ans;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "[2, 2, 1]",
+        "expected": "3"
+      },
+      {
+        "input": "[4, 1, 2, 1, 2]",
+        "expected": "7"
       }
     ],
     "clues": [
       "Consider each bit position separately.",
       "Count the set bits at each position across all values.",
       "Values that appear three times add 0 or 3 to each count, so count mod 3\ngives the bit of the answer."
-    ]
+    ],
+    "expected_output": "3"
   },
   {
     "id": "table_9_s7",
@@ -3315,7 +3740,7 @@
     "solution_c": "/* returns the number of values removed */\nint remove_value(int a[], int n, int v) {\n    int k = 0;\n    for (int i = 0; i < n; i++)\n        if (a[i] != v) a[k++] = a[i];\n    return n - k;\n}",
     "test_cases": [
       {
-        "input": "Sample",
+        "input": "",
         "expected": "Passed"
       }
     ],
@@ -3323,7 +3748,8 @@
       "Consider a write index that only advances on kept values.",
       "Copy each kept value forward while reading the array in order.",
       "The difference between the old length and the kept count is the number of\nvalues removed."
-    ]
+    ],
+    "expected_output": "Passed"
   },
   {
     "id": "table_9_s8",
@@ -3338,15 +3764,24 @@
     "solution_c": "int runs_of_ones(unsigned int n) {\n    int runs = 0, prev = 0;\n    while (n) {\n        int bit = n & 1u;\n        if (bit && !prev) runs++;\n        prev = bit;\n        n >>= 1;\n    }\n    return runs;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "5",
+        "expected": "2"
+      },
+      {
+        "input": "10",
+        "expected": "2"
+      },
+      {
+        "input": "1",
+        "expected": "1"
       }
     ],
     "clues": [
       "Look at how each bit compares with the bit before it as you scan.",
       "A new run starts whenever a 1 follows a 0 or the start of the number.",
       "Track the previous bit and add to the count only when the current bit is 1\nand the previous bit was 0."
-    ]
+    ],
+    "expected_output": "2"
   },
   {
     "id": "table_9_s9",
@@ -3361,7 +3796,7 @@
     "solution_c": "int hamming(unsigned int x, unsigned int y, int w) {\n    unsigned int d = (x ^ y) & ((1u << w) - 1u);\n    int c = 0;\n    while (d) {\n        d &= d - 1;\n        c++;\n    }\n    return c;\n}",
     "test_cases": [
       {
-        "input": "Sample",
+        "input": "",
         "expected": "Passed"
       }
     ],
@@ -3369,7 +3804,8 @@
       "Start with the bits where x and y differ.",
       "Only the lowest w bits matter, so mask the XOR result first.",
       ""
-    ]
+    ],
+    "expected_output": "Passed"
   },
   {
     "id": "table_9_s10",
@@ -3384,7 +3820,7 @@
     "solution_c": "int count_less(const int a[], int n, int x) {\n    int lo = 0, hi = n;\n    while (lo < hi) {\n        int mid = lo + (hi - lo) / 2;\n        if (a[mid] < x) lo = mid + 1;\n        else hi = mid;\n    }\n    return lo;\n}",
     "test_cases": [
       {
-        "input": "Sample",
+        "input": "",
         "expected": "Passed"
       }
     ],
@@ -3392,7 +3828,8 @@
       "Think about the first position where the value is not less than x.",
       "Strictly less means you stop at the first element that is equal to or greater\nthan x.",
       "Use a lower-bound search: move lo past every element that is strictly less\nthan x, then return lo."
-    ]
+    ],
+    "expected_output": "Passed"
   },
   {
     "id": "table_9_h1",
@@ -3407,7 +3844,7 @@
     "solution_c": "/* O(n^2) reference version in C. The hashed O(n) version needs a map. */\nint count_subarrays_sum_k(const int a[], int n, int k) {\n    int count = 0;\n    for (int i = 0; i < n; i++) {\n        long long s = 0;\n        for (int j = i; j < n; j++) {\n            s += a[j];\n            if (s == k) count++;\n        }\n    }\n    return count;\n}",
     "test_cases": [
       {
-        "input": "Sample",
+        "input": "",
         "expected": "Passed"
       }
     ],
@@ -3415,7 +3852,8 @@
       "A subarray from i to j has sum equal to k exactly when the prefix sum up\nto j minus the prefix sum up to i equals k.",
       "For each position, you need to know how many earlier prefix sums equal\nthe current prefix sum minus k.",
       "Keep a count of each prefix sum seen so far, starting with the empty\nprefix 0. At each element, add the count for (current prefix sum - k) to the answer, then record the current prefix sum."
-    ]
+    ],
+    "expected_output": "Passed"
   },
   {
     "id": "table_9_h2",
@@ -3430,15 +3868,24 @@
     "solution_c": "/* O(n^2) reference version: for each start, check whether x + 1, x + 2, ... exist. */\nint longest_consecutive(const int a[], int n) {\n    int best = 0;\n    for (int i = 0; i < n; i++) {\n        int len = 1;\n        int found = 1;\n        while (found) {\n            found = 0;\n            for (int j = 0; j < n; j++)\n                if (a[j] == a[i] + len) { found = 1; break; }\n            if (found) len++;\n        }\n        if (len > best) best = len;\n    }\n    return best;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "[1, 2, 3, 4]",
+        "expected": "4"
+      },
+      {
+        "input": "[5, 1, 8, 2]",
+        "expected": "2"
+      },
+      {
+        "input": "[10]",
+        "expected": "1"
       }
     ],
     "clues": [
       "Consider how to avoid restarting counts from every number in the middle\nof a run.",
       "If you only start counting at numbers whose predecessor is missing, each\nrun is counted exactly once.",
       "Put all values in a hash set. For each value whose predecessor is not in\nthe set, count upward while the next value is present."
-    ]
+    ],
+    "expected_output": "4"
   },
   {
     "id": "table_9_h3",
@@ -3453,7 +3900,7 @@
     "solution_c": "long long trap(const int h[], int n) {\n    if (n == 0) return 0;\n    int i = 0, j = n - 1, lmax = 0, rmax = 0;\n    long long water = 0;\n    while (i < j) {\n        if (h[i] < h[j]) {\n            if (h[i] > lmax) lmax = h[i];\n            water += lmax - h[i];\n            i++;\n        } else {\n            if (h[j] > rmax) rmax = h[j];\n            water += rmax - h[j];\n            j--;\n        }\n    }\n    return water;\n}",
     "test_cases": [
       {
-        "input": "Sample",
+        "input": "",
         "expected": "Passed"
       }
     ],
@@ -3461,7 +3908,8 @@
       "Water above a bar depends on the tallest bar on its left and on its right.",
       "The side with the smaller current height is limited by its own running\nmaximum, so its water can be decided without knowing the other side.",
       "Use two pointers and two running maxima. Always advance the pointer\non the lower side, and add the running maximum minus the current height to the total."
-    ]
+    ],
+    "expected_output": "Passed"
   },
   {
     "id": "table_9_h4",
@@ -3476,15 +3924,24 @@
     "solution_c": "void product_except_self(const int a[], int n, long long out[]) {\n    long long prefix = 1;\n    for (int i = 0; i < n; i++) {\n        out[i] = prefix;\n        prefix *= a[i];\n    }\n    long long suffix = 1;\n    for (int i = n - 1; i >= 0; i--) {\n        out[i] *= suffix;\n        suffix *= a[i];\n    }\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "[1, 2, 3, 4]",
+        "expected": "[24, 12, 8, 6]"
+      },
+      {
+        "input": "[5, 1, 8, 2]",
+        "expected": "[16, 80, 10, 40]"
+      },
+      {
+        "input": "[10]",
+        "expected": "[1]"
       }
     ],
     "clues": [
       "Each output value combines what is to its left with what is to its right.",
       "Two passes can compute the left product and the right product\nseparately, and no division is needed.",
       "First pass: store the product of everything to the left of each index."
-    ]
+    ],
+    "expected_output": "[24, 12, 8, 6]"
   },
   {
     "id": "table_9_h5",
@@ -3499,15 +3956,24 @@
     "solution_c": "#include <stdlib.h>\nstatic int cmp_int(const void *x, const void *y) {\n    int a = *(const int *)x, b = *(const int *)y;\n    return (a > b) - (a < b);\n}\nint has_zero_triplet(int a[], int n) {\n    qsort(a, n, sizeof a[0], cmp_int);\n    for (int i = 0; i + 2 < n; i++) {\n        int lo = i + 1, hi = n - 1;\n        while (lo < hi) {\n            int s = a[i] + a[lo] + a[hi];\n            if (s == 0) return 1;\n            if (s < 0) lo++;\n            else hi--;\n        }\n    }\n    return 0;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "[1, 2, 3, 4]",
+        "expected": "False"
+      },
+      {
+        "input": "[5, 1, 8, 2]",
+        "expected": "False"
+      },
+      {
+        "input": "[10]",
+        "expected": "False"
       }
     ],
     "clues": [
       "Fix one value and look for two others that complete it to zero.",
       "After sorting, the two remaining values can be found with two pointers,\nmoving one of them depending on the sign of the partial sum.",
       ""
-    ]
+    ],
+    "expected_output": "False"
   },
   {
     "id": "table_9_h6",
@@ -3522,7 +3988,7 @@
     "solution_c": "#include <stdlib.h>\nstatic int cmp_int(const void *x, const void *y) {\n    int a = *(const int *)x, b = *(const int *)y;\n    return (a > b) - (a < b);\n}\nint min_rooms(int starts[], int ends[], int n) {\n    qsort(starts, n, sizeof starts[0], cmp_int);\n    qsort(ends, n, sizeof ends[0], cmp_int);\n    int rooms = 0, best = 0, i = 0, j = 0;\n    while (i < n) {\n        if (starts[i] < ends[j]) {\n            rooms++;\n            if (rooms > best) best = rooms;\n            i++;\n        } else {\n            rooms--;\n            j++;\n        }\n    }\n    return best;\n}",
     "test_cases": [
       {
-        "input": "Sample",
+        "input": "",
         "expected": "Passed"
       }
     ],
@@ -3530,7 +3996,8 @@
       "Count how many meetings are active at the moment each meeting starts.",
       "Sorting starts and ends separately lets you sweep through time and track\nthe number of active meetings.",
       ""
-    ]
+    ],
+    "expected_output": "Passed"
   },
   {
     "id": "table_9_h7",
@@ -3545,15 +4012,24 @@
     "solution_c": "static int expand(const char *s, int n, int l, int r) {\n    while (l >= 0 && r < n && s[l] == s[r]) {\n        l--;\n        r++;\n    }\n    return r - l - 1;\n}\nint longest_palindrome(const char *s) {\n    int n = 0;\n    while (s[n]) n++;\n    if (n == 0) return 0;\n    int best = 1;\n    for (int c = 0; c < n; c++) {\n        int a = expand(s, n, c, c);\n        int b = expand(s, n, c, c + 1);\n        if (a > best) best = a;\n        if (b > best) best = b;\n    }\n    return best;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "\"racecar\"",
+        "expected": "7"
+      },
+      {
+        "input": "\"hello\"",
+        "expected": "2"
+      },
+      {
+        "input": "\"A man a plan a canal Panama\"",
+        "expected": "3"
       }
     ],
     "clues": [
       "Palindromes grow outward from a center, which can be a character or a\ngap between two characters.",
       "For each possible center, expanding outward while the characters match\nfinds the longest palindrome at that center.",
       "Try every center, both single-character centers and gaps between\nneighbors. From each center, expand left and right while the characters match, and record the length."
-    ]
+    ],
+    "expected_output": "7"
   },
   {
     "id": "table_9_h8",
@@ -3568,7 +4044,7 @@
     "solution_c": "#include <string.h>\n#define ROWS 64\n#define COLS 64\nint count_islands(int rows, int cols, const char grid[ROWS][COLS]) {\n    static int seen[ROWS][COLS];\n    static int st[ROWS * COLS][2];\n    memset(seen, 0, sizeof seen);\n    int count = 0;\n    for (int r = 0; r < rows; r++)\n        for (int c = 0; c < cols; c++) {\n            if (grid[r][c] != '1' || seen[r][c]) continue;\n            count++;\n            int top = 0;\n            st[top][0] = r; st[top][1] = c; top++;\n            seen[r][c] = 1;\n            while (top > 0) {\n                top--;\n                int y = st[top][0], x = st[top][1];\n                int dy[4] = {1, -1, 0, 0}, dx[4] = {0, 0, 1, -1};\n                for (int k = 0; k < 4; k++) {\n                    int ny = y + dy[k], nx = x + dx[k];\n                    if (ny >= 0 && ny < rows && nx >= 0 && nx < cols &&\n                        grid[ny][nx] == '1' && !seen[ny][nx]) {\n                        seen[ny][nx] = 1;\n                        st[top][0] = ny; st[top][1] = nx; top++;\n                    }\n                }\n            }\n        }\n    return count;\n}",
     "test_cases": [
       {
-        "input": "Sample",
+        "input": "",
         "expected": "Passed"
       }
     ],
@@ -3576,7 +4052,8 @@
       "Treat the grid as a graph, where land cells are connected to neighboring\nland cells.",
       "Each island is one connected component, so you can count components\nby starting a search from each unvisited land cell.",
       ""
-    ]
+    ],
+    "expected_output": "Passed"
   },
   {
     "id": "table_9_h9",
@@ -3591,7 +4068,7 @@
     "solution_c": "#include <stdlib.h>\nstatic int cmp_desc(const void *x, const void *y) {\n    int a = *(const int *)x, b = *(const int *)y;\n    return (b > a) - (b < a);\n}\nint kth_largest(int a[], int n, int k) {   /* sorts a in place */\n    qsort(a, n, sizeof a[0], cmp_desc);\n    return a[k - 1];\n}",
     "test_cases": [
       {
-        "input": "Sample",
+        "input": "",
         "expected": "Passed"
       }
     ],
@@ -3599,7 +4076,8 @@
       "Think about which elements you need to keep around to answer the\nquestion.",
       "You do not need a full ordering. Keeping a small structure of the k largest\nvalues is enough.",
       "Maintain a min-heap of size k. Push each value, pop when the heap\ngrows past k, and the heap root then holds the answer."
-    ]
+    ],
+    "expected_output": "Passed"
   },
   {
     "id": "table_9_h10",
@@ -3614,15 +4092,24 @@
     "solution_c": "int min_jumps(const int a[], int n) {\n    int jumps = 0, end = 0, far = 0;\n    for (int i = 0; i < n - 1; i++) {\n        if (i + a[i] > far) far = i + a[i];\n        if (i == end) {\n            jumps++;\n            end = far;\n        }\n    }\n    return jumps;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "[1, 2, 3, 4]",
+        "expected": "2"
+      },
+      {
+        "input": "[5, 1, 8, 2]",
+        "expected": "1"
+      },
+      {
+        "input": "[10]",
+        "expected": "0"
       }
     ],
     "clues": [
       "Think of the positions reachable with exactly one jump, then with two, and\nso on.",
       "Each jump covers a window of positions, and the next jump should start\nfrom the farthest point you can reach inside the current window.",
       "Track the end of the current window and the farthest index reachable so\nfar. Each time you reach the end of the window, count one jump and extend the window to the farthest index."
-    ]
+    ],
+    "expected_output": "2"
   },
   {
     "id": "table_10_s1",
@@ -3637,10 +4124,19 @@
     "solution_c": "#include <stdlib.h>\nstatic int cmp(const void *a, const void *b) {\n    int x = *(const int *)a, y = *(const int *)b;\n    return (x > y) - (x < y);\n}\n/* O(n log n) time, O(1) extra. Returns -1 if there is no duplicate. */\nint smallest_duplicate(int a[], int n) {\n    qsort(a, n, sizeof a[0], cmp);\n    for (int i = 1; i < n; i++)\n        if (a[i] == a[i - 1]) return a[i];\n    return -1;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "[3, 1, 3, 4, 2]",
+        "expected": "3"
+      },
+      {
+        "input": "[1, 2, 3, 4]",
+        "expected": "None"
+      },
+      {
+        "input": "[5, 2, 5, 2, 1]",
+        "expected": "2"
       }
-    ]
+    ],
+    "expected_output": "3"
   },
   {
     "id": "table_10_s2",
@@ -3655,10 +4151,11 @@
     "solution_c": "struct Node { int val; struct Node *left, *right; };\nint count_leaves(const struct Node *root) {\n    if (!root) return 0;\n    if (!root->left && !root->right) return 1;\n    return count_leaves(root->left) + count_leaves(root->right);\n}",
     "test_cases": [
       {
-        "input": "Sample",
+        "input": "",
         "expected": "Passed"
       }
-    ]
+    ],
+    "expected_output": "Passed"
   },
   {
     "id": "table_10_s3",
@@ -3673,10 +4170,11 @@
     "solution_c": "#include <string.h>\n#define MAXR 50\n#define MAXC 50\nint shortest_path(int R, int C, int g[MAXR][MAXC]) {\n    int dist[MAXR][MAXC], qr[MAXR * MAXC], qc[MAXR * MAXC], head = 0, tail = 0;\n    if (g[0][0] || g[R - 1][C - 1]) return -1;\n    memset(dist, -1, sizeof dist);\n    dist[0][0] = 0;\n    qr[tail] = 0; qc[tail] = 0; tail++;\n    while (head < tail) {\n        int r = qr[head], c = qc[head]; head++;\n        if (r == R - 1 && c == C - 1) return dist[r][c];\n        for (int dr = -1; dr <= 1; dr++)\n            for (int dc = -1; dc <= 1; dc++) {\n                int nr = r + dr, nc = c + dc;\n                if ((dr || dc) && nr >= 0 && nr < R && nc >= 0 && nc < C &&\n                    g[nr][nc] == 0 && dist[nr][nc] == -1) {\n                    dist[nr][nc] = dist[r][c] + 1;\n                    qr[tail] = nr; qc[tail] = nc; tail++;\n                }\n            }\n    }\n    return -1;\n}",
     "test_cases": [
       {
-        "input": "Sample",
+        "input": "",
         "expected": "Passed"
       }
-    ]
+    ],
+    "expected_output": "Passed"
   },
   {
     "id": "table_10_s4",
@@ -3691,10 +4189,11 @@
     "solution_c": "struct LNode { int val; struct LNode *next; };\nint cycle_length(struct LNode *head) {\n    struct LNode *slow = head, *fast = head;\n    while (fast && fast->next) {\n        slow = slow->next;\n        fast = fast->next->next;\n        if (slow == fast) {\n            int length = 1;\n            for (struct LNode *p = slow->next; p != slow; p = p->next) length++;\n            return length;\n        }\n    }\n    return 0;\n}",
     "test_cases": [
       {
-        "input": "Sample",
+        "input": "",
         "expected": "Passed"
       }
-    ]
+    ],
+    "expected_output": "Passed"
   },
   {
     "id": "table_10_s5",
@@ -3709,10 +4208,11 @@
     "solution_c": "#include <stddef.h>\nstruct LNode { int val; struct LNode *next; };\n/* returns the new head; *count receives the number of nodes */\nstruct LNode *reverse_list(struct LNode *head, int *count) {\n    struct LNode *prev = NULL;\n    *count = 0;\n    while (head) {\n        struct LNode *next = head->next;\n        head->next = prev;\n        prev = head;\n        head = next;\n        (*count)++;\n    }\n    return prev;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "\"\"",
+        "expected": "(None, 0)"
       }
-    ]
+    ],
+    "expected_output": "(None, 0)"
   },
   {
     "id": "table_10_s6",
@@ -3727,10 +4227,11 @@
     "solution_c": "#include <stdlib.h>\ntypedef struct { int s, e; } Iv;\nstatic int by_start(const void *a, const void *b) {\n    const Iv *x = a, *y = b;\n    return (x->s > y->s) - (x->s < y->s);\n}\n/* removes zero-length intervals, merges in place, returns the new count */\nint merge_intervals(Iv iv[], int n) {\n    int m = 0;\n    for (int i = 0; i < n; i++)\n        if (iv[i].s != iv[i].e) iv[m++] = iv[i];\n    if (m == 0) return 0;\n    qsort(iv, m, sizeof iv[0], by_start);\n    int k = 0;\n    for (int i = 1; i < m; i++) {\n        if (iv[i].s <= iv[k].e) {\n            if (iv[i].e > iv[k].e) iv[k].e = iv[i].e;\n        } else iv[++k] = iv[i];\n    }\n    return k + 1;\n}",
     "test_cases": [
       {
-        "input": "Sample",
+        "input": "",
         "expected": "Passed"
       }
-    ]
+    ],
+    "expected_output": "Passed"
   },
   {
     "id": "table_10_s7",
@@ -3745,10 +4246,19 @@
     "solution_c": "int second_missing_positive(int a[], int n) {\n    for (int i = 0; i < n; i++)\n        while (a[i] >= 1 && a[i] <= n && a[a[i] - 1] != a[i]) {\n            int j = a[i] - 1, t = a[i];\n            a[i] = a[j];\n            a[j] = t;\n        }\n    int found = 0;\n    for (int i = 0; i < n; i++)\n        if (a[i] != i + 1) {\n            found++;\n            if (found == 2) return i + 1;\n        }\n    return found == 1 ? n + 1 : n + 2;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "[1, 2, 3, 4]",
+        "expected": "6"
+      },
+      {
+        "input": "[5, 1, 8, 2]",
+        "expected": "4"
+      },
+      {
+        "input": "[10]",
+        "expected": "2"
       }
-    ]
+    ],
+    "expected_output": "6"
   },
   {
     "id": "table_10_s8",
@@ -3763,10 +4273,11 @@
     "solution_c": "int search_rotated(const int a[], int n, int t, int *rot) {\n    int lo = 0, hi = n - 1, idx = -1;\n    while (lo <= hi) {\n        int mid = lo + (hi - lo) / 2;\n        if (a[mid] == t) { idx = mid; break; }\n        if (a[lo] <= a[mid]) {\n            if (a[lo] <= t && t < a[mid]) hi = mid - 1;\n            else lo = mid + 1;\n        } else {\n            if (a[mid] < t && t <= a[hi]) lo = mid + 1;\n            else hi = mid - 1;\n        }\n    }\n    *rot = -1;\n    for (int i = 0; i < n; i++)\n        if (*rot < 0 || a[i] < a[*rot]) *rot = i;\n    return idx;\n}",
     "test_cases": [
       {
-        "input": "Sample",
+        "input": "",
         "expected": "Passed"
       }
-    ]
+    ],
+    "expected_output": "Passed"
   },
   {
     "id": "table_10_s9",
@@ -3781,10 +4292,19 @@
     "solution_c": "long long climb_stairs(int n) {\n    if (n == 0) return 1;\n    if (n <= 2) return n == 1 ? 1 : 2;\n    long long a = 1, b = 1, c = 2;\n    for (int i = 3; i <= n; i++) {\n        long long t = a + b + c;\n        a = b;\n        b = c;\n        c = t;\n    }\n    return c;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "2",
+        "expected": "2"
+      },
+      {
+        "input": "3",
+        "expected": "4"
+      },
+      {
+        "input": "5",
+        "expected": "13"
       }
-    ]
+    ],
+    "expected_output": "2"
   },
   {
     "id": "table_10_s10",
@@ -3799,10 +4319,15 @@
     "solution_c": "#include <string.h>\n/* writes the suffix into out (out must be at least as long as strs[0]) */\nvoid longest_common_suffix(const char *strs[], int n, char *out) {\n    if (n == 0) { out[0] = '\\0'; return; }\n    int l0 = (int)strlen(strs[0]);\n    int len = l0;\n    for (int i = 1; i < n && len > 0; i++) {\n        int li = (int)strlen(strs[i]);\n        int k = 0;\n        while (k < len && k < li && strs[i][li - 1 - k] == strs[0][l0 - 1 - k]) k++;\n        len = k;\n    }\n    memcpy(out, strs[0] + l0 - len, len);\n    out[len] = '\\0';\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "\"hello\"",
+        "expected": ""
+      },
+      {
+        "input": "\"CodeSprint\"",
+        "expected": ""
       }
-    ]
+    ],
+    "expected_output": ""
   },
   {
     "id": "table_10_h1",
@@ -3817,10 +4342,11 @@
     "solution_c": "int longest_at_most_k_zeros(const int a[], int n, int k) {\n    int lo = 0, zeros = 0, best = 0;\n    for (int hi = 0; hi < n; hi++) {\n        if (a[hi] == 0) zeros++;\n        while (zeros > k) {\n            if (a[lo] == 0) zeros--;\n            lo++;\n        }\n        if (hi - lo + 1 > best) best = hi - lo + 1;\n    }\n    return best;\n}",
     "test_cases": [
       {
-        "input": "Sample",
+        "input": "",
         "expected": "Passed"
       }
-    ]
+    ],
+    "expected_output": "Passed"
   },
   {
     "id": "table_10_h2",
@@ -3835,10 +4361,11 @@
     "solution_c": "#include <limits.h>\n#define MAXN 100\n/* adjacency matrix version: O(V^2), w[u][v] = 0 means no edge */\nint dijkstra(int n, int w[MAXN][MAXN], int src, int dst) {\n    int dist[MAXN], done[MAXN] = {0};\n    for (int i = 0; i < n; i++) dist[i] = INT_MAX;\n    dist[src] = 0;\n    for (int it = 0; it < n; it++) {\n        int u = -1;\n        for (int i = 0; i < n; i++)\n            if (!done[i] && dist[i] != INT_MAX && (u == -1 || dist[i] < dist[u])) u = i;\n        if (u == -1) break;\n        done[u] = 1;\n        for (int v = 0; v < n; v++)\n            if (w[u][v] > 0 && dist[u] + w[u][v] < dist[v]) dist[v] = dist[u] + w[u][v];\n    }\n    return dist[dst] == INT_MAX ? -1 : dist[dst];\n}",
     "test_cases": [
       {
-        "input": "Sample",
+        "input": "",
         "expected": "Passed"
       }
-    ]
+    ],
+    "expected_output": "Passed"
   },
   {
     "id": "table_10_h3",
@@ -3853,10 +4380,11 @@
     "solution_c": "struct Node { int val; struct Node *left, *right; };\nstatic int found, answer;\nstatic void inorder(struct Node *n, int *k) {\n    if (!n || found) return;\n    inorder(n->left, k);\n    if (!found && --(*k) == 0) { found = 1; answer = n->val; return; }\n    inorder(n->right, k);\n}\nint kth_smallest(struct Node *root, int k) {\n    found = 0;\n    inorder(root, &k);\n    return found ? answer : -1;\n}",
     "test_cases": [
       {
-        "input": "Sample",
+        "input": "",
         "expected": "Passed"
       }
-    ]
+    ],
+    "expected_output": "Passed"
   },
   {
     "id": "table_10_h4",
@@ -3871,10 +4399,11 @@
     "solution_c": "#include <string.h>\n#define MAXLEN 200\nint lcs(const char *a, const char *b) {\n    int n = strlen(a), m = strlen(b);\n    static int dp[MAXLEN + 1][MAXLEN + 1];\n    for (int i = 0; i <= n; i++)\n        for (int j = 0; j <= m; j++) {\n            if (i == 0 || j == 0) dp[i][j] = 0;\n            else if (a[i - 1] == b[j - 1]) dp[i][j] = dp[i - 1][j - 1] + 1;\n            else dp[i][j] = dp[i - 1][j] > dp[i][j - 1] ? dp[i - 1][j] : dp[i][j - 1];\n        }\n    return dp[n][m];\n}",
     "test_cases": [
       {
-        "input": "Sample",
+        "input": "",
         "expected": "Passed"
       }
-    ]
+    ],
+    "expected_output": "Passed"
   },
   {
     "id": "table_10_h5",
@@ -3889,10 +4418,19 @@
     "solution_c": "#include <stdio.h>\n/* prints every subset of a[0..n-1]; n up to 20 */\nvoid subsets(const int a[], int n) {\n    for (unsigned mask = 0; mask < (1u << n); mask++) {\n        printf(\"[\");\n        int first = 1;\n        for (int i = 0; i < n; i++)\n            if (mask & (1u << i)) {\n                printf(first ? \"%d\" : \", %d\", a[i]);\n                first = 0;\n            }\n        printf(\"]\\n\");\n    }\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "[1, 2, 3, 4]",
+        "expected": "[[], [1], [2], [1, 2], [3], [1, 3], [2, 3], [1, 2, 3], [4], [1, 4], [2, 4], [1, 2, 4], [3, 4], [1, 3, 4], [2, 3, 4], [1, 2, 3, 4]]"
+      },
+      {
+        "input": "[5, 1, 8, 2]",
+        "expected": "[[], [5], [1], [5, 1], [8], [5, 8], [1, 8], [5, 1, 8], [2], [5, 2], [1, 2], [5, 1, 2], [8, 2], [5, 8, 2], [1, 8, 2], [5, 1, 8, 2]]"
+      },
+      {
+        "input": "[10]",
+        "expected": "[[], [10]]"
       }
-    ]
+    ],
+    "expected_output": "[[], [1], [2], [1, 2], [3], [1, 3], [2, 3], [1, 2, 3], [4], [1, 4], [2, 4], [1, 2, 4], [3, 4], [1, 3, 4], [2, 3, 4], [1, 2, 3, 4]]"
   },
   {
     "id": "table_10_h6",
@@ -3907,10 +4445,11 @@
     "solution_c": "int knapsack(const int w[], const int v[], int n, int W) {\n    int dp[W + 1];\n    for (int c = 0; c <= W; c++) dp[c] = 0;\n    for (int i = 0; i < n; i++)\n        for (int cap = W; cap >= w[i]; cap--)   /* reverse order: 0/1 */\n            if (dp[cap - w[i]] + v[i] > dp[cap]) dp[cap] = dp[cap - w[i]] + v[i];\n    return dp[W];\n}",
     "test_cases": [
       {
-        "input": "Sample",
+        "input": "",
         "expected": "Passed"
       }
-    ]
+    ],
+    "expected_output": "Passed"
   },
   {
     "id": "table_10_h7",
@@ -3925,10 +4464,19 @@
     "solution_c": "#include <stdlib.h>\nstatic int cmp(const void *a, const void *b) {\n    int x = *(const int *)a, y = *(const int *)b;\n    return (x > y) - (x < y);\n}\n/* sorts a in place, then scans runs: O(n log n) */\nint most_frequent(int a[], int n) {\n    qsort(a, n, sizeof a[0], cmp);\n    int best = a[0], best_cnt = 0;\n    for (int i = 0; i < n;) {\n        int j = i;\n        while (j < n && a[j] == a[i]) j++;\n        if (j - i > best_cnt) { best_cnt = j - i; best = a[i]; }\n        i = j;\n    }\n    return best;\n}",
     "test_cases": [
       {
-        "input": "Sample",
-        "expected": "Passed"
+        "input": "[1, 2, 3, 4]",
+        "expected": "1"
+      },
+      {
+        "input": "[5, 1, 8, 2]",
+        "expected": "5"
+      },
+      {
+        "input": "[10]",
+        "expected": "10"
       }
-    ]
+    ],
+    "expected_output": "1"
   },
   {
     "id": "table_10_h8",
@@ -3943,10 +4491,11 @@
     "solution_c": "#define R 4\n#define C 4\nstatic int memo[R][C];\nstatic int dfs(int g[R][C], int r, int c) {\n    if (memo[r][c]) return memo[r][c];\n    int best = 1;\n    int dr[4] = {1, -1, 0, 0}, dc[4] = {0, 0, 1, -1};\n    for (int k = 0; k < 4; k++) {\n        int nr = r + dr[k], nc = c + dc[k];\n        if (nr >= 0 && nr < R && nc >= 0 && nc < C && g[nr][nc] > g[r][c]) {\n            int cand = 1 + dfs(g, nr, nc);\n            if (cand > best) best = cand;\n        }\n    }\n    return memo[r][c] = best;\n}\nint longest_increasing_path(int g[R][C]) {\n    int best = 0;\n    for (int r = 0; r < R; r++)\n        for (int c = 0; c < C; c++) {\n            int d = dfs(g, r, c);\n            if (d > best) best = d;\n        }\n    return best;\n}",
     "test_cases": [
       {
-        "input": "Sample",
+        "input": "",
         "expected": "Passed"
       }
-    ]
+    ],
+    "expected_output": "Passed"
   },
   {
     "id": "table_10_h9",
@@ -3961,10 +4510,11 @@
     "solution_c": "long long num_decodings(const char *s) {\n    int n = 0;\n    while (s[n]) n++;\n    if (n == 0 || s[0] == '0') return 0;\n    long long prev = 1, cur = 1;\n    for (int i = 1; i < n; i++) {\n        long long nxt = 0;\n        if (s[i] != '0') nxt += cur;\n        int two = (s[i - 1] - '0') * 10 + (s[i] - '0');\n        if (two >= 10 && two <= 26) nxt += prev;\n        prev = cur;\n        cur = nxt;\n    }\n    return cur;\n}",
     "test_cases": [
       {
-        "input": "Sample",
+        "input": "",
         "expected": "Passed"
       }
-    ]
+    ],
+    "expected_output": "Passed"
   },
   {
     "id": "table_10_h10",
@@ -3979,10 +4529,11 @@
     "solution_c": "long long unique_paths(int R, int C, const int g[][10]) {\n    long long dp[10] = {0};\n    if (g[0][0] == 1) return 0;\n    dp[0] = 1;\n    for (int r = 0; r < R; r++)\n        for (int c = 0; c < C; c++) {\n            if (g[r][c] == 1) dp[c] = 0;\n            else if (c > 0) dp[c] += dp[c - 1];\n        }\n    return dp[C - 1];\n}",
     "test_cases": [
       {
-        "input": "Sample",
+        "input": "",
         "expected": "Passed"
       }
-    ]
+    ],
+    "expected_output": "Passed"
   },
   {
     "id": "table_final_round",

@@ -11,6 +11,7 @@ type TeamRow = {
 }
 
 import { AVATAR_LIST } from '@/lib/avatars'
+import { CASINO_EVENTS, EVENT_BY_ROUTE } from '@/lib/events'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function loginAction(prevState: any, formData: FormData) {
@@ -98,12 +99,13 @@ export async function loginAction(prevState: any, formData: FormData) {
 
 export async function logoutAction(teamId: string) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const payload = { is_logged_in: false } as any;
+  const payload = { is_logged_in: false, current_locked_table: null } as any;
   await supabaseAdmin
     .from('teams')
     // @ts-expect-error: Suppress Next.js/Supabase inference bug
     .update(payload)
     .eq('id', teamId)
+    .neq('current_locked_table', 'BANNED')
 
   cookies().delete('team_id')
   redirect('/')
@@ -221,10 +223,10 @@ export async function placeBet(teamId: string, amount: number, gameId: string) {
       }
     }
 
-    // 1. Get current balance
+    // 1. Get current balance & stamps
     const { data: teamData, error: fetchError } = await supabaseAdmin
       .from('teams')
-      .select('wallet_balance')
+      .select('wallet_balance, stamps')
       .eq('id', teamId)
       .single()
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -232,6 +234,11 @@ export async function placeBet(teamId: string, amount: number, gameId: string) {
 
     if (fetchError || !teamData) {
       return { error: "Failed to read wallet." }
+    }
+
+    const teamStamps = (teamData.stamps as Record<string, boolean>) || {}
+    if (teamStamps[gameId]) {
+      return { error: "Badge already claimed for this table! You cannot replay this event." }
     }
 
     if (teamData.wallet_balance < amount) {
@@ -271,11 +278,159 @@ export async function unlockPlayer(teamId: string) {
       // @ts-expect-error: Next.js/Supabase inference bug
       .update({ current_locked_table: null })
       .eq('id', teamId)
+      .neq('current_locked_table', 'BANNED')
 
     if (error) return { error: error.message }
     return { success: true }
   } catch {
     return { error: "System error unlocking player." }
+  }
+}
+
+// --- TABLE OCCUPANCY & CAPACITY (MAX 3 PER EVENT) ---
+export async function getTableOccupancies(): Promise<Record<string, number>> {
+  try {
+    const { data: teams, error } = await supabaseAdmin
+      .from('teams')
+      .select('current_locked_table')
+      .not('current_locked_table', 'is', null)
+
+    const occupancies: Record<string, number> = {}
+    CASINO_EVENTS.forEach(e => { occupancies[e.route] = 0 })
+
+    if (teams && !error) {
+      teams.forEach((t: any) => {
+        const table = (t.current_locked_table || '').toLowerCase()
+        if (table && occupancies[table] !== undefined) {
+          occupancies[table]++
+        }
+      })
+    }
+
+    return occupancies
+  } catch (err) {
+    console.error('Error fetching table occupancies:', err)
+    return {}
+  }
+}
+
+export type TableJoinResult = {
+  status: 'SUCCESS' | 'ALREADY_WON' | 'FULL' | 'ERROR'
+  message?: string
+  gameId: string
+  label?: string
+  sublabel?: string
+  emoji?: string
+  currentCount?: number
+  maxParticipants?: number
+  availableTables?: Array<{
+    route: string
+    label: string
+    sublabel: string
+    emoji: string
+    count: number
+    wing: string
+  }>
+}
+
+export async function checkAndJoinTable(teamId: string, gameId: string): Promise<TableJoinResult> {
+  try {
+    const normGame = gameId.toLowerCase()
+    const eventConfig = EVENT_BY_ROUTE[normGame]
+
+    // 1. Fetch team's stamps and current table
+    const { data, error: teamErr } = await supabaseAdmin
+      .from('teams')
+      .select('id, stamps, current_locked_table')
+      .eq('id', teamId)
+      .maybeSingle()
+
+    const teamData = data as any
+    if (teamErr || !teamData) {
+      return { status: 'ERROR', message: 'Team profile not found.', gameId: normGame }
+    }
+
+    const stamps = (teamData.stamps as Record<string, boolean>) || {}
+
+    // Check if team already holds the badge for this game
+    if (stamps[normGame]) {
+      return {
+        status: 'ALREADY_WON',
+        message: `Your syndicate has already claimed the badge for ${eventConfig?.label || normGame.toUpperCase()}!`,
+        gameId: normGame,
+        label: eventConfig?.label || normGame.toUpperCase(),
+        sublabel: eventConfig?.sublabel || '',
+        emoji: eventConfig?.emoji || '🏅'
+      }
+    }
+
+    // 2. Check table occupancy across all active teams
+    const { data: activeTeams } = await supabaseAdmin
+      .from('teams')
+      .select('id, current_locked_table')
+      .not('current_locked_table', 'is', null)
+
+    const occupancies: Record<string, number> = {}
+    CASINO_EVENTS.forEach(e => { occupancies[e.route] = 0 })
+
+    if (activeTeams) {
+      activeTeams.forEach((t: any) => {
+        // Exclude this team if already locked to this table
+        if (t.id !== teamId) {
+          const table = (t.current_locked_table || '').toLowerCase()
+          if (table && occupancies[table] !== undefined) {
+            occupancies[table]++
+          }
+        }
+      })
+    }
+
+    const currentOccupancy = occupancies[normGame] || 0
+    const maxCapacity = eventConfig?.maxParticipants ?? 3
+
+    if (currentOccupancy >= maxCapacity) {
+      // Find open tables (< 3)
+      const availableTables = CASINO_EVENTS
+        .filter(e => (occupancies[e.route] || 0) < e.maxParticipants)
+        .map(e => ({
+          route: e.route,
+          label: e.label,
+          sublabel: e.sublabel,
+          emoji: e.emoji,
+          count: occupancies[e.route] || 0,
+          wing: e.wing === 'WING_1' ? 'Wing 1' : 'Wing 2'
+        }))
+
+      return {
+        status: 'FULL',
+        message: `${eventConfig?.label || normGame.toUpperCase()} is currently full (${currentOccupancy}/${maxCapacity} seats occupied).`,
+        gameId: normGame,
+        label: eventConfig?.label || normGame.toUpperCase(),
+        sublabel: eventConfig?.sublabel || '',
+        emoji: eventConfig?.emoji || '🚫',
+        currentCount: currentOccupancy,
+        maxParticipants: maxCapacity,
+        availableTables
+      }
+    }
+
+    // 3. Mark player as currently locked to this table
+    await supabaseAdmin
+      .from('teams')
+      // @ts-expect-error: Next.js/Supabase inference bug
+      .update({ current_locked_table: normGame } as any)
+      .eq('id', teamId)
+      .neq('current_locked_table', 'BANNED')
+
+    return {
+      status: 'SUCCESS',
+      gameId: normGame,
+      label: eventConfig?.label,
+      emoji: eventConfig?.emoji
+    }
+  } catch (err: any) {
+    console.error('Error in checkAndJoinTable:', err)
+    return { status: 'ERROR', message: err.message || 'System error joining table.', gameId }
   }
 }
 
