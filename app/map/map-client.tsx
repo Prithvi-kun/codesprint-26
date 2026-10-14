@@ -7,6 +7,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '@/lib/supabase/client'
 import { AVATAR_LIST, getAvatarUrl } from '@/lib/avatars'
 import LogoutButton from '@/components/LogoutButton'
+import BadgeAlreadyWonModal from '@/components/BadgeAlreadyWonModal'
+import EventFullModal, { OpenTableInfo } from '@/components/EventFullModal'
+import { CASINO_EVENTS, EVENT_BY_ROUTE } from '@/lib/events'
 
 // --- CONFIGURATION ---
 const LOBBY_W = 20
@@ -211,6 +214,24 @@ export default function MapClient({ userData }: MapClientProps) {
   const [broadcastMessage, setBroadcastMessage] = useState<string | null>(null)
   const [bouncerSpeech, setBouncerSpeech] = useState<'closed' | 'need_badges' | 'not_top6' | null>(null)
   const [top6Ids, setTop6Ids] = useState<string[]>([])
+
+  // --- TABLE CAPACITY & MODALS ---
+  const [tableOccupancies, setTableOccupancies] = useState<Record<string, number>>({})
+  const [badgeWonModal, setBadgeWonModal] = useState<{
+    isOpen: boolean
+    label: string
+    sublabel?: string
+    emoji?: string
+  }>({ isOpen: false, label: '' })
+  const [eventFullModal, setEventFullModal] = useState<{
+    isOpen: boolean
+    label: string
+    emoji?: string
+    currentCount: number
+    maxCount: number
+    availableTables: OpenTableInfo[]
+  }>({ isOpen: false, label: '', currentCount: 3, maxCount: 3, availableTables: [] })
+  const isCheckingTable = useRef(false)
 
   // --- STATE REFS FOR EVENT LISTENERS ---
   const sceneRef = useRef(scene)
@@ -420,8 +441,112 @@ export default function MapClient({ userData }: MapClientProps) {
       supabase.removeChannel(eventChannel)
       clearInterval(pollInterval)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inRound2])
+
+  // --- REALTIME OCCUPANCY SYNC (CAPACITY TRACKER) ---
+  useEffect(() => {
+    async function syncOccupancies() {
+      try {
+        const { getTableOccupancies } = await import('@/app/actions')
+        const occ = await getTableOccupancies()
+        if (occ) setTableOccupancies(occ)
+      } catch (e) {
+        console.error("Error syncing occupancies:", e)
+      }
+    }
+
+    syncOccupancies()
+    const occInterval = setInterval(syncOccupancies, 3500)
+
+    const occChannel = supabase.channel('map_table_occupancies')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'teams' }, () => {
+        syncOccupancies()
+      })
+      .subscribe()
+
+    return () => {
+      clearInterval(occInterval)
+      supabase.removeChannel(occChannel)
+    }
+  }, [])
+
+  // --- JOIN TABLE HANDLER (VALIDATES BADGES & CAPACITY) ---
+  const handleTryJoinTable = async (route: string) => {
+    if (isCheckingTable.current) return
+
+    // 1. Badge Check: Already won badge for this event?
+    if (stampsRef.current[route]) {
+      const ev = EVENT_BY_ROUTE[route]
+      setBadgeWonModal({
+        isOpen: true,
+        label: ev?.label || route.toUpperCase(),
+        sublabel: ev?.sublabel || 'Challenge Completed',
+        emoji: TABLE_EMOJI[route] || '🏅'
+      })
+      return
+    }
+
+    // VIP Final Round
+    if (route === 'final') {
+      router.push('/game/final')
+      return
+    }
+
+    // 2. Check if table is live in game_state
+    const { data: stateData } = await supabase
+      .from('game_state')
+      .select('entry_pin, is_active')
+      .eq('game_id', route)
+      .eq('is_active', true)
+      .maybeSingle()
+
+    if (!(stateData as any)?.entry_pin) {
+      setBroadcastMessage("DEALER|DEALER: This table is currently closed. Wait for the admin to open it.")
+      return
+    }
+
+    // 3. Server Check for Capacity (Max 3) & Player Lock
+    isCheckingTable.current = true
+    try {
+      const { checkAndJoinTable } = await import('@/app/actions')
+      const result = await checkAndJoinTable(userData.id, route)
+
+      if (result.status === 'ALREADY_WON') {
+        setBadgeWonModal({
+          isOpen: true,
+          label: result.label || route.toUpperCase(),
+          sublabel: result.sublabel || 'Challenge Completed',
+          emoji: result.emoji || '🏅'
+        })
+        return
+      }
+
+      if (result.status === 'FULL') {
+        setEventFullModal({
+          isOpen: true,
+          label: result.label || route.toUpperCase(),
+          emoji: result.emoji || '🚫',
+          currentCount: result.currentCount || 3,
+          maxCount: result.maxParticipants || 3,
+          availableTables: result.availableTables || []
+        })
+        return
+      }
+
+      if (result.status === 'SUCCESS') {
+        router.push(`/game/${route}`)
+      } else if (result.message) {
+        setBroadcastMessage(`DEALER|DEALER: ${result.message}`)
+      }
+    } catch (err: any) {
+      console.error("Error joining table:", err)
+    } finally {
+      isCheckingTable.current = false
+    }
+  }
+
+  const handleTryJoinTableRef = useRef(handleTryJoinTable)
+  useEffect(() => { handleTryJoinTableRef.current = handleTryJoinTable })
 
   // --- MOVEMENT ---
   useEffect(() => {
@@ -530,23 +655,7 @@ export default function MapClient({ userData }: MapClientProps) {
       if (e.key === 'Enter') {
         const routeOrAction = foundTableRoute || foundInteract
         if (routeOrAction) {
-          if (stampsRef.current[routeOrAction]) {
-            setBroadcastMessage("DEALER|DEALER: You've already cleared this table. Give the others a chance!")
-            return
-          }
-          if (routeOrAction === 'final') {
-            // Final round has its own dedicated page with betting + spin wheel
-            router.push('/game/final')
-          } else {
-            // Check if game is live before routing
-            supabase.from('game_state').select('entry_pin').eq('game_id', routeOrAction).eq('is_active', true).maybeSingle().then(({ data }) => {
-              if ((data as any)?.entry_pin) {
-                router.push(`/game/${routeOrAction}`)
-              } else {
-                setBroadcastMessage("DEALER|DEALER: This table is currently closed. Wait for the admin to open it.")
-              }
-            })
-          }
+          handleTryJoinTableRef.current(routeOrAction)
         }
       }
     }
@@ -583,8 +692,14 @@ export default function MapClient({ userData }: MapClientProps) {
   })
   // Chairs
   activeTables.forEach(t => {
+    const occ = tableOccupancies[t.route] || 0
     t.chairs.forEach((c, i) => {
-      allEntities.push({ type: 'chair', y: c.y, key: `chair-${t.id}-${i}`, data: { ...c, tableRoute: t.route } })
+      allEntities.push({
+        type: 'chair',
+        y: c.y,
+        key: `chair-${t.id}-${i}`,
+        data: { ...c, tableRoute: t.route, chairIndex: i, isOccupied: i < occ }
+      })
     })
   })
   // Decorations
@@ -846,24 +961,37 @@ export default function MapClient({ userData }: MapClientProps) {
             if (entity.type === 'table') {
               const t = entity.data
               const isVip = t.route === 'final' || t.route === 'blackjack'
+              const isCleared = !!stamps[t.route]
+              const occCount = tableOccupancies[t.route] || 0
+              const isFull = occCount >= 3
+
               return (
                 <div key={entity.key} className="absolute flex flex-col items-center justify-center cursor-pointer pointer-events-auto"
-                  onClick={() => {
-                    if (stamps[t.route]) {
-                      setBroadcastMessage("DEALER|DEALER: You've already cleared this table. Give the others a chance!")
-                      return
-                    }
-                    if (t.route === 'final') {
-                      // Navigate to dedicated final round page
-                      router.push('/game/final')
-                    }
-                    else router.push(`/game/${t.route}`)
-                  }}
+                  onClick={() => handleTryJoinTable(t.route)}
                   style={{ left: t.x * CELL, top: t.y * CELL, width: (t.w || 3) * CELL, height: (t.h || 2) * CELL, zIndex }}>
                   <div className={`w-full h-full ${isVip ? 'retro-table-vip' : 'retro-table'} relative ${nearTable === t.route ? 'table-glow shadow-retro-lg z-[100]' : ''}`}>
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center w-full pointer-events-none">
                       <span className={`${(t.w || 3) > 3 ? 'text-4xl' : 'text-lg'} mb-0.5`}>{TABLE_EMOJI[t.route]}</span>
-                      <span className={`${(t.w || 3) > 3 ? 'text-sm' : 'text-[6px]'} font-pixel text-retro-cream/80 font-bold mt-2`}>{t.label}</span>
+                      <span className={`${(t.w || 3) > 3 ? 'text-sm' : 'text-[6px]'} font-pixel text-retro-cream/80 font-bold mt-1`}>{t.label}</span>
+                      
+                      {/* Live Table Capacity / Badge Status */}
+                      {t.route !== 'final' && (
+                        <div className="mt-1">
+                          {isCleared ? (
+                            <span className="text-[6px] font-pixel text-yellow-400 bg-black/85 px-1.5 py-0.5 rounded border border-yellow-500/60 shadow-sm">
+                              🏅 CLEARED
+                            </span>
+                          ) : isFull ? (
+                            <span className="text-[6px] font-pixel text-red-300 bg-red-950/90 px-1.5 py-0.5 rounded border border-red-500/70 animate-pulse shadow-sm">
+                              🚫 3/3 FULL
+                            </span>
+                          ) : (
+                            <span className="text-[6px] font-pixel text-emerald-400 bg-black/80 px-1.5 py-0.5 rounded border border-emerald-500/40 shadow-sm">
+                              {occCount}/3 SEATS
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -885,10 +1013,16 @@ export default function MapClient({ userData }: MapClientProps) {
             // --- CHAIR ---
             if (entity.type === 'chair') {
               const c = entity.data
+              const isOccupied = !!c.isOccupied
               return (
                 <div key={entity.key} className="absolute"
                   style={{ left: c.x * CELL, top: c.y * CELL, width: CELL, height: CELL, zIndex }}>
-                  <div className={`w-[28px] h-[28px] mx-auto mt-[6px] ${nearTable === c.tableRoute ? 'retro-chair-active' : 'retro-chair'}`}>
+                  <div className={`w-[28px] h-[28px] mx-auto mt-[6px] relative ${nearTable === c.tableRoute ? 'retro-chair-active' : 'retro-chair'}`}>
+                    {isOccupied && (
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <div className="w-2.5 h-2.5 rounded-full bg-red-500/90 border border-red-200 shadow-[0_0_8px_rgba(239,68,68,0.9)] animate-pulse" title="Seat Occupied" />
+                      </div>
+                    )}
                   </div>
                 </div>
               )
@@ -936,10 +1070,16 @@ export default function MapClient({ userData }: MapClientProps) {
                   <AnimatePresence>
                     {nearTableData && (
                       <motion.div initial={{ opacity: 0, y: 5, scale: 0.8 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 5, scale: 0.8 }}
-                        className="absolute -top-16 left-1/2 -translate-x-1/2 whitespace-nowrap z-50">
+                        className="absolute -top-16 left-1/2 -translate-x-1/2 whitespace-nowrap z-50 pointer-events-none">
                         <div className="interact-tooltip text-center">
                           <div className="text-[9px] font-bold font-pixel text-gray-700">{TABLE_EMOJI[nearTableData.route]} {nearTableData.label}</div>
-                          <div className="text-[8px] text-gray-500 mt-0.5">Press ENTER</div>
+                          {stamps[nearTableData.route] ? (
+                            <div className="text-[8px] font-pixel text-yellow-600 mt-0.5">🏅 BADGE CLAIMED (ENTER)</div>
+                          ) : (tableOccupancies[nearTableData.route] || 0) >= 3 ? (
+                            <div className="text-[8px] font-pixel text-red-600 mt-0.5">🚫 TABLE FULL 3/3 (ENTER)</div>
+                          ) : (
+                            <div className="text-[8px] text-gray-500 mt-0.5">Press ENTER ({tableOccupancies[nearTableData.route] || 0}/3)</div>
+                          )}
                         </div>
                       </motion.div>
                     )}
@@ -1040,6 +1180,29 @@ export default function MapClient({ userData }: MapClientProps) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* BADGE ALREADY WON POPUP MODAL */}
+      <BadgeAlreadyWonModal
+        isOpen={badgeWonModal.isOpen}
+        onClose={() => setBadgeWonModal(prev => ({ ...prev, isOpen: false }))}
+        label={badgeWonModal.label}
+        sublabel={badgeWonModal.sublabel}
+        emoji={badgeWonModal.emoji}
+        actionButtonText="RETURN TO FLOOR"
+      />
+
+      {/* EVENT FULL (MAX 3) POPUP MODAL */}
+      <EventFullModal
+        isOpen={eventFullModal.isOpen}
+        onClose={() => setEventFullModal(prev => ({ ...prev, isOpen: false }))}
+        tableLabel={eventFullModal.label}
+        tableEmoji={eventFullModal.emoji}
+        currentCount={eventFullModal.currentCount}
+        maxCount={eventFullModal.maxCount}
+        availableTables={eventFullModal.availableTables}
+        stamps={stamps}
+        actionButtonText="BACK TO CASINO FLOOR"
+      />
 
     </div>
   )

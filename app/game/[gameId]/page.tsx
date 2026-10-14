@@ -9,6 +9,9 @@ import SpinWheel from '@/components/SpinWheel'
 import { supabase } from '@/lib/supabase/client'
 import LogoutButton from '@/components/LogoutButton'
 import { claimAutomatedReward } from '@/app/actions'
+import BadgeAlreadyWonModal from '@/components/BadgeAlreadyWonModal'
+import EventFullModal, { OpenTableInfo } from '@/components/EventFullModal'
+import TestPassedModal from '@/components/TestPassedModal'
 
 // --- CONFIGURATION ---
 const GAME_CONFIG: Record<string, any> = {
@@ -242,6 +245,23 @@ export default function GamePage() {
   const [currentTeammate, setCurrentTeammate] = useState<number>(0)
   const [blackjackTimers, setBlackjackTimers] = useState<number[]>([300, 300, 300])
 
+  // Modals for Badge Won & Table Full
+  const [badgeWonModal, setBadgeWonModal] = useState<{
+    isOpen: boolean
+    label: string
+    sublabel?: string
+    emoji?: string
+  }>({ isOpen: false, label: '' })
+  const [eventFullModal, setEventFullModal] = useState<{
+    isOpen: boolean
+    label: string
+    emoji?: string
+    currentCount: number
+    maxCount: number
+    availableTables: OpenTableInfo[]
+  }>({ isOpen: false, label: '', currentCount: 3, maxCount: 3, availableTables: [] })
+  const [showTestPassedModal, setShowTestPassedModal] = useState(false)
+
   // Timer urgency
   const isTimerUrgent = timeLeft !== '--:--' && (() => {
     const parts = timeLeft.split(':')
@@ -266,7 +286,7 @@ export default function GamePage() {
       // Fetch initial event and wallet state
       if (tid) {
         const [teamRes, eventRes, gameStateRes] = await Promise.all([
-          supabase.from('teams').select('wallet_balance, current_locked_table').eq('id', tid).maybeSingle(),
+          supabase.from('teams').select('wallet_balance, current_locked_table, stamps').eq('id', tid).maybeSingle(),
           supabase.from('event_control').select('is_paused, current_round, table_timers').eq('id', 1).maybeSingle(),
           supabase.from('game_state').select('*').eq('game_id', gameId.toLowerCase()).maybeSingle()
         ])
@@ -274,6 +294,44 @@ export default function GamePage() {
         const teamData = teamRes.data as any
         const eventData = eventRes.data as any
         const gameStateData = gameStateRes.data as any
+
+        // Check if team already holds the badge for this challenge
+        const stamps = (teamData?.stamps as Record<string, boolean>) || {}
+        if (stamps[gameId.toLowerCase()]) {
+          setBadgeWonModal({
+            isOpen: true,
+            label: config?.title || gameId.toUpperCase(),
+            sublabel: 'Badge Already Claimed',
+            emoji: '🏅'
+          })
+          return
+        }
+
+        // Verify table capacity (Max 3) if not already locked
+        if (teamData?.current_locked_table !== gameId.toLowerCase()) {
+          const { checkAndJoinTable } = await import('@/app/actions')
+          const joinRes = await checkAndJoinTable(tid, gameId.toLowerCase())
+          if (joinRes.status === 'ALREADY_WON') {
+            setBadgeWonModal({
+              isOpen: true,
+              label: joinRes.label || gameId.toUpperCase(),
+              sublabel: joinRes.sublabel || 'Badge Already Claimed',
+              emoji: joinRes.emoji || '🏅'
+            })
+            return
+          }
+          if (joinRes.status === 'FULL') {
+            setEventFullModal({
+              isOpen: true,
+              label: joinRes.label || gameId.toUpperCase(),
+              emoji: joinRes.emoji || '🚫',
+              currentCount: joinRes.currentCount || 3,
+              maxCount: joinRes.maxParticipants || 3,
+              availableTables: joinRes.availableTables || []
+            })
+            return
+          }
+        }
 
         const timers = eventData?.table_timers || {}
         
@@ -463,6 +521,22 @@ export default function GamePage() {
     }
   }, [teamId, gameId])
 
+  // --- RELEASE TABLE LOCK ON UNMOUNT / TAB CLOSE ---
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (teamId) {
+        navigator.sendBeacon('/api/unlock', JSON.stringify({ teamId }))
+      }
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      if (teamId) {
+        import('@/app/actions').then(({ unlockPlayer }) => unlockPlayer(teamId))
+      }
+    }
+  }, [teamId])
+
   // ============================================================
   // AUTOMATED REWARD CLAIM EFFECT
   // ============================================================
@@ -487,6 +561,13 @@ export default function GamePage() {
       claim()
     }
   }, [showSuccessModal, rewardClaimed, teamId, difficulty, wheelMultiplier, gameId])
+
+  // Dismiss TestPassedModal once Pit Boss awards the win
+  useEffect(() => {
+    if (showSuccessModal) {
+      setShowTestPassedModal(false)
+    }
+  }, [showSuccessModal])
 
   // --- WAITING ROOM SYNCHRONIZATION ---
   useEffect(() => {
@@ -703,7 +784,9 @@ export default function GamePage() {
         }
 
         if (textInput.trim() === dynamicConfig.expected_output.trim()) {
-          setShowSuccessModal(true)
+          setOutput("✅ CORRECT OUTPUT PREDICTION!\n\n⚠️ Please call the Dealer / Pit Boss to verify and award your win from the Admin Panel.")
+          setHasError(false)
+          setShowTestPassedModal(true)
         } else {
           setOutput("❌ WRONG ANSWER. Please try again.")
           setHasError(true)
@@ -726,7 +809,9 @@ export default function GamePage() {
         }
 
         if (selectedMcqOption.trim() === dynamicConfig.expected_output.trim()) {
-          setShowSuccessModal(true)
+          setOutput("✅ CORRECT QUERY SELECTED!\n\n⚠️ Please call the Dealer / Pit Boss to verify and award your win from the Admin Panel.")
+          setHasError(false)
+          setShowTestPassedModal(true)
         } else {
           setOutput("❌ WRONG ANSWER. Please try again.")
           setHasError(true)
@@ -782,16 +867,38 @@ export default function GamePage() {
       })
 
       // 5. Create Worker Execution Promise
-      const executionPromise = new Promise<{ stdout?: string, stderr?: string, error?: string }>((resolve) => {
+      const executionPromise = new Promise<{
+        stdout?: string
+        stderr?: string
+        evalResult?: string
+        error?: string
+        testResults?: any[]
+        allPassed?: boolean
+      }>((resolve) => {
         worker.onmessage = (e) => resolve(e.data)
         worker.onerror = (e) => resolve({ error: e.message })
       })
 
-      // Send to Worker
-      worker.postMessage({ code: finalCode })
+      // Detect function name from user code or starter code
+      const funcMatch = code.match(/def\s+([a-zA-Z0-9_]+)/) || (dynamicConfig?.starter || '').match(/def\s+([a-zA-Z0-9_]+)/)
+      const functionName = funcMatch ? funcMatch[1] : undefined
+
+      // Send to Worker: user code AND test cases
+      worker.postMessage({
+        code: finalCode,
+        testCases: dynamicConfig?.test_cases || [],
+        functionName
+      })
 
       // RACE! First one to finish wins
-      const result = await Promise.race([executionPromise, timeoutPromise]) as { stdout?: string, stderr?: string, error?: string }
+      const result = await Promise.race([executionPromise, timeoutPromise]) as {
+        stdout?: string
+        stderr?: string
+        evalResult?: string
+        error?: string
+        testResults?: any[]
+        allPassed?: boolean
+      }
 
       // Always terminate worker immediately after race finishes to free memory immediately
       worker.terminate()
@@ -805,28 +912,63 @@ export default function GamePage() {
       } else {
         const stderr = result.stderr ? `\n[STDERR]:\n${result.stderr}` : ''
         const stdout = result.stdout || ''
+        const evalResult = result.evalResult
 
-        let displayOutput = `> OUTPUT:\n${stdout}${stderr}`
+        let displayOutput = ''
 
-        if (isSubmit) {
-          const expectedRaw = dynamicConfig?.test_cases?.[0]?.expected || dynamicConfig?.expected_output
-          const expectedStr = expectedRaw ? String(expectedRaw).trim() : null
-          
-          if (expectedStr && stdout.trim() === expectedStr) {
-            displayOutput += "\n\n✅ Passed Public Test Case!\n⚠️ Please call the Dealer/Pit Boss to verify your code against a PRIVATE test case to pass."
-            setHasError(false)
-          } else if (expectedStr) {
-            displayOutput += `\n\n❌ Failed Public Test Case.\nExpected: ${expectedStr}\nGot: ${stdout.trim()}`
-            setHasError(true)
-            setShowBustEffect(true)
-            setTimeout(() => setShowBustEffect(false), 500)
+        if (stdout.trim()) {
+          displayOutput += `> OUTPUT:\n${stdout.trim()}\n\n`
+        } else if (evalResult && evalResult !== 'None') {
+          displayOutput += `> RETURNED:\n${evalResult}\n\n`
+        }
+
+        if (result.testResults && result.testResults.length > 0) {
+          displayOutput += `══════════════════════════════════════════\n`
+          displayOutput += `🧪 TEST CASE RESULTS:\n`
+          displayOutput += `══════════════════════════════════════════\n`
+
+          result.testResults.forEach((tr: any, idx: number) => {
+            const statusIcon = tr.passed ? '✅ PASSED' : '❌ FAILED'
+            displayOutput += `[Test ${idx + 1}] ${tr.input}\n`
+            displayOutput += `  Expected: ${tr.expected}\n`
+            displayOutput += `  Actual:   ${tr.actual}\n`
+            displayOutput += `  Status:   ${statusIcon}\n\n`
+          })
+
+          displayOutput += `══════════════════════════════════════════\n`
+          if (result.allPassed) {
+            displayOutput += `🎉 ALL TEST CASES PASSED!\n`
+            if (isSubmit) {
+              displayOutput += `\n⚠️ Please call the Dealer / Pit Boss to verify your solution and award your win from the Admin Panel.`
+              setHasError(false)
+              setShowTestPassedModal(true)
+            } else {
+              displayOutput += `\n💡 Click "SUBMIT CODE" below to submit for Pit Boss verification!`
+              setHasError(false)
+            }
           } else {
-            displayOutput += "\n\n⚠️ Submission Complete. Please show this output to the Dealer/Pit Boss."
-            setHasError(false)
+            displayOutput += `❌ SOME TEST CASES FAILED.\nCheck your logic and try again.`
+            setHasError(true)
+            if (isSubmit) {
+              setShowBustEffect(true)
+              setTimeout(() => setShowBustEffect(false), 500)
+            }
           }
         } else {
-          displayOutput += "\n\n✅ Run Complete. Check your output."
-          setHasError(false)
+          if (!stdout.trim() && (!evalResult || evalResult === 'None')) {
+            displayOutput += `> Code executed with no printed output.\n\n`
+          }
+          if (isSubmit) {
+            displayOutput += `⚠️ Submission Complete. Show this to the Dealer/Pit Boss.`
+            setHasError(false)
+          } else {
+            displayOutput += `✅ Run Complete.`
+            setHasError(false)
+          }
+        }
+
+        if (stderr.trim()) {
+          displayOutput += `\n${stderr}`
         }
 
         setOutput(displayOutput)
@@ -843,6 +985,34 @@ export default function GamePage() {
   }
 
   if (!config) return <div className="text-white p-10">INVALID GAME ID</div>
+
+  if (badgeWonModal.isOpen) {
+    return (
+      <BadgeAlreadyWonModal
+        isOpen={true}
+        onClose={() => router.push('/map')}
+        label={badgeWonModal.label}
+        sublabel={badgeWonModal.sublabel}
+        emoji={badgeWonModal.emoji}
+        actionButtonText="RETURN TO CASINO FLOOR"
+      />
+    )
+  }
+
+  if (eventFullModal.isOpen) {
+    return (
+      <EventFullModal
+        isOpen={true}
+        onClose={() => router.push('/map')}
+        tableLabel={eventFullModal.label}
+        tableEmoji={eventFullModal.emoji}
+        currentCount={eventFullModal.currentCount}
+        maxCount={eventFullModal.maxCount}
+        availableTables={eventFullModal.availableTables}
+        actionButtonText="RETURN TO CASINO FLOOR"
+      />
+    )
+  }
 
   // ============================================================
   // PHASE 3: THE GAME (AND WAITING ROOM)
@@ -886,6 +1056,14 @@ export default function GamePage() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* TEST CASES PASSED / AWAITING DEALER APPROVAL MODAL */}
+        <TestPassedModal
+          isOpen={showTestPassedModal}
+          onClose={() => setShowTestPassedModal(false)}
+          gameTitle={config?.title || gameId.toUpperCase()}
+          totalCases={dynamicConfig?.test_cases?.length}
+        />
 
         {/* JACKPOT SUCCESS MODAL */}
         <AnimatePresence>
@@ -974,6 +1152,12 @@ export default function GamePage() {
               }`}>
               RISK: {difficulty}
             </div>
+            {wheelMultiplier > 0 && (
+              <div className="px-3 py-1.5 rounded-lg border border-yellow-500/50 bg-yellow-900/30 text-yellow-300 font-pixel text-[10px] tracking-wider flex items-center gap-1.5 shadow-[0_0_10px_rgba(234,179,8,0.3)] animate-pulse">
+                <span>🎡</span>
+                <span>WHEEL: {wheelMultiplier}x</span>
+              </div>
+            )}
             <div className={`px-4 py-1.5 rounded-lg border font-hud font-bold tracking-wider transition-all
               ${isTimerUrgent
                 ? 'border-neon-red text-neon-red bg-red-900/30 shadow-neon-red animate-neon-pulse text-lg'
@@ -1301,8 +1485,8 @@ export default function GamePage() {
                 >
                   {/* STANDARD BET CARD */}
                   <motion.div
-                    whileHover={{ scale: 1.03, y: -4 }}
-                    whileTap={{ scale: 0.98 }}
+                    whileHover={{ scale: selectedBet === 'STANDARD' ? 1 : 1.03, y: selectedBet === 'STANDARD' ? 0 : -4 }}
+                    whileTap={{ scale: selectedBet === 'STANDARD' ? 1 : 0.98 }}
                     onClick={() => setSelectedBet('STANDARD')}
                     className={`group cursor-pointer border-[3px] p-6 md:p-8 rounded-2xl transition-all relative overflow-hidden flex flex-col justify-center h-full min-h-[300px]
                       ${selectedBet === 'STANDARD' ? 'bg-[#1e4d2b] border-white shadow-[0_0_30px_rgba(34,197,94,0.3)]' : 'bg-[#143a21] border-green-500/60 hover:border-green-400/80'}`}
@@ -1317,23 +1501,50 @@ export default function GamePage() {
                     </div>
                   </motion.div>
 
-                  {/* HIGH ROLLER CARD */}
-                  <motion.div
-                    whileHover={{ scale: 1.03, y: -4 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => setSelectedBet('HIGH')}
-                    className={`group cursor-pointer border-[3px] p-6 md:p-8 rounded-2xl transition-all relative overflow-hidden flex flex-col justify-center h-full min-h-[300px]
-                      ${selectedBet === 'HIGH' ? 'bg-[#2a0a0a] border-neon-red shadow-neon-red' : 'bg-[#1a0a0a] border-red-900/60 hover:border-neon-red/80'}`}
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-b from-red-900/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <div className="relative z-10">
-                      <h3 className="text-2xl text-white font-bold mb-1 font-pixel">HIGH ROLLER</h3>
-                      <div className="text-4xl font-hud font-bold text-neon-red mb-2 neon-text-red">$200</div>
-                      <div className="text-base font-hud font-bold text-red-300 mb-3">Returns $400</div>
-                      <p className="text-gray-400 text-sm font-mono">{gameId === 'roulette' ? 'Exact Match Input' : 'Extreme Difficulty'}</p>
-                      <div className="mt-3 text-[9px] font-pixel text-red-600/60 uppercase tracking-widest">HIGH RISK • HIGH REWARD</div>
-                    </div>
-                  </motion.div>
+                  {/* HIGH ROLLER CARD OR SPIN WHEEL */}
+                  {selectedBet === 'STANDARD' ? (
+                    <motion.div
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className="h-full"
+                    >
+                      <SpinWheel 
+                        teamId={teamId || ''} 
+                        gameId={gameId}
+                        onSpinStart={() => setIsSpinningWheel(true)}
+                        onSpinComplete={(multiplier, newBalance) => {
+                          setIsSpinningWheel(false)
+                          setIsBetting(true)
+                          setWheelMultiplier(multiplier)
+                          setWalletBalance(newBalance)
+                          setDifficulty('STANDARD')
+                          localStorage.setItem(`cs_diff_${gameId}`, 'STANDARD')
+                          setTimeout(() => {
+                            setPhase('WAITING')
+                            setIsBetting(false)
+                          }, 2000)
+                        }}
+                        disabled={isBetting || isSpinningWheel} 
+                      />
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      whileHover={{ scale: 1.03, y: -4 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => setSelectedBet('HIGH')}
+                      className={`group cursor-pointer border-[3px] p-6 md:p-8 rounded-2xl transition-all relative overflow-hidden flex flex-col justify-center h-full min-h-[300px]
+                        ${selectedBet === 'HIGH' ? 'bg-[#2a0a0a] border-neon-red shadow-neon-red' : 'bg-[#1a0a0a] border-red-900/60 hover:border-neon-red/80'}`}
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-b from-red-900/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <div className="relative z-10">
+                        <h3 className="text-2xl text-white font-bold mb-1 font-pixel">HIGH ROLLER</h3>
+                        <div className="text-4xl font-hud font-bold text-neon-red mb-2 neon-text-red">$200</div>
+                        <div className="text-base font-hud font-bold text-red-300 mb-3">Returns $400</div>
+                        <p className="text-gray-400 text-sm font-mono">{gameId === 'roulette' ? 'Exact Match Input' : 'Extreme Difficulty'}</p>
+                        <div className="mt-3 text-[9px] font-pixel text-red-600/60 uppercase tracking-widest">HIGH RISK • HIGH REWARD</div>
+                      </div>
+                    </motion.div>
+                  )}
                 </motion.div>
                 
                 <div className="mt-4 w-full flex flex-col items-center gap-3">
@@ -1354,16 +1565,21 @@ export default function GamePage() {
                       <p className="text-[9px] text-gray-500 font-mono text-center mt-2">Clues cannot be purchased after the round starts.</p>
                     </div>
                   )}
+                  {selectedBet === 'STANDARD' && wheelMultiplier === 0 && (
+                    <button onClick={() => setSelectedBet(null)} className="text-gray-400 hover:text-white text-[10px] font-pixel tracking-widest uppercase mb-1 transition-colors">
+                      ← CANCEL AND CHANGE BET TYPE
+                    </button>
+                  )}
                   <button 
                     onClick={handleBet}
-                    disabled={!selectedBet || isBetting}
+                    disabled={!selectedBet || isBetting || isSpinningWheel}
                     className={`px-6 py-3 font-bold rounded-xl uppercase text-sm shadow-lg transition-all font-pixel w-full max-w-md
-                      ${selectedBet && !isBetting
+                      ${selectedBet && !isBetting && !isSpinningWheel
                         ? 'bg-retro-gold text-black hover:bg-yellow-400 hover:scale-105 shadow-neon-gold cursor-pointer' 
                         : 'bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700'
                       }`}
                   >
-                    {isBetting ? 'ENTERING CASINO...' : 'CONFIRM CHOICES & ENTER'}
+                    {isSpinningWheel ? 'SPINNING WHEEL...' : isBetting ? 'ENTERING CASINO...' : 'CONFIRM CHOICES & ENTER'}
                   </button>
                   <button onClick={() => router.back()} className="text-gray-500 hover:text-white text-[9px] disabled:opacity-0 font-pixel tracking-widest uppercase transition-colors" disabled={isBetting}>
                     ← BACK TO MAP
