@@ -5,8 +5,7 @@ import {
     Shield, Pause, Play, Zap, Search, DollarSign, AlertTriangle, Ban,
     Award, Upload, RotateCcw, ToggleLeft, ToggleRight, Trophy, BarChart3,
     Megaphone, Eye, ChevronDown, RefreshCw, X, Check, Flame, Trash2, ChevronRight,
-    Sparkles, FileText, CheckCircle2, HelpCircle, Code2, ListOrdered, FileJson,
-    Copy, Filter, Layers, Database
+    Sparkles, CheckCircle2, FileJson, Copy
 } from 'lucide-react'
 import {
     togglePause, setCurrentRound, getEventState,
@@ -17,7 +16,6 @@ import {
     getLeaderboard, getAnalytics, broadcastMessage, forceWin, createTeam,
     startTableRound, setTableStatusState, awardWin, toggleRound2Portal
 } from '../actions'
-import { Json } from '@/lib/supabase/types'
 
 type Tab = 'pit' | 'vault' | 'deck' | 'eye'
 

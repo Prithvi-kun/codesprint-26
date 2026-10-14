@@ -3,9 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Group as PanelGroup, Panel, Separator as PanelResizeHandle } from 'react-resizable-panels'
 import CodeEditor from '@/components/CodeEditor'
-import SpinWheel from '@/components/SpinWheel'
 import { supabase } from '@/lib/supabase/client'
 import LogoutButton from '@/components/LogoutButton'
 import { claimAutomatedReward } from '@/app/actions'
@@ -217,11 +215,8 @@ export default function GamePage() {
   const [actualPin, setActualPin] = useState<string | null>(null)
   const [enteredPin, setEnteredPin] = useState<string>('')
   const [isUnlockedLocally, setIsUnlockedLocally] = useState<boolean>(false)
-  const [panelLayout, setPanelLayout] = useState([25, 55, 20])
   const [language, setLanguage] = useState<string>('python')
-  const [wheelMultiplier, setWheelMultiplier] = useState<number>(0)
   const [rewardClaimed, setRewardClaimed] = useState<boolean>(false)
-  const [isSpinningWheel, setIsSpinningWheel] = useState<boolean>(false)
   const [vaultClueLevel, setVaultClueLevel] = useState<number>(0)
 
   // Dynamic Content State
@@ -470,7 +465,7 @@ export default function GamePage() {
     if (showSuccessModal && !rewardClaimed && teamId) {
       setRewardClaimed(true)
       
-      const payout = Math.floor(difficulty === 'HIGH' ? 400 : (150 * (wheelMultiplier > 0 ? wheelMultiplier : 1)))
+      const payout = Math.floor(difficulty === 'HIGH' ? 400 : 150)
       
       const claim = async () => {
         try {
@@ -486,7 +481,7 @@ export default function GamePage() {
       }
       claim()
     }
-  }, [showSuccessModal, rewardClaimed, teamId, difficulty, wheelMultiplier, gameId])
+  }, [showSuccessModal, rewardClaimed, teamId, difficulty, gameId])
 
   // --- WAITING ROOM SYNCHRONIZATION ---
   useEffect(() => {
@@ -919,13 +914,8 @@ export default function GamePage() {
                   <div className="bg-black/50 p-6 rounded-2xl border-2 border-retro-brass shadow-inner my-6">
                     <p className="text-gray-400 font-mono text-sm mb-2 uppercase tracking-widest">Expected Payout</p>
                     <p className="text-4xl font-hud text-neon-green">
-                      ${Math.floor(difficulty === 'HIGH' ? 400 : (150 * (wheelMultiplier > 0 ? wheelMultiplier : 1)))}
+                      ${difficulty === 'HIGH' ? 400 : 150}
                     </p>
-                    {difficulty === 'STANDARD' && wheelMultiplier > 0 && wheelMultiplier !== 1 && (
-                      <p className="text-retro-gold font-pixel text-[10px] mt-3 uppercase tracking-widest animate-pulse">
-                        WHEEL BONUS APPLIED ({wheelMultiplier}x)
-                      </p>
-                    )}
                   </div>
 
                   <p className="text-sm text-gray-500 font-mono italic">

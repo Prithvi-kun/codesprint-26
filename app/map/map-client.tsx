@@ -27,10 +27,6 @@ const TABLE_EMOJI: Record<string, string> = {
   slots: '🎰', roulette: '🎯', blackjack: '🃏', craps: '🎲', poker: '🕵️',
   baccarat: '🏦', dice: '🎲', highcard: '🃏', coinflip: '🪙', vault: '🔐', final: '🏆',
 }
-const TABLE_COLOR: Record<string, string> = {
-  slots: '#B5A642', roulette: '#722F37', blackjack: '#1B5E3B', craps: '#6B4E1E', poker: '#4A7C59',
-  baccarat: '#3A2E39', dice: '#5C3A21', highcard: '#1F3C4D', coinflip: '#8C6C3F', vault: '#2A303C', final: '#B5A642',
-}
 
 // Helper to generate room walls with doors
 function generatePerimeter(doorLeft: boolean, doorRight: boolean, doorTop: boolean, doorBottom: boolean, w: number, h: number): { x: number, y: number, className?: string }[] {
@@ -162,7 +158,7 @@ export default function MapClient({ userData }: MapClientProps) {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('cs_map_pos')
       if (saved) {
-        let p = JSON.parse(saved)
+        const p = JSON.parse(saved)
         const scene = localStorage.getItem('cs_map_scene') || 'LOBBY'
         const w = scene === 'LOBBY' ? LOBBY_W : scene === 'VIP_ROOM' ? VIP_W : WING_W
         const h = scene === 'LOBBY' ? LOBBY_H : scene === 'VIP_ROOM' ? VIP_H : WING_H
@@ -308,6 +304,7 @@ export default function MapClient({ userData }: MapClientProps) {
   const handleTeleportToRound2 = async () => {
     setScene('VIP_ROOM')
     setPosition({ x: Math.floor(VIP_W / 2), y: VIP_H - 2 })
+    setInRound2(true)
     const { updateRound2Status } = await import('@/app/actions')
     await updateRound2Status(userData.id, true)
   }
@@ -315,6 +312,7 @@ export default function MapClient({ userData }: MapClientProps) {
   const handleTeleportToRound1 = async () => {
     setScene('LOBBY')
     setPosition({ x: 9, y: 2 })
+    setInRound2(false)
     const { updateRound2Status } = await import('@/app/actions')
     await updateRound2Status(userData.id, false)
   }
@@ -342,6 +340,7 @@ export default function MapClient({ userData }: MapClientProps) {
         const newRecord = payload.new as any
         setWalletBalance(newRecord.wallet_balance)
         if (newRecord.stamps) setStamps(newRecord.stamps as Record<string, boolean>)
+        if (newRecord.in_round_2 !== undefined) setInRound2(newRecord.in_round_2)
         if (newRecord.current_locked_table === 'WARNING') {
           setIsWarning(true)
           setTimeout(() => setIsWarning(false), 3000)

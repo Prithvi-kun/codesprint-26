@@ -428,7 +428,7 @@ export async function claimAutomatedReward(teamId: string, payout: number, gameI
     } as any);
 
     return { success: true, newBalance };
-  } catch (err) {
+  } catch {
     return { error: "System error claiming reward." };
   }
 }
@@ -486,7 +486,7 @@ export async function buyVaultClues(teamId: string, questionId: string, level: n
 
   const { data: question } = await supabaseAdmin.from('question_bank').select('test_cases').eq('id', questionId).maybeSingle();
   
-  let actualClues: string[] = [];
+  const actualClues: string[] = [];
   let cluesArray: string[] = [];
   const tc = (question as any)?.test_cases;
   if (tc) {
