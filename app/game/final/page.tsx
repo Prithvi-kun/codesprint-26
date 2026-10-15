@@ -137,19 +137,14 @@ export default function FinalRoundPage() {
         return
       }
 
-      // Check Top-6 ranking
+      // Rank is informational only - there is NO Top-6 cut-off: anyone with all 10 badges may enter
       const { data: allTeams } = await supabase
         .from('teams')
         .select('id, wallet_balance')
         .order('wallet_balance', { ascending: false })
 
       if (allTeams) {
-        const myRank = allTeams.findIndex((t: any) => t.id === tid) + 1
-        setRank(myRank)
-        if (myRank > 6) {
-          setPhase('BLOCKED')
-          return
-        }
+        setRank(allTeams.findIndex((t: any) => t.id === tid) + 1)
       }
 
       // Check game state
@@ -463,21 +458,8 @@ export default function FinalRoundPage() {
           className="max-w-md w-full bg-[#161b22] border border-red-500/40 rounded-2xl p-8 text-center shadow-[0_0_40px_rgba(239,68,68,0.15)]">
           <div className="text-6xl mb-4">🔒</div>
           <h1 className="text-2xl font-bold text-red-400 mb-2 font-mono">Access Denied</h1>
-          {rank !== null && rank > 6 ? (
-            <>
-              <p className="text-gray-400 text-sm font-mono mb-2">
-                You are currently ranked <span className="text-white font-bold">#{rank}</span>.
-              </p>
-              <p className="text-gray-500 text-xs font-mono">
-                Only the <span className="text-yellow-400 font-bold">Top 6 teams</span> by credit score may enter the Final Round.
-              </p>
-            </>
-          ) : (
-            <>
-              <p className="text-gray-400 text-sm font-mono mb-2">You need all <span className="text-yellow-400 font-bold">10 badges</span> to enter.</p>
-              <p className="text-gray-500 text-xs font-mono">Complete all tables in Wing 1 &amp; Wing 2 first.</p>
-            </>
-          )}
+          <p className="text-gray-400 text-sm font-mono mb-2">You need all <span className="text-yellow-400 font-bold">10 badges</span> to enter.</p>
+          <p className="text-gray-500 text-xs font-mono">Complete all tables in Wing 1 &amp; Wing 2 first.</p>
           <button onClick={() => router.push('/map')} className="mt-6 w-full py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 font-mono text-sm rounded-lg border border-gray-600 transition-colors">
             ← Return to Casino Floor
           </button>
@@ -503,7 +485,7 @@ export default function FinalRoundPage() {
                 <h1 className="text-xl font-bold text-yellow-400 font-mono">FINAL SHOWDOWN</h1>
                 <DiffBadge label="FINAL" color="bg-yellow-900/60 text-yellow-300 border border-yellow-700/50" />
               </div>
-              <p className="text-gray-500 text-xs font-mono">The ultimate coding challenge. Top 6 only. All-or-nothing.</p>
+              <p className="text-gray-500 text-xs font-mono">The ultimate coding challenge. Open to every team with all 10 badges. All-or-nothing.</p>
             </div>
             <div className="text-right">
               <div className="text-gray-500 text-xs font-mono">Your Balance</div>
@@ -608,7 +590,7 @@ export default function FinalRoundPage() {
                   {spinState === 'SPINNING' ? 'SPINNING...' : '🎡 SPIN BONUS WHEEL'}
                 </button>
               )}
-              <p className="text-gray-600 text-[10px] font-mono text-center">Included for all Top-6 finalists.</p>
+              <p className="text-gray-600 text-[10px] font-mono text-center">Included for all finalists.</p>
             </div>
           </div>
         </motion.div>
@@ -787,7 +769,7 @@ export default function FinalRoundPage() {
                     <DiffBadge label="Hard" color="bg-red-900/40 text-red-400" />
                   </div>
                   <div className="flex items-center gap-4 text-xs text-gray-500 font-mono mb-4">
-                    <span>🏆 Top-6 Only</span>
+                    <span>🏆 10 badges required</span>
                     <span>⏱ 45 min total</span>
                     <span>🎯 All badges required</span>
                   </div>

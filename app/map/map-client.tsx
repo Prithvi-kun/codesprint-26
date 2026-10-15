@@ -623,13 +623,7 @@ export default function MapClient({ userData }: MapClientProps) {
             setPosition({ x: newPos.x, y: 1 })
             return
           }
-          // Check Top-6 ranking for VIP room
-          if (top6Ids.length > 0 && !top6Ids.includes(userData.id)) {
-            setBouncerSpeech('not_top6')
-            setTimeout(() => setBouncerSpeech(null), 3500)
-            setPosition({ x: newPos.x, y: 1 })
-            return
-          }
+          // No Top-6 cut-off: anyone with all 10 badges may enter
           handleTeleportToRound2()
           return 
         }
