@@ -185,7 +185,8 @@ function ThePit({ adminRole = 'pitboss', adminLabel = 'Pit Boss Alpha' }: { admi
 
     const handleTableStatusChange = async (gameId: string, newStatus: string) => {
         setActionLoading(`table-status-${gameId}`)
-        await setTableStatusState(gameId, newStatus)
+        const res = await setTableStatusState(gameId, newStatus)
+        if (res?.error) alert(`Error: ${res.error}`)
         await refresh()
         setActionLoading(null)
     }
@@ -193,8 +194,9 @@ function ThePit({ adminRole = 'pitboss', adminLabel = 'Pit Boss Alpha' }: { admi
     const handleKillSwitch = async () => {
         setActionLoading('kill')
         const newState = !isPaused
-        await togglePause(newState)
-        setIsPaused(newState)
+        const res = await togglePause(newState)
+        if (res?.error) alert(`Error: ${res.error}`)
+        else setIsPaused(newState)
         setActionLoading(null)
     }
 

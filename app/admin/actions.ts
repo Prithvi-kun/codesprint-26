@@ -10,6 +10,10 @@ function isAdminAuthenticated(): boolean {
     return cookieStore.get('admin_session')?.value === 'authenticated'
 }
 
+// A write that "succeeds" but touches 0 rows means Row-Level Security blocked it,
+// i.e. the server is NOT using the real service_role key (common on Vercel misconfig).
+const RLS_BLOCKED = 'Database write was blocked (0 rows changed). The server is not using a valid SUPABASE_SERVICE_ROLE_KEY - check the Vercel env var and redeploy. Open /api/admin/health for details.'
+
 // =============================================
 // TAB A: "THE PIT" - Live Ops
 // =============================================
@@ -65,12 +69,14 @@ export async function setTableStatusState(gameId: string, status: string) {
 
     currentTimers[`${gameId}_status`] = status
 
-    const { error: eventErr } = await supabaseAdmin
+    const { data: evRows, error: eventErr } = await supabaseAdmin
         .from('event_control')
         .update({ table_timers: currentTimers } as any)
         .eq('id', 1)
+        .select('id')
 
     if (eventErr) return { error: eventErr.message }
+    if (!evRows || evRows.length === 0) return { error: RLS_BLOCKED }
 
     // If the Pit Boss explicitly KILLS the table, forcefully eject everyone and close it
     if (status === 'KILLED') {
@@ -139,12 +145,14 @@ export async function togglePause(isPaused: boolean) {
         }
     }
 
-    const { error } = await supabaseAdmin
+    const { data: pauseRows, error } = await supabaseAdmin
         .from('event_control')
         .update({ is_paused: isPaused, table_timers: currentTimers } as any)
         .eq('id', 1)
+        .select('id')
 
     if (error) return { error: error.message }
+    if (!pauseRows || pauseRows.length === 0) return { error: RLS_BLOCKED }
     return { success: true, isPaused }
 }
 
@@ -247,13 +255,15 @@ export async function startTableRound(gameId: string, durationMins: number = 16)
     }
 
     // Update the event_control table with the merged timers
-    const { error: eventErr } = await supabaseAdmin
+    const { data: startRows, error: eventErr } = await supabaseAdmin
         .from('event_control')
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .update({ table_timers: currentTimers } as any)
         .eq('id', 1)
+        .select('id')
 
     if (eventErr) return { error: `Failed to update event control: ${eventErr.message}` }
+    if (!startRows || startRows.length === 0) return { error: RLS_BLOCKED }
 
     // Update the game_state table with the actual PIN text Native SQL storage
     let { error: upsertErr } = await supabaseAdmin
