@@ -391,7 +391,10 @@ export default function FinalRoundPage() {
       const worker = new Worker('/pythonWorker.js')
       const timeout = new Promise<{ error: string }>(r => setTimeout(() => r({ error: 'Execution timed out (2 min).' }), 120000))
       const exec    = new Promise<any>(r => { worker.onmessage = e => r(e.data); worker.onerror = e => r({ error: e.message }) })
-      worker.postMessage({ code })
+      // Run the public test cases against the function the player defined
+      const testCases = (question?.test_cases || []).map((tc: any) => ({ input: tc.input, expected: tc.expected }))
+      const fnMatch = code.match(/def\s+([a-zA-Z0-9_]+)/) || (question?.starter || '').match(/def\s+([a-zA-Z0-9_]+)/)
+      worker.postMessage({ code, testCases, functionName: fnMatch ? fnMatch[1] : undefined })
       const result: any = await Promise.race([exec, timeout])
       worker.terminate()
 
@@ -403,20 +406,29 @@ export default function FinalRoundPage() {
       } else {
         const stdout = result.stdout || ''
         const stderr = result.stderr ? `\n[STDERR]:\n${result.stderr}` : ''
-        let display  = `> OUTPUT:\n${stdout}${stderr}`
+        let display  = ''
+        if (stdout.trim()) display += `> OUTPUT:\n${stdout}${stderr}\n\n`
+        else if (result.stderr) display += `${stderr}\n\n`
 
-        if (isSubmit) {
-          const expected = question?.test_cases?.[0]?.expected || question?.expected_output
-          if (expected && stdout.trim() === String(expected).trim()) {
-            display += '\n\n✅ Passed Public Test Case! Call the Pit Boss for private test validation.'
-          } else if (expected) {
-            display += `\n\n❌ Wrong Answer.\nExpected: ${expected}\nGot: ${stdout.trim()}`
-            setHasError(true)
-            setShowBust(true)
-            setTimeout(() => setShowBust(false), 500)
+        if (result.testResults && result.testResults.length > 0) {
+          display += '══════════════════════════════\n🧪 TEST CASE RESULTS:\n══════════════════════════════\n'
+          result.testResults.forEach((tr: any, idx: number) => {
+            display += `[Test ${idx + 1}] ${tr.input}\n  Expected: ${tr.expected}\n  Actual:   ${tr.actual}\n  Status:   ${tr.passed ? '✅ PASSED' : '❌ FAILED'}\n\n`
+          })
+          if (result.allPassed) {
+            display += '🎉 ALL TEST CASES PASSED!'
+            if (isSubmit) display += '\n\n✅ Call the Pit Boss for private test validation.'
           } else {
-            display += '\n\n⚠️ Submission complete. Show output to Pit Boss.'
+            display += '❌ SOME TEST CASES FAILED. Check your logic and try again.'
+            setHasError(true)
+            if (isSubmit) {
+              setShowBust(true)
+              setTimeout(() => setShowBust(false), 500)
+            }
           }
+        } else {
+          if (!stdout.trim()) display += '> Code ran with no printed output.\n\n'
+          display += isSubmit ? '⚠️ Submission complete. Show output to Pit Boss.' : '✅ Run complete.'
         }
         setOutput(display)
       }
@@ -655,7 +667,7 @@ export default function FinalRoundPage() {
   // RENDER: GAME — LeetCode-style IDE layout
   // ─────────────────────────────────────────────────────────────────────────────
   return (
-    <div className={`min-h-screen bg-[#0d1117] text-white flex flex-col ${isWarning ? 'animate-bust-shake' : ''}`}>
+    <div className={`h-screen overflow-hidden bg-[#0d1117] text-white flex flex-col ${isWarning ? 'animate-bust-shake' : ''}`}>
 
       {/* ── EVENT OVERLAYS ── */}
       <AnimatePresence>
@@ -748,10 +760,10 @@ export default function FinalRoundPage() {
       </header>
 
       {/* ── MAIN IDE BODY ── */}
-      <div className="flex flex-1 overflow-hidden" style={{ height: 'calc(100vh - 44px)' }}>
+      <div className="flex flex-1 min-h-0 overflow-hidden flex-col lg:flex-row">
 
         {/* ═══ LEFT PANEL: Problem Description ═══ */}
-        <div className="w-[430px] shrink-0 flex flex-col bg-[#0d1117] border-r border-[#30363d] overflow-hidden">
+        <div className="w-full h-[40%] lg:h-full lg:w-[34%] lg:min-w-[320px] lg:max-w-[460px] shrink-0 flex flex-col bg-[#0d1117] border-b lg:border-b-0 lg:border-r border-[#30363d] overflow-hidden">
 
           {/* Tab bar */}
           <div className="flex items-center border-b border-[#30363d] bg-[#161b22] shrink-0">
@@ -842,7 +854,7 @@ export default function FinalRoundPage() {
         </div>
 
         {/* ═══ RIGHT PANEL: Code Editor ═══ */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="relative flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden">
 
           {/* Editor toolbar */}
           <div className="h-[40px] bg-[#1a1b26] border-b border-[#30363d] flex items-center justify-between px-4 shrink-0">
@@ -868,8 +880,7 @@ export default function FinalRoundPage() {
           <AnimatePresence>
             {!isUnlocked && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                className="absolute inset-0 z-[100] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center gap-6 pointer-events-auto"
-                style={{ left: 430 }}>
+                className="absolute inset-0 z-[100] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center gap-6 p-4 pointer-events-auto">
                 <div className="text-center space-y-2">
                   <span className="text-4xl">🔒</span>
                   <h2 className="text-2xl font-bold text-yellow-400 font-mono">IDE LOCKED</h2>
