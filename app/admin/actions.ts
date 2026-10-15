@@ -90,6 +90,18 @@ export async function setTableStatusState(gameId: string, status: string) {
     return { success: true }
 }
 
+export async function resetAllTeamLogins() {
+    if (!isAdminAuthenticated()) return { error: 'UNAUTHORIZED' }
+    const { error, data } = await supabaseAdmin
+        .from('teams')
+        .update({ is_logged_in: false, current_locked_table: null } as any)
+        .or('current_locked_table.is.null,current_locked_table.neq.BANNED')
+        .select('id')
+
+    if (error) return { error: `Failed to reset team logins: ${error.message}` }
+    return { success: true, count: data?.length || 0 }
+}
+
 export async function togglePause(isPaused: boolean) {
     if (!isAdminAuthenticated()) return { error: 'UNAUTHORIZED' }
 
@@ -152,8 +164,64 @@ export async function setCurrentRound(roundName: string) {
 export async function startTableRound(gameId: string, durationMins: number = 16) {
     if (!isAdminAuthenticated()) return { error: 'UNAUTHORIZED' }
 
+    const normGame = gameId.toLowerCase()
     const now = new Date().toISOString()
     const pin = Math.floor(1000 + Math.random() * 9000).toString()
+
+    // 0. Draw + activate this round's questions FIRST, so the moment the table
+    //    is announced as ACTIVE (below) the questions already exist for the players.
+    // Shut down previously active questions for THIS game table
+    await supabaseAdmin
+        .from('question_bank')
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .update({ is_active: false } as any)
+        .eq('is_active', true)
+        .ilike('game_type', normGame)
+
+    // Select exactly 1 STANDARD and 1 HIGH unused question for THIS game table
+    const difficulties = ['STANDARD', 'HIGH']
+    const selectedIds: string[] = []
+
+    for (const diff of difficulties) {
+        let { data: qList } = await supabaseAdmin
+            .from('question_bank')
+            .select('id')
+            .ilike('game_type', normGame)
+            .ilike('difficulty', diff)
+            .eq('is_used', false)
+
+        // Auto-recycle: if all questions have been used, reset is_used flag so table never runs dry
+        if (!qList || qList.length === 0) {
+            await supabaseAdmin
+                .from('question_bank')
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                .update({ is_used: false } as any)
+                .ilike('game_type', normGame)
+                .ilike('difficulty', diff)
+
+            const recycled = await supabaseAdmin
+                .from('question_bank')
+                .select('id')
+                .ilike('game_type', normGame)
+                .ilike('difficulty', diff)
+
+            qList = recycled.data || []
+        }
+
+        if (qList && qList.length > 0) {
+            const randomQ = qList[Math.floor(Math.random() * qList.length)]
+            selectedIds.push(randomQ.id)
+        }
+    }
+
+    // Activate the newly drawn questions AND mark them USED
+    if (selectedIds.length > 0) {
+        await supabaseAdmin
+            .from('question_bank')
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            .update({ is_active: true, is_used: true } as any)
+            .in('id', selectedIds)
+    }
 
     // 1. Fetch current table timers to preserve other active games
     const { data: currentEvent } = await supabaseAdmin
@@ -167,10 +235,16 @@ export async function startTableRound(gameId: string, durationMins: number = 16)
         ? { ...(currentEvent.table_timers as Record<string, string>) }
         : {}
 
-    // Inject the new timer for this specific table (storing start time string, status, and pin)
-    currentTimers[gameId] = now
-    currentTimers[`${gameId}_status`] = 'ACTIVE'
-    currentTimers[`${gameId}_pin`] = pin
+    // Force overwrite the timer, status, and pin for this table
+    currentTimers[normGame] = now
+    currentTimers[`${normGame}_status`] = 'ACTIVE'
+    currentTimers[`${normGame}_pin`] = pin
+    delete currentTimers[`${normGame}_paused_at`] // Clear any pause state
+
+    // Also support uppercase key if referenced anywhere
+    if (currentTimers[gameId] && gameId !== normGame) {
+        delete currentTimers[gameId]
+    }
 
     // Update the event_control table with the merged timers
     const { error: eventErr } = await supabaseAdmin
@@ -182,50 +256,54 @@ export async function startTableRound(gameId: string, durationMins: number = 16)
     if (eventErr) return { error: `Failed to update event control: ${eventErr.message}` }
 
     // Update the game_state table with the actual PIN text Native SQL storage
-    const { error: upsertErr } = await supabaseAdmin
+    let { error: upsertErr } = await supabaseAdmin
         .from('game_state')
-        .upsert({ game_id: gameId, entry_pin: pin, is_active: true } as any)
+        .upsert({ game_id: normGame, entry_pin: pin, is_active: true } as any)
 
-    if (upsertErr) return { error: `Failed to upsert game state: ${upsertErr.message}` }
-
-    // 2. Shut down previously active questions for THIS game table
-    const questionGameId = gameId;
-
-    await supabaseAdmin
-        .from('question_bank')
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .update({ is_active: false } as any)
-        .eq('is_active', true)
-        .ilike('game_type', questionGameId)
-
-    // 3. Select exactly 1 STANDARD and 1 HIGH unused question for THIS game table
-    const difficulties = ['STANDARD', 'HIGH']
-    const selectedIds: string[] = []
-
-    for (const diff of difficulties) {
-        const { data: qList } = await supabaseAdmin
-            .from('question_bank')
-            .select('id')
-            .ilike('game_type', questionGameId)
-            .ilike('difficulty', diff)
-            .eq('is_used', false)
-
-        if (qList && qList.length > 0) {
-            const randomQ = qList[Math.floor(Math.random() * qList.length)]
-            selectedIds.push(randomQ.id)
+    if (upsertErr) {
+        // Fallback: attempt direct update if the row already exists
+        const { error: updateErr } = await supabaseAdmin
+            .from('game_state')
+            .update({ entry_pin: pin, is_active: true } as any)
+            .eq('game_id', normGame)
+        if (!updateErr) {
+            upsertErr = null
         }
     }
 
-    // 4. Activate the newly drawn 2 questions AND mark them USED permanently
-    if (selectedIds.length > 0) {
-        await supabaseAdmin
-            .from('question_bank')
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            .update({ is_active: true, is_used: true } as any)
-            .in('id', selectedIds)
-    }
+    if (upsertErr) return { error: `Failed to upsert game state: ${upsertErr.message}` }
 
-    return { success: true }
+    return { success: true, pin, startTime: now, gameId: normGame }
+}
+
+export async function restartTableTimerOnly(gameId: string) {
+    if (!isAdminAuthenticated()) return { error: 'UNAUTHORIZED' }
+
+    const normGame = gameId.toLowerCase()
+    const now = new Date().toISOString()
+
+    const { data: currentEvent } = await supabaseAdmin
+        .from('event_control')
+        .select('table_timers')
+        .eq('id', 1)
+        .single()
+
+    const currentTimers = (currentEvent?.table_timers && typeof currentEvent.table_timers === 'object')
+        ? { ...(currentEvent.table_timers as Record<string, string>) }
+        : {}
+
+    currentTimers[normGame] = now
+    currentTimers[`${normGame}_status`] = 'ACTIVE'
+    delete currentTimers[`${normGame}_paused_at`]
+
+    const { error: eventErr } = await supabaseAdmin
+        .from('event_control')
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .update({ table_timers: currentTimers } as any)
+        .eq('id', 1)
+
+    if (eventErr) return { error: `Failed to reset timer: ${eventErr.message}` }
+    return { success: true, startTime: now, gameId: normGame }
 }
 // --- NEW: PIT BOSS MANUAL WIN VALIDATION ---
 export async function awardWin(teamId: string, gameId: string) {

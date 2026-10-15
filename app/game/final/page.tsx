@@ -301,7 +301,7 @@ export default function FinalRoundPage() {
     if (phase !== 'GAME' || !roundStartTime || isPaused || tableStatus === 'PAUSED') return
     const iv = setInterval(() => {
       const start = new Date(roundStartTime).getTime()
-      const end   = start + 16 * 60000
+      const end   = start + 60 * 60000
       const now   = Date.now()
       const diff  = end - now
       if (diff <= 0) {
@@ -776,7 +776,7 @@ export default function FinalRoundPage() {
                   </div>
                   <div className="flex items-center gap-4 text-xs text-gray-500 font-mono mb-4">
                     <span>🏆 Top-6 Only</span>
-                    <span>⏱ 15 minutes</span>
+                    <span>⏱ 45 min + 15 min (1 hour total)</span>
                     <span>🎯 All badges required</span>
                   </div>
                   <div className="prose prose-invert prose-sm max-w-none">

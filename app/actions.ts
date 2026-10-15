@@ -12,6 +12,7 @@ type TeamRow = {
 
 import { AVATAR_LIST } from '@/lib/avatars'
 import { CASINO_EVENTS, EVENT_BY_ROUTE } from '@/lib/events'
+import { WHEEL_MULTIPLIERS, PRIZE_STANDARD, PRIZE_HIGH } from '@/lib/wheel'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function loginAction(prevState: any, formData: FormData) {
@@ -105,7 +106,7 @@ export async function logoutAction(teamId: string) {
     // @ts-expect-error: Suppress Next.js/Supabase inference bug
     .update(payload)
     .eq('id', teamId)
-    .neq('current_locked_table', 'BANNED')
+    .or('current_locked_table.is.null,current_locked_table.neq.BANNED')
 
   cookies().delete('team_id')
   redirect('/')
@@ -172,6 +173,9 @@ export async function fetchQuestionData(gameId: string, difficultyStr: string = 
       }
     }
 
+    // MCQ questions: NEVER ship the answer key / "test cases" (which hold the answer) to the browser.
+    const isMcq = Array.isArray(extractedOptions) && extractedOptions.length > 0
+
     return {
       success: true,
       question: {
@@ -180,47 +184,176 @@ export async function fetchQuestionData(gameId: string, difficultyStr: string = 
         content: questionData.problem_statement || questionData.content,
         starter_code: questionData.starter_code,
         constraints: questionData.constraints,
-        expected_output: extractedExpected,
-        test_cases: extractedCases,
+        expected_output: isMcq ? null : extractedExpected,
+        test_cases: isMcq ? [] : extractedCases,
         clues: extractedClues,
         clues_total: extractedClues.length,
         options: extractedOptions
       }
     };
+  } catch (e) {
+    console.error('fetchQuestionData crashed:', e)
+    return { error: "System error fetching question: " + ((e as Error)?.message || 'unknown') };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// TABLE LOBBY — who has joined a table and what they bet for the NEXT round.
+// Stored as tagged transactions so no schema change is required:
+//   Entered table (roulette) [t:1760000000000]
+//   Game Entry Fee (roulette - STANDARD) [t:1760000000000]
+// A bet only counts if it was placed at/after the team's latest
+// "Entered table" marker, so bets from an earlier round never carry over.
+// ---------------------------------------------------------------------------
+export type LobbyMember = {
+  teamId: string
+  name: string
+  hasBet: boolean
+  difficulty: 'STANDARD' | 'HIGH' | null
+  amount: number
+  joinedAt: number | null
+}
+
+async function readLobbyMembers(g: string): Promise<LobbyMember[]> {
+  const { data: lockedRaw } = await supabaseAdmin
+    .from('teams')
+    .select('*')
+    .eq('current_locked_table', g)
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const locked = (lockedRaw || []) as any[]
+  if (locked.length === 0) return []
+
+  const ids = locked.map(t => t.id)
+  const { data: txRaw } = await supabaseAdmin
+    .from('transactions')
+    .select('team_id, amount, description, created_at')
+    .in('team_id', ids)
+    .like('description', '%[t:%')
+    .order('created_at', { ascending: false })
+    .limit(500)
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const txs = (txRaw || []) as any[]
+
+  return locked.map(t => {
+    let enterT = 0
+    let bet: { difficulty: 'STANDARD' | 'HIGH'; amount: number; t: number } | null = null
+
+    for (const x of txs) {
+      if (x.team_id !== t.id) continue
+      const d = String(x.description || '')
+      const e = d.match(/^Entered table \((\w+)\) \[t:(\d+)\]/)
+      if (e) {
+        if (e[1] === g) enterT = Math.max(enterT, Number(e[2]))
+        continue
+      }
+      const b = d.match(/\((\w+) - (STANDARD|HIGH)\) \[t:(\d+)\]/)
+      if (b && b[1] === g) {
+        const bt = Number(b[3])
+        if (!bet || bt > bet.t) {
+          bet = { difficulty: b[2] as 'STANDARD' | 'HIGH', amount: Math.abs(Number(x.amount) || 0), t: bt }
+        }
+      }
+    }
+
+    const valid = bet && bet.t >= enterT ? bet : null
+    return {
+      teamId: t.id as string,
+      name: (t.team_name || t.access_code || 'TEAM') as string,
+      hasBet: !!valid,
+      difficulty: valid ? valid.difficulty : null,
+      amount: valid ? valid.amount : 0,
+      joinedAt: valid ? valid.t : null
+    }
+  })
+}
+
+async function computePayout(teamId: string, g: string): Promise<{ payout: number; difficulty: 'STANDARD' | 'HIGH'; multiplier: number } | null> {
+  const { data: txRaw } = await supabaseAdmin
+    .from('transactions')
+    .select('amount, description, created_at')
+    .eq('team_id', teamId)
+    .like('description', '%[t:%')
+    .order('created_at', { ascending: false })
+    .limit(200)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const txs = (txRaw || []) as any[]
+
+  let enterT = 0
+  let bet: { difficulty: 'STANDARD' | 'HIGH'; t: number; mult: number } | null = null
+  for (const x of txs) {
+    const d = String(x.description || '')
+    const e = d.match(/^Entered table \((\w+)\) \[t:(\d+)\]/)
+    if (e) { if (e[1] === g) enterT = Math.max(enterT, Number(e[2])); continue }
+    const b = d.match(/\((\w+) - (STANDARD|HIGH)\) \[t:(\d+)\](?: \[m:([\d.]+)\])?/)
+    if (b && b[1] === g) {
+      const bt = Number(b[3])
+      if (!bet || bt > bet.t) {
+        bet = { difficulty: b[2] as 'STANDARD' | 'HIGH', t: bt, mult: b[4] ? Number(b[4]) : 1 }
+      }
+    }
+  }
+  if (!bet || bet.t < enterT) return null
+  // Wheel only ever applies to the Standard bet
+  const multiplier = bet.difficulty === 'STANDARD' ? (bet.mult > 0 ? bet.mult : 1) : 1
+  const base = bet.difficulty === 'HIGH' ? PRIZE_HIGH : PRIZE_STANDARD
+  return { payout: Math.round(base * multiplier), difficulty: bet.difficulty, multiplier }
+}
+
+export async function getTableLobby(gameId: string, myTeamId?: string) {
+  const g = gameId.toLowerCase()
+  try {
+    const [members, eventRes, gsRes] = await Promise.all([
+      readLobbyMembers(g),
+      supabaseAdmin.from('event_control').select('table_timers, is_paused').eq('id', 1).maybeSingle(),
+      supabaseAdmin.from('game_state').select('is_active').eq('game_id', g).maybeSingle()
+    ])
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ev = eventRes.data as any
+    const timers = (ev?.table_timers || {}) as Record<string, string>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const stateActive = (gsRes.data as any)?.is_active
+    const tableStatus = timers[`${g}_status`] || (stateActive ? 'ACTIVE' : 'WAITING')
+
+    return {
+      error: undefined as string | undefined,
+      members,
+      me: (myTeamId ? members.find(m => m.teamId === myTeamId) : undefined) || null,
+      tableStatus,
+      roundStartTime: (timers[g] as string | undefined) || null,
+      isPaused: !!ev?.is_paused,
+      capacity: EVENT_BY_ROUTE[g]?.maxParticipants ?? 3
+    }
   } catch {
-    return { error: "System error fetching question." };
+    return {
+      error: 'Failed to load table lobby.' as string | undefined,
+      members: [] as LobbyMember[],
+      me: null as LobbyMember | null,
+      tableStatus: 'WAITING',
+      roundStartTime: null as string | null,
+      isPaused: false,
+      capacity: 3
+    }
   }
 }
 
 // --- NEW: PLACE BET ---
 export async function placeBet(teamId: string, amount: number, gameId: string) {
   try {
-    // 0. Verify Table Status & Expiration
-    const [eventRes, gameStateRes] = await Promise.all([
-      supabaseAdmin.from('event_control').select('table_timers, is_paused').eq('id', 1).single(),
-      supabaseAdmin.from('game_state').select('is_active').eq('game_id', gameId).single()
-    ])
+    const g = gameId.toLowerCase()
 
-    const eventData = eventRes.data as any
-    const gameStateData = gameStateRes.data as any
+    // 0. Betting is ALWAYS open (players bet first and wait in the lobby for the
+    //    Pit Boss to start the round). Only a global casino pause blocks it.
+    const eventRes = await supabaseAdmin.from('event_control').select('is_paused').eq('id', 1).maybeSingle()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if ((eventRes.data as any)?.is_paused) return { error: "The entire casino is currently PAUSED." }
 
-    const isGlobalPaused = eventData?.is_paused
-    if (isGlobalPaused) return { error: "The entire casino is currently PAUSED." }
-
-    const timers = (eventData?.table_timers || {}) as Record<string, string>
-    const status = timers[`${gameId}_status`]
-    const startTimeStr = timers[gameId]
-    const isStateActive = gameStateData?.is_active
-
-    if (status === 'KILLED' || isStateActive === false) {
-      return { error: "This table is currently CLOSED by the Pit Boss." }
-    }
-
-    if (startTimeStr) {
-      const startMs = new Date(startTimeStr).getTime()
-      if (Date.now() > startMs + (16 * 60000)) {
-        return { error: "The round for this table has already ended! You cannot join." }
-      }
+    // Already bet for this visit? (guards double clicks / refreshes)
+    const existing = (await readLobbyMembers(g)).find(m => m.teamId === teamId)
+    if (existing?.hasBet) {
+      return { error: "You have already placed your bet for this table." }
     }
 
     // 1. Get current balance & stamps
@@ -257,14 +390,17 @@ export async function placeBet(teamId: string, amount: number, gameId: string) {
       return { error: "Failed to deduct bet." }
     }
 
-    // 3. Log transaction
+    // 3. Log transaction (tagged so the lobby can show who bet what, and when)
+    const joinedAt = Date.now()
+    const difficulty: 'STANDARD' | 'HIGH' = amount >= 200 ? 'HIGH' : 'STANDARD'
     await supabaseAdmin.from('transactions').insert({
       team_id: teamId,
       amount: -amount,
-      description: `Game Entry Fee`,
+      description: `Game Entry Fee (${g} - ${difficulty}) [t:${joinedAt}]`,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
 
-    return { success: true, newBalance }
+    return { success: true, newBalance, joinedAt, difficulty }
   } catch {
     return { error: "System error placing bet." }
   }
@@ -278,7 +414,7 @@ export async function unlockPlayer(teamId: string) {
       // @ts-expect-error: Next.js/Supabase inference bug
       .update({ current_locked_table: null })
       .eq('id', teamId)
-      .neq('current_locked_table', 'BANNED')
+      .or('current_locked_table.is.null,current_locked_table.neq.BANNED')
 
     if (error) return { error: error.message }
     return { success: true }
@@ -420,7 +556,17 @@ export async function checkAndJoinTable(teamId: string, gameId: string): Promise
       // @ts-expect-error: Next.js/Supabase inference bug
       .update({ current_locked_table: normGame } as any)
       .eq('id', teamId)
-      .neq('current_locked_table', 'BANNED')
+      .or('current_locked_table.is.null,current_locked_table.neq.BANNED')
+
+    // Fresh entry marker: any bet made before this moment belongs to an old round
+    if (teamData.current_locked_table !== normGame) {
+      await supabaseAdmin.from('transactions').insert({
+        team_id: teamId,
+        amount: 0,
+        description: `Entered table (${normGame}) [t:${Date.now()}]`
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any)
+    }
 
     return {
       status: 'SUCCESS',
@@ -502,26 +648,37 @@ export async function spinWheel(teamId: string, gameId: string) {
     if (!team) return { error: 'Team not found' }
     
     // In the final round, spin wheel is a free bonus multiplier included for all top 6 finalists
-    const cost = gameId === 'final' ? 0 : 150
+    const cost = gameId === 'final' ? 0 : 100
+    const g = gameId.toLowerCase()
+
+    if (cost > 0) {
+      // Spinning IS the STANDARD bet — don't allow paying twice for one visit
+      const existing = (await readLobbyMembers(g)).find(m => m.teamId === teamId)
+      if (existing?.hasBet) return { error: 'You have already placed your bet for this table.' }
+    }
+
     const newBalance = (team.wallet_balance || 0) - cost
-    if (newBalance < 0) return { error: 'Insufficient funds (150 Credits required for Wheel).' }
+    if (newBalance < 0) return { error: 'Insufficient funds (100 Credits required for Wheel).' }
 
     const payload: any = { wallet_balance: newBalance, current_locked_table: gameId }
     // @ts-expect-error: Next.js/Supabase inference bug
     const { error: updateErr } = await supabaseAdmin.from('teams').update(payload).eq('id', teamId)
     console.log(`DEBUG: spinWheel updateErr:`, updateErr)
 
+    const joinedAt = Date.now()
+    const winIndex = Math.floor(Math.random() * WHEEL_MULTIPLIERS.length)
+    const multiplier = WHEEL_MULTIPLIERS[winIndex]
     if (cost > 0) {
-      // Log transaction
+      // Log transaction (tagged so the lobby shows this team's bet + join time + wheel result)
       const txPayload: any = {
         team_id: teamId,
         amount: -cost,
-        description: `Wheel Spin Fee for ${gameId.toUpperCase()}`
+        description: `Wheel Spin Fee for ${gameId.toUpperCase()} (${g} - STANDARD) [t:${joinedAt}] [m:${multiplier}]`
       }
       await supabaseAdmin.from('transactions').insert(txPayload)
     }
 
-    return { success: true, newBalance }
+    return { success: true, newBalance, joinedAt, winIndex, multiplier }
   } catch (error: any) {
     return { error: error.message || 'System error processing spin.' }
   }
@@ -560,7 +717,17 @@ export async function claimAutomatedReward(teamId: string, payout: number, gameI
       }
     }
 
-    const newBalance = teamData.wallet_balance + payout;
+    // Already paid for this table? (never pay the same badge twice)
+    const stampsNow = (teamData.stamps as Record<string, boolean>) || {}
+    if (stampsNow[gameId] || stampsNow[gameId.toLowerCase()]) {
+      return { success: true, newBalance: teamData.wallet_balance, payout: 0 }
+    }
+
+    // Payout is decided HERE from the recorded bet (base prize x wheel multiplier) — never from the client
+    const computed = await computePayout(teamId, gameId.toLowerCase())
+    const finalPayout = computed ? computed.payout : Math.max(0, Math.min(Number(payout) || 0, PRIZE_HIGH))
+
+    const newBalance = teamData.wallet_balance + finalPayout
     const stamps = (teamData.stamps as Record<string, boolean>) || {}
     stamps[gameId] = true
     
@@ -578,13 +745,126 @@ export async function claimAutomatedReward(teamId: string, payout: number, gameI
     // Log transaction
     await supabaseAdmin.from('transactions').insert({
       team_id: teamId,
-      amount: payout,
+      amount: finalPayout,
       description: `Won ${gameId.toUpperCase()} Table (Automated)`,
     } as any);
 
-    return { success: true, newBalance };
+    return { success: true, newBalance, payout: finalPayout, multiplier: computed?.multiplier ?? 1 };
   } catch {
     return { error: "System error claiming reward." };
+  }
+}
+
+// --- AUTO WIN for code / output-prediction tables (test cases already passed in the browser) ---
+export async function winGame(teamId: string, gameId: string) {
+  try {
+    const g = gameId.toLowerCase()
+    const { data: teamRaw } = await supabaseAdmin
+      .from('teams')
+      .select('stamps, current_locked_table')
+      .eq('id', teamId)
+      .maybeSingle()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const team = teamRaw as any
+    if (!team) return { error: 'Team not found.' }
+
+    const stamps = (team.stamps as Record<string, boolean>) || {}
+    if (stamps[g] || stamps[gameId]) return { error: 'Badge already claimed for this table.' }
+    if (String(team.current_locked_table || '').toLowerCase() !== g) {
+      return { error: 'You are not seated at this table (or you already won).' }
+    }
+
+    // Release the seat atomically so only ONE win is ever processed per visit
+    const { data: released } = await supabaseAdmin
+      .from('teams')
+      // @ts-expect-error: Next.js/Supabase inference bug
+      .update({ current_locked_table: null } as any)
+      .eq('id', teamId)
+      .eq('current_locked_table', team.current_locked_table)
+      .select('id')
+    if (!released || released.length === 0) return { error: 'Your win was already processed.' }
+
+    const reward = await claimAutomatedReward(teamId, 0, g)
+    if (reward.error) return { error: reward.error }
+    return { success: true as const, payout: reward.payout ?? 0, newBalance: reward.newBalance, multiplier: reward.multiplier ?? 1 }
+  } catch {
+    return { error: 'System error processing your win.' }
+  }
+}
+
+// --- MCQ ANSWER CHECK (server-side; the answer key never reaches the browser) ---
+export async function submitMcqAnswer(teamId: string, gameId: string, difficultyStr: string, selectedOption: string) {
+  try {
+    const g = gameId.toLowerCase()
+    if (!selectedOption || !selectedOption.trim()) return { error: 'Pick an option first.' }
+
+    const { data: teamRaw } = await supabaseAdmin
+      .from('teams')
+      .select('wallet_balance, stamps, current_locked_table')
+      .eq('id', teamId)
+      .maybeSingle()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const team = teamRaw as any
+    if (!team) return { error: 'Team not found.' }
+
+    const stamps = (team.stamps as Record<string, boolean>) || {}
+    if (stamps[g] || stamps[gameId]) return { error: 'Badge already claimed for this table.' }
+    if (String(team.current_locked_table || '').toLowerCase() !== g) {
+      return { error: 'You are not seated at this table (or you already answered).' }
+    }
+
+    // Load the ACTIVE question for this table/difficulty (same lookup the player got it from)
+    const { data: qRaw } = await supabaseAdmin
+      .from('question_bank')
+      .select('*')
+      .ilike('game_type', g)
+      .ilike('difficulty', difficultyStr)
+      .eq('is_active', true)
+      .limit(1)
+      .maybeSingle()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const q = qRaw as any
+    if (!q) return { error: 'No active question found for this table.' }
+
+    const tc = (q.test_cases && !Array.isArray(q.test_cases) && typeof q.test_cases === 'object') ? q.test_cases : {}
+    const expected = String(
+      q.expected_output || tc.expected_output ||
+      (Array.isArray(q.test_cases) ? q.test_cases[0]?.expected : tc.cases?.[0]?.expected) || ''
+    )
+    const correctLetter = String(q.correct_option || tc.correct_option || '').trim().toUpperCase()
+
+    // "B) SELECT ..." -> "SELECT ..."
+    const strip = (s: string) => s.replace(/^\s*[A-Da-d][).:]\s*/, '').replace(/\s+/g, ' ').trim().toLowerCase()
+    const letterMatch = selectedOption.match(/^\s*([A-Da-d])[).:]/)
+    const selLetter = letterMatch ? letterMatch[1].toUpperCase() : ''
+
+    const correct =
+      (!!correctLetter && !!selLetter && selLetter === correctLetter) ||
+      (!!expected && strip(expected) === strip(selectedOption))
+
+    // Atomically release the seat first: only ONE submission per visit can ever be processed
+    const { data: released } = await supabaseAdmin
+      .from('teams')
+      // @ts-expect-error: Next.js/Supabase inference bug
+      .update({ current_locked_table: null } as any)
+      .eq('id', teamId)
+      .eq('current_locked_table', team.current_locked_table)
+      .select('id')
+
+    if (!released || released.length === 0) {
+      return { error: 'Your answer was already submitted.' }
+    }
+
+    if (!correct) {
+      return { correct: false as const }
+    }
+
+    const reward = await claimAutomatedReward(teamId, 0, g)
+    if (reward.error) return { error: reward.error }
+
+    return { correct: true as const, payout: reward.payout ?? 0, multiplier: reward.multiplier ?? 1, newBalance: reward.newBalance }
+  } catch {
+    return { error: 'System error checking your answer.' }
   }
 }
 

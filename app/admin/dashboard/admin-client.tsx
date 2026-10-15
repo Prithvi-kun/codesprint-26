@@ -14,7 +14,8 @@ import {
     uploadDefaultQuestionBank, purgeAllQuestions,
     uploadQuestionsForTable, deleteQuestion, deleteAllQuestionsForTable,
     getLeaderboard, getAnalytics, broadcastMessage, forceWin, createTeam,
-    startTableRound, setTableStatusState, awardWin, toggleRound2Portal
+    startTableRound, setTableStatusState, awardWin, toggleRound2Portal,
+    resetAllTeamLogins
 } from '../actions'
 
 type Tab = 'pit' | 'vault' | 'deck' | 'eye'
@@ -34,11 +35,20 @@ const GAME_LABELS: Record<string, string> = {
     final: '🏆 FINAL SHOWDOWN (All In)',
 }
 
-export default function AdminDashboard() {
+interface AdminDashboardProps {
+    adminRole?: string
+    adminLabel?: string
+}
+
+export default function AdminDashboard({ adminRole = 'pitboss', adminLabel = 'Pit Boss Alpha' }: AdminDashboardProps) {
+    const isDealer = adminRole !== 'pitboss' && GAME_TYPES.includes(adminRole as any)
     const [activeTab, setActiveTab] = useState<Tab>('pit')
 
-    const tabs: { id: Tab; label: string; icon: React.ReactNode; color: string; badge?: string }[] = [
-        { id: 'pit', label: 'THE PIT', icon: <Zap className="w-4 h-4" />, color: 'text-red-400 border-red-500' },
+    const tabs: { id: Tab; label: string; icon: React.ReactNode; color: string; badge?: string }[] = isDealer ? [
+        { id: 'pit', label: `${adminRole.toUpperCase()} STATION`, icon: <Zap className="w-4 h-4" />, color: 'text-yellow-400 border-yellow-500' },
+        { id: 'deck', label: '🃏 TABLE QUESTIONS', icon: <Flame className="w-4 h-4" />, color: 'text-blue-400 border-blue-500' },
+    ] : [
+        { id: 'pit', label: 'THE PIT (MASTER OPS)', icon: <Zap className="w-4 h-4" />, color: 'text-red-400 border-red-500' },
         { id: 'vault', label: 'THE VAULT', icon: <DollarSign className="w-4 h-4" />, color: 'text-yellow-400 border-yellow-500' },
         { id: 'deck', label: '🃏 QUESTION BANK & BULK PUSH', icon: <Flame className="w-4 h-4" />, color: 'text-blue-400 border-blue-500', badge: '201 Qs' },
         { id: 'eye', label: 'THE EYE', icon: <Eye className="w-4 h-4" />, color: 'text-purple-400 border-purple-500' },
@@ -52,30 +62,48 @@ export default function AdminDashboard() {
                     <Shield className="w-6 h-6 text-red-500" />
                     <div>
                         <div className="flex items-center gap-2">
-                            <span className="font-pixel text-red-400 text-sm tracking-wider">PIT BOSS CONTROL</span>
-                            <span className="text-[9px] font-mono bg-red-950/60 border border-red-500/30 text-red-300 px-2 py-0.5 rounded">ADMIN HQ</span>
+                            <span className="font-pixel text-red-400 text-sm tracking-wider">
+                                {isDealer ? `${adminRole.toUpperCase()} DEALER CONSOLE` : 'PIT BOSS CONTROL HQ'}
+                            </span>
+                            <span className={`text-[9px] font-mono px-2 py-0.5 rounded border ${isDealer ? 'bg-yellow-950/60 border-yellow-500/40 text-yellow-300' : 'bg-red-950/60 border-red-500/30 text-red-300'}`}>
+                                {adminLabel}
+                            </span>
                         </div>
-                        <p className="text-[10px] text-gray-500 font-mono hidden sm:block">CodeSprint 2026 Casino Engine & Question Command</p>
+                        <p className="text-[10px] text-gray-500 font-mono hidden sm:block">
+                            {isDealer ? `Assigned Table Station: ${adminRole.toUpperCase()} • Isolated Table Controls` : 'CodeSprint 2026 Master Casino Engine & Pit Boss Headquarters'}
+                        </p>
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
-                    {/* Unmissable Top-Level Bulk Push Button */}
-                    <button
-                        onClick={() => setActiveTab('deck')}
-                        className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-pixel font-bold transition-all cursor-pointer ${
-                            activeTab === 'deck'
-                                ? 'bg-retro-green text-black shadow-[0_0_15px_#39ff14]'
-                                : 'bg-yellow-500 hover:bg-yellow-400 text-black shadow-[0_0_10px_rgba(234,179,8,0.4)]'
-                        }`}
-                        title="Open Question Bank and Bulk JSON Uploader"
-                    >
-                        <Sparkles className="w-3.5 h-3.5" />
-                        <span>BULK PUSH QUESTIONS (JSON)</span>
-                    </button>
+                    {/* Bulk push button for master pitboss */}
+                    {!isDealer && (
+                        <button
+                            onClick={() => setActiveTab('deck')}
+                            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-pixel font-bold transition-all cursor-pointer ${
+                                activeTab === 'deck'
+                                    ? 'bg-retro-green text-black shadow-[0_0_15px_#39ff14]'
+                                    : 'bg-yellow-500 hover:bg-yellow-400 text-black shadow-[0_0_10px_rgba(234,179,8,0.4)]'
+                            }`}
+                            title="Open Question Bank and Bulk JSON Uploader"
+                        >
+                            <Sparkles className="w-3.5 h-3.5" />
+                            <span>BULK PUSH QUESTIONS (JSON)</span>
+                        </button>
+                    )}
                     <div className="flex items-center gap-2 bg-black/50 px-3 py-1.5 rounded-lg border border-white/10">
                         <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                         <span className="text-xs text-gray-400 font-mono">LIVE</span>
                     </div>
+                    <button
+                        onClick={async () => {
+                            await fetch('/api/admin/logout', { method: 'POST' })
+                            window.location.href = '/admin'
+                        }}
+                        className="px-3 py-1.5 rounded-lg border border-red-500/30 bg-red-950/30 hover:bg-red-900/60 text-red-400 text-xs font-pixel transition-all hover:scale-105"
+                        title="Log out of admin session"
+                    >
+                        LOGOUT
+                    </button>
                 </div>
             </div>
 
@@ -104,9 +132,9 @@ export default function AdminDashboard() {
 
             {/* CONTENT */}
             <div className="p-6 max-w-[1600px] mx-auto">
-                {activeTab === 'pit' && <ThePit />}
+                {activeTab === 'pit' && <ThePit adminRole={adminRole} adminLabel={adminLabel} />}
                 {activeTab === 'vault' && <TheVault />}
-                {activeTab === 'deck' && <TheDeck />}
+                {activeTab === 'deck' && <TheDeck defaultTable={isDealer ? adminRole : undefined} />}
                 {activeTab === 'eye' && <TheEye />}
             </div>
         </div>
@@ -116,10 +144,11 @@ export default function AdminDashboard() {
 // ========================================
 // TAB A: "THE PIT" — Live Ops & Control
 // ========================================
-function ThePit() {
+function ThePit({ adminRole = 'pitboss', adminLabel = 'Pit Boss Alpha' }: { adminRole?: string; adminLabel?: string }) {
+    const isDealer = adminRole !== 'pitboss' && GAME_TYPES.includes(adminRole as any)
     const [isPaused, setIsPaused] = useState(false)
     const [isRound2Open, setIsRound2Open] = useState(false)
-    const [currentRound, setCurrentRoundState] = useState('slots')
+    const [currentRound, setCurrentRoundState] = useState(isDealer ? adminRole : 'slots')
     const [liveFeed, setLiveFeed] = useState<any[]>([])
     const [broadcast, setBroadcast] = useState('')
     const [loading, setLoading] = useState(true)
@@ -139,9 +168,7 @@ function ThePit() {
         if (data && !data.error) {
             setIsPaused(data.control?.is_paused || false)
             setIsRound2Open(data.control?.round_2_open || false)
-            if (data.control?.current_round && !data.control.current_round.startsWith('BROADCAST:')) {
-                setCurrentRoundState(data.control.current_round)
-            }
+            // PRESERVE local dealer selection: never overwrite currentRoundState from DB
             setLiveFeed(data.recentTx || [])
             setTableTimers(data.control?.table_timers as Record<string, string> || {})
             setActiveTeams(data.activeTeams || [])
@@ -171,32 +198,57 @@ function ThePit() {
         setActionLoading(null)
     }
 
-    const handleRoundChange = async (round: string) => {
-        setActionLoading('round')
-        const res = await setCurrentRound(round)
-        if (res.error) {
-            alert(`Failed to change round: ${res.error}`)
-        } else {
-            setCurrentRoundState(round)
-        }
-        setActionLoading(null)
+    const handleRoundChange = (round: string) => {
+        // LOCAL SELECTION ONLY - do not overwrite database so other dealers aren't affected
+        setCurrentRoundState(round)
     }
 
+    // Total countdown: tables = 10 min play + 1 min passcode entry; final = 60 min
+    const roundMins = (key: string) => (key === 'final' ? 60 : 11)
+
     const handleStartRound = async () => {
-        if (!window.confirm(`Are you sure? This will AUTO-BURN active questions for ${GAME_LABELS[currentRound]} and start an isolated 15-minute sync timer just for THIS table.`)) return;
+        const startTime = tableTimers[currentRound]
+        const gameStatus = tableTimers[`${currentRound}_status`] || 'ACTIVE'
+        const isLive = startTime && gameStatus === 'ACTIVE' && (new Date(startTime).getTime() + (roundMins(currentRound) * 60000) - currentTime > 0)
+        const actionWord = isLive ? 'RESTART' : 'START'
+
+        if (!window.confirm(`Are you sure you want to ${actionWord} the ${roundMins(currentRound)}-Minute timer for ${GAME_LABELS[currentRound]}?\n\nThis will OVERWRITE the old timer, set ${roundMins(currentRound)}:00 from NOW, generate a new PIN, and activate fresh questions for this table.`)) return;
         setActionLoading('start-round')
         try {
-            const res = await startTableRound(currentRound, 15)
+            const res = await startTableRound(currentRound, roundMins(currentRound))
             if (res.error) {
                 alert(`Error: ${res.error}`)
             } else {
-                alert(`15-Minute timer started for ${GAME_LABELS[currentRound]}!`)
+                alert(`✅ ${roundMins(currentRound)}-Minute timer ${isLive ? 'RESTARTED' : 'STARTED'} for ${GAME_LABELS[currentRound]}!\n\nNew Table PIN: ${res.pin}`)
             }
         } catch (err: any) {
             alert(`Unhandled Server Error: ${err.message}`)
             console.error(err)
         }
-        refresh()
+        await refresh()
+        setActionLoading(null)
+    }
+
+    const handleStartRoundForTable = async (targetTable: string) => {
+        const startTime = tableTimers[targetTable]
+        const gameStatus = tableTimers[`${targetTable}_status`] || 'ACTIVE'
+        const isLive = startTime && gameStatus === 'ACTIVE' && (new Date(startTime).getTime() + (roundMins(targetTable) * 60000) - currentTime > 0)
+        const actionWord = isLive ? 'RESTART' : 'START'
+
+        if (!window.confirm(`${actionWord} ${roundMins(targetTable)}-minute countdown for ${GAME_LABELS[targetTable] || targetTable.toUpperCase()}?\n\nThis will reset the ${roundMins(targetTable)}m timer to NOW and generate a fresh PIN.`)) return;
+        setActionLoading(`start-${targetTable}`)
+        try {
+            const res = await startTableRound(targetTable, roundMins(targetTable))
+            if (res.error) {
+                alert(`Error: ${res.error}`)
+            } else {
+                alert(`✅ 15-Minute timer ${isLive ? 'RESTARTED' : 'STARTED'} for ${targetTable.toUpperCase()}!\n\nNew Table PIN: ${res.pin}`)
+            }
+        } catch (err: any) {
+            alert(`Unhandled Server Error: ${err.message}`)
+            console.error(err)
+        }
+        await refresh()
         setActionLoading(null)
     }
 
@@ -220,11 +272,56 @@ function ThePit() {
         setActionLoading(null)
     }
 
+    const handleResetAllLogins = async () => {
+        if (!window.confirm('⚠️ Reset EVERY Syndicate login to LOGGED OUT?\n\nThis will allow all teams to log in again immediately.')) return
+        setActionLoading('reset-logins')
+        const res = await resetAllTeamLogins()
+        if (res.error) {
+            alert(`Error: ${res.error}`)
+        } else {
+            alert(`✅ SUCCESS: All ${res.count || 0} teams have been reset to LOGGED OUT!`)
+        }
+        await refresh()
+        setActionLoading(null)
+    }
+
     return (
         <div className="space-y-6">
+            {/* DEDICATED DEALER STATION BANNER */}
+            {isDealer && (
+                <div className="bg-gradient-to-r from-red-950/70 via-black to-yellow-950/70 border-2 border-yellow-500/50 rounded-xl p-5 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                        <span className="text-4xl">
+                            {currentRound === 'slots' ? '🎰' : currentRound === 'roulette' ? '🎯' : currentRound === 'blackjack' ? '🃏' : currentRound === 'craps' ? '🎲' : currentRound === 'poker' ? '🕵️' : currentRound === 'baccarat' ? '🏦' : currentRound === 'dice' ? '🎲' : currentRound === 'highcard' ? '🃏' : currentRound === 'coinflip' ? '🪙' : '🔐'}
+                        </span>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <span className="font-pixel text-yellow-400 text-lg">{GAME_LABELS[currentRound] || currentRound.toUpperCase()}</span>
+                                <span className="text-[10px] font-pixel bg-yellow-500 text-black px-2 py-0.5 rounded font-bold">DEALER STATION</span>
+                            </div>
+                            <p className="text-xs text-gray-400 font-mono mt-0.5">Station: {adminLabel} • Controls are locked exclusively to this table</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <div className="bg-black/90 px-4 py-2 rounded-lg border border-yellow-500/60 text-center shadow-[0_0_15px_rgba(234,179,8,0.2)]">
+                            <span className="text-[9px] text-gray-400 font-pixel uppercase block">TABLE PIN</span>
+                            <span className="text-2xl font-mono font-bold text-yellow-400 tracking-widest">{tableTimers[`${currentRound}_pin`] || '----'}</span>
+                        </div>
+                        <button
+                            onClick={handleStartRound}
+                            disabled={actionLoading === 'start-round'}
+                            className="px-5 py-3 rounded-xl bg-green-600 hover:bg-green-500 text-white font-pixel text-sm flex items-center gap-2 shadow-[0_0_20px_rgba(34,197,94,0.4)] transition-all hover:scale-105 disabled:opacity-50"
+                        >
+                            <Play className="w-4 h-4" />
+                            {tableTimers[currentRound] && tableTimers[`${currentRound}_status`] === 'ACTIVE' ? '🔄 RESTART 15M TIMER' : '▶ START 15M ROUND'}
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* Kill Switch + Round Manager Row */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* KILL SWITCH */}
+                {/* KILL SWITCH (Visible to Master Pitboss, or compact for dealers) */}
                 <div className="bg-[#12121a] rounded-xl border border-red-900/30 p-6 flex flex-col items-center gap-4">
                     <h3 className="text-xs font-pixel text-red-400/80 tracking-widest uppercase">Global Kill Switch</h3>
                     <button
@@ -244,26 +341,51 @@ function ThePit() {
                     <span className={`text-sm font-pixel ${isPaused ? 'text-red-400' : 'text-green-400'}`}>
                         {isPaused ? 'EVENT PAUSED' : 'EVENT LIVE'}
                     </span>
+
+                    {/* EMERGENCY RESET LOGINS */}
+                    <div className="w-full pt-4 border-t border-white/10 mt-1">
+                        <button
+                            onClick={handleResetAllLogins}
+                            disabled={actionLoading === 'reset-logins'}
+                            className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg bg-orange-950/40 hover:bg-orange-900/60 border border-orange-500/40 text-orange-200 text-xs font-pixel transition-all hover:scale-[1.02] disabled:opacity-50"
+                        >
+                            <RotateCcw className={`w-3.5 h-3.5 ${actionLoading === 'reset-logins' ? 'animate-spin' : ''}`} />
+                            {actionLoading === 'reset-logins' ? 'RESETTING...' : 'RESET ALL LOGINS'}
+                        </button>
+                        <p className="text-[9px] text-gray-500 text-center font-mono mt-1">Eject/Reset all active sessions</p>
+                    </div>
                 </div>
 
                 {/* ROUND MANAGER */}
                 <div className="bg-[#12121a] rounded-xl border border-white/10 p-6 col-span-1 lg:col-span-2">
-                    <h3 className="text-xs font-pixel text-gray-400 tracking-widest uppercase mb-4">Round Manager</h3>
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-xs font-pixel text-gray-400 tracking-widest uppercase">
+                            {isDealer ? `Table Station: ${GAME_LABELS[currentRound]}` : 'Round Manager (Master)'}
+                        </h3>
+                        {isDealer && (
+                            <span className="text-[9px] font-mono bg-yellow-950/60 border border-yellow-500/30 text-yellow-300 px-2 py-0.5 rounded">
+                                LOCKED TO YOUR TABLE
+                            </span>
+                        )}
+                    </div>
 
                     {/* Current Round Selector */}
                     <div className="mb-4">
-                        <label className="text-[10px] text-gray-500 uppercase tracking-widest mb-2 block">Active Round</label>
+                        <label className="text-[10px] text-gray-500 uppercase tracking-widest mb-2 block">
+                            {isDealer ? 'Active Assigned Station' : 'Select Active Round Table'}
+                        </label>
                         <div className="relative">
                             <select
                                 value={currentRound}
+                                disabled={isDealer}
                                 onChange={(e) => handleRoundChange(e.target.value)}
-                                className="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-sm font-mono text-white appearance-none cursor-pointer focus:border-red-500 focus:outline-none"
+                                className={`w-full bg-black/40 border border-white/10 rounded-lg p-3 text-sm font-mono text-white appearance-none ${isDealer ? 'opacity-85 cursor-not-allowed border-yellow-500/30' : 'cursor-pointer focus:border-red-500 focus:outline-none'}`}
                             >
                                 {GAME_TYPES.map(g => (
                                     <option key={g} value={g}>{GAME_LABELS[g]}</option>
                                 ))}
                             </select>
-                            <ChevronDown className="w-4 h-4 text-gray-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                            {!isDealer && <ChevronDown className="w-4 h-4 text-gray-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />}
                         </div>
                     </div>
 
@@ -273,25 +395,49 @@ function ThePit() {
                             {(() => {
                                 const startTime = tableTimers[currentRound]
                                 const gameStatus = tableTimers[`${currentRound}_status`] || 'ACTIVE'
-                                const isActive = startTime && gameStatus === 'ACTIVE' && (new Date(startTime).getTime() + (16 * 60000) - currentTime > 0)
+                                const isActive = startTime && gameStatus === 'ACTIVE' && (new Date(startTime).getTime() + (roundMins(currentRound) * 60000) - currentTime > 0)
 
                                 return (
-                                    <button
-                                        onClick={handleStartRound}
-                                        disabled={actionLoading === 'start-round'}
-                                        className={`w-full h-full flex items-center justify-center gap-2 p-4 border-2 rounded-xl font-pixel text-lg transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed
-                                            ${isActive 
-                                                ? 'bg-green-900/40 hover:bg-green-900/60 border-green-500 text-green-100 shadow-[0_0_15px_rgba(34,197,94,0.3)]' 
-                                                : 'bg-red-900/40 hover:bg-red-900/60 border-red-500 text-red-100 shadow-[0_0_15px_rgba(239,68,68,0.3)]'
-                                            }`}
-                                    >
-                                        <Play className="w-5 h-5" />
-                                        {isActive ? `${currentRound.toUpperCase()} IS LIVE` : `START ${currentRound.toUpperCase()}`}
-                                    </button>
+                                    <div className="flex flex-col h-full">
+                                        <button
+                                            onClick={handleStartRound}
+                                            disabled={actionLoading === 'start-round'}
+                                            className={`w-full flex-1 flex flex-col items-center justify-center gap-1.5 p-4 border-2 rounded-xl font-pixel text-lg transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed
+                                                ${isActive 
+                                                    ? 'bg-green-900/40 hover:bg-green-900/60 border-green-500 text-green-100 shadow-[0_0_20px_rgba(34,197,94,0.3)]' 
+                                                    : 'bg-red-900/40 hover:bg-red-900/60 border-red-500 text-red-100 shadow-[0_0_15px_rgba(239,68,68,0.3)]'
+                                                }`}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <Play className="w-5 h-5" />
+                                                <span>{isActive ? `🔄 RESTART ${currentRound.toUpperCase()} (${roundMins(currentRound)}M)` : `▶ START ${currentRound.toUpperCase()}`}</span>
+                                            </div>
+                                            {isActive && (
+                                                <span className="text-[11px] font-mono text-green-300">
+                                                    CLICK TO OVERWRITE TIMER & PIN
+                                                </span>
+                                            )}
+                                        </button>
+                                        {isActive && (
+                                            <div className="flex justify-between items-center px-2 pt-2 text-xs font-mono">
+                                                <span className="text-green-400 font-bold">
+                                                    TIME: {(() => {
+                                                        const diff = new Date(startTime).getTime() + (roundMins(currentRound) * 60000) - currentTime
+                                                        const m = Math.floor(diff / 60000)
+                                                        const s = Math.floor((diff % 60000) / 1000)
+                                                        return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+                                                    })()}
+                                                </span>
+                                                <span className="text-yellow-400 font-bold bg-yellow-950/60 px-2 py-0.5 rounded border border-yellow-500/40">
+                                                    PIN: {tableTimers[`${currentRound}_pin`] || '----'}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
                                 )
                             })()}
                             <p className="text-center text-[10px] text-gray-500 mt-2 font-mono uppercase">
-                                Warning: Auto-burns questions.
+                                Overwrites 15-minute countdown and regenerates PIN.
                             </p>
                         </div>
                         <div>
@@ -339,7 +485,7 @@ function ThePit() {
                                     status = "KILLED"
                                     color = "text-red-500 font-bold"
                                 } else if (startTime) {
-                                    const diff = new Date(startTime).getTime() + (16 * 60000) - currentTime
+                                    const diff = new Date(startTime).getTime() + (roundMins(g) * 60000) - currentTime
                                     if (diff > 0) {
                                         const m = Math.floor(diff / 60000)
                                         const s = Math.floor((diff % 60000) / 1000)
@@ -351,16 +497,26 @@ function ThePit() {
                                     }
                                 }
                                 return (
-                                    <div key={g} className="flex flex-col gap-2 bg-black/40 p-3 rounded-lg border border-white/5">
+                                    <div key={g} className={`flex flex-col gap-2 p-3 rounded-lg border transition-all ${currentRound === g ? 'bg-white/[0.04] border-yellow-500/50 shadow-lg' : 'bg-black/40 border-white/5'}`}>
                                         <div className="flex justify-between items-center text-xs font-mono mb-2">
-                                            <span className="text-gray-400 uppercase w-32">{g}</span>
+                                            <span className={`uppercase font-bold ${currentRound === g ? 'text-yellow-400' : 'text-gray-400'}`}>
+                                                {g} {currentRound === g && '★'}
+                                            </span>
                                             <div className="flex items-center gap-2">
                                                 {tableTimers[`${g}_pin`] && <span className="bg-yellow-500/20 text-yellow-500 border border-yellow-500/50 px-2 py-0.5 rounded font-bold tracking-widest">{tableTimers[`${g}_pin`]}</span>}
                                                 <span className={color}>{status}</span>
                                             </div>
                                         </div>
-                                        {/* Actions */}
+                                        {/* Actions: Restart, Pause/Resume, Kill */}
                                         <div className="flex gap-2">
+                                            <button
+                                                onClick={() => handleStartRoundForTable(g)}
+                                                disabled={actionLoading === `start-${g}`}
+                                                className="flex-1 py-1 rounded text-[10px] bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-300 border border-emerald-500/40 font-pixel transition-colors"
+                                                title="Restart 15-minute countdown from now and generate new PIN"
+                                            >
+                                                🔄 RESTART
+                                            </button>
                                             <button
                                                 onClick={() => handleTableStatusChange(g, gameStatus === 'PAUSED' ? 'ACTIVE' : 'PAUSED')}
                                                 disabled={actionLoading === `table-status-${g}`}
@@ -368,7 +524,7 @@ function ThePit() {
                                                 {gameStatus === 'PAUSED' ? 'RESUME' : 'PAUSE'}
                                             </button>
                                             <button
-                                                onClick={() => { if (window.confirm('Kill this table? Time will stop and players lose.')) handleTableStatusChange(g, 'KILLED') }}
+                                                onClick={() => { if (window.confirm(`Kill ${g.toUpperCase()} table? Time will stop and players lose.`)) handleTableStatusChange(g, 'KILLED') }}
                                                 disabled={actionLoading === `table-status-${g}` || gameStatus === 'KILLED'}
                                                 className="flex-1 py-1 rounded text-[10px] bg-red-900/30 text-red-500 border border-red-500/50 hover:bg-red-600/30 font-pixel transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                                                 KILL
@@ -959,11 +1115,11 @@ const TABLE_METADATA: Record<string, TableMeta> = {
     }
 }
 
-function TheDeck() {
+function TheDeck({ defaultTable }: { defaultTable?: string } = {}) {
     const [questions, setQuestions] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
-    const [expandedTable, setExpandedTable] = useState<string | null>(null)
-    const [selectedTableFilter, setSelectedTableFilter] = useState<string>('all')
+    const [expandedTable, setExpandedTable] = useState<string | null>(defaultTable || null)
+    const [selectedTableFilter, setSelectedTableFilter] = useState<string>(defaultTable || 'all')
     const [difficultyFilter, setDifficultyFilter] = useState<'ALL' | 'STANDARD' | 'HIGH'>('ALL')
     const [searchQuery, setSearchQuery] = useState('')
     const [actionLoading, setActionLoading] = useState<string | null>(null)

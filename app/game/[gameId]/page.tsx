@@ -1,15 +1,17 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import CodeEditor from '@/components/CodeEditor'
 import { supabase } from '@/lib/supabase/client'
 import LogoutButton from '@/components/LogoutButton'
 import { claimAutomatedReward } from '@/app/actions'
+import type { LobbyMember } from '@/app/actions'
 import BadgeAlreadyWonModal from '@/components/BadgeAlreadyWonModal'
 import EventFullModal, { OpenTableInfo } from '@/components/EventFullModal'
 import TestPassedModal from '@/components/TestPassedModal'
+import SpinWheel from '@/components/SpinWheel'
 
 // --- CONFIGURATION ---
 const GAME_CONFIG: Record<string, any> = {
@@ -185,6 +187,9 @@ export default function GamePage() {
 
   // --- STATE ---
   const [phase, setPhase] = useState<'RULES' | 'BETTING' | 'WAITING' | 'GAME'>('RULES')
+  // Where to continue AFTER the player confirms the rules (set by the server-state check)
+  const [resumePhase, setResumePhase] = useState<'BETTING' | 'WAITING' | 'GAME' | null>(null)
+  const [rulesAccepted, setRulesAccepted] = useState(false)
   const [difficulty, setDifficulty] = useState<'STANDARD' | 'HIGH' | null>(null)
   const [selectedBet, setSelectedBet] = useState<'STANDARD' | 'HIGH' | null>(null)
   const [showAdminWaitModal, setShowAdminWaitModal] = useState(false)
@@ -211,7 +216,7 @@ export default function GamePage() {
   const [roundStartTime, setRoundStartTime] = useState<string | null>(null)
   const [tableStatus, setTableStatus] = useState<string>('WAITING')
 
-  const [roundDuration, setRoundDuration] = useState<number>(15)
+  const [roundDuration, setRoundDuration] = useState<number>(11)
   const [timeLeft, setTimeLeft] = useState<string>("--:--")
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [showBustEffect, setShowBustEffect] = useState(false)
@@ -221,6 +226,15 @@ export default function GamePage() {
   const [language, setLanguage] = useState<string>('python')
   const [rewardClaimed, setRewardClaimed] = useState<boolean>(false)
   const [vaultClueLevel, setVaultClueLevel] = useState<number>(0)
+  const [wheelMultiplier, setWheelMultiplier] = useState<number>(0)
+  const [isSpinningWheel, setIsSpinningWheel] = useState<boolean>(false)
+  const [awardedPayout, setAwardedPayout] = useState<number | null>(null)
+
+  // Waiting-room (lobby) state: who joined this table + when WE joined (server clock)
+  const [joinedAt, setJoinedAt] = useState<number | null>(null)
+  const [lobby, setLobby] = useState<LobbyMember[]>([])
+  const [lobbyCapacity, setLobbyCapacity] = useState<number>(3)
+  const lobbyMissCount = useRef(0)
 
   // Dynamic Content State
   const [dynamicConfig, setDynamicConfig] = useState<{
@@ -238,7 +252,7 @@ export default function GamePage() {
   
   // Blackjack State
   const [currentTeammate, setCurrentTeammate] = useState<number>(0)
-  const [blackjackTimers, setBlackjackTimers] = useState<number[]>([300, 300, 300])
+  const [blackjackTimers, setBlackjackTimers] = useState<number[]>([200, 200, 200])
 
   // Modals for Badge Won & Table Full
   const [badgeWonModal, setBadgeWonModal] = useState<{
@@ -354,28 +368,37 @@ export default function GamePage() {
             } else if (teamData.current_locked_table === `WIN_${gameId.toUpperCase()}`) {
               setShowSuccessModal(true)
             } else if (teamData.current_locked_table === gameId) {
-              const savedDiff = localStorage.getItem(`cs_diff_${gameId}`) as 'STANDARD' | 'HIGH' | null
-              if (savedDiff) setDifficulty(savedDiff)
-
-              // If they were already playing and no reset happened locally, put them back
-              const savedJoinTime = localStorage.getItem(`cs_join_${gameId}`)
               const eventTableStatus = timers[`${gameId.toLowerCase()}_status`]
               const currentStatus = eventTableStatus || (gameStateData?.is_active ? 'ACTIVE' : 'WAITING')
               setTableStatus(currentStatus)
 
-              if (rPin && localStorage.getItem(`cs_unlocked_${gameId}`) === rPin) {
-                setIsUnlockedLocally(true)
-              }
+              // (the passcode is always typed in again - never restored from storage)
 
-              // A table is Live if the Admin flagged it ACTIVE
-              if (savedJoinTime && currentStatus === 'ACTIVE') {
-                setPhase('GAME')
-              } else if (currentStatus === 'ACTIVE' && !savedJoinTime) {
-                // Failsafe for missing localstorage
-                setPhase('GAME')
+              // Ask the SERVER what this visit looks like (has this team bet? when?)
+              // instead of trusting browser storage that may be left over from an older round.
+              const { getTableLobby } = await import('@/app/actions')
+              const lobbyRes = await getTableLobby(gameId, tid)
+              const me = lobbyRes?.me
+
+              if (me?.hasBet && me.difficulty && me.joinedAt) {
+                setDifficulty(me.difficulty)
+                setJoinedAt(me.joinedAt)
+                localStorage.setItem(`cs_diff_${gameId}`, me.difficulty)
+
+                // Only a round that was started AFTER we joined can put us in the game
+                const startMs = rTime ? new Date(rTime).getTime() : 0
+                const stillRunning = startMs > 0 && Date.now() <= startMs + 11 * 60000
+                if (currentStatus === 'ACTIVE' && startMs >= me.joinedAt && stillRunning) {
+                  setResumePhase('GAME')
+                } else {
+                  setResumePhase('WAITING')
+                }
+              } else if (gameId !== 'final') {
+                // Seated at the table but no bet yet for this visit -> must bet first
+                localStorage.removeItem(`cs_diff_${gameId}`)
+                setResumePhase('BETTING')
               } else {
-                // setJoinedRoundTime(Date.now().toString())
-                setPhase('WAITING')
+                setResumePhase('WAITING')
               }
             } else {
               localStorage.removeItem(`cs_diff_${gameId}`)
@@ -409,7 +432,7 @@ export default function GamePage() {
         setIsPaused(newRecord.is_paused)
         const timers = newRecord.table_timers || {}
         setRoundStartTime(timers[gameId.toLowerCase() as string] || null)
-        setRoundDuration(16)
+        setRoundDuration(11)
 
         const individualStatus = timers[`${gameId.toLowerCase()}_status`]
         if (individualStatus) {
@@ -481,7 +504,7 @@ export default function GamePage() {
         const timers = eventData.table_timers || {}
         const rTime = timers[gameId.toLowerCase() as string] || null
         setRoundStartTime(rTime)
-        setRoundDuration(16)
+        setRoundDuration(11)
 
         const tableStatusStr = timers[`${gameId.toLowerCase()}_status`] || (gameStateData?.is_active ? 'ACTIVE' : 'WAITING')
         setTableStatus(tableStatusStr)
@@ -539,7 +562,7 @@ export default function GamePage() {
     if (showSuccessModal && !rewardClaimed && teamId) {
       setRewardClaimed(true)
       
-      const payout = Math.floor(difficulty === 'HIGH' ? 400 : 150)
+      const payout = Math.floor(difficulty === 'HIGH' ? 600 : 100)
       
       const claim = async () => {
         try {
@@ -548,6 +571,7 @@ export default function GamePage() {
             console.error("Reward Error:", res.error)
           } else if (res.success && res.newBalance !== undefined) {
             setWalletBalance(res.newBalance)
+            if (typeof res.payout === 'number') setAwardedPayout(res.payout)
           }
         } catch (e) {
           console.error("System Error claiming reward:", e)
@@ -564,17 +588,63 @@ export default function GamePage() {
     }
   }, [showSuccessModal])
 
+  // --- LOBBY POLLING (server is the source of truth while we wait) ---
+  useEffect(() => {
+    if (!teamId || phase !== 'WAITING') return
+    let cancelled = false
+    lobbyMissCount.current = 0
+
+    const tick = async () => {
+      try {
+        const { getTableLobby } = await import('@/app/actions')
+        const res = await getTableLobby(gameId, teamId)
+        if (cancelled || !res || res.error) return
+
+        setLobby(res.members)
+        setLobbyCapacity(res.capacity)
+        setTableStatus(res.tableStatus)
+        setRoundStartTime(res.roundStartTime)
+        setIsPaused(res.isPaused)
+
+        if (res.me) {
+          lobbyMissCount.current = 0
+          if (res.me.joinedAt) setJoinedAt(res.me.joinedAt)
+        } else {
+          // Not on this table's roster any more (e.g. the Pit Boss cleared/killed the table)
+          lobbyMissCount.current += 1
+          if (lobbyMissCount.current >= 4) {
+            cancelled = true
+            alert('You are no longer seated at this table. Returning to the casino floor.')
+            router.push('/map')
+          }
+        }
+      } catch (err) {
+        console.error('Lobby poll failed:', err)
+      }
+    }
+
+    tick()
+    const iv = setInterval(tick, 3000)
+    return () => { cancelled = true; clearInterval(iv) }
+  }, [teamId, phase, gameId, router])
+
   // --- WAITING ROOM SYNCHRONIZATION ---
   useEffect(() => {
-    // 2. Safe deterministic transition based purely on Admin's database status flag
-    if (phase === 'WAITING' && tableStatus === 'ACTIVE' && roundStartTime) {
+    // Only a round the Pit Boss started AFTER this team joined/bet can pull it into the game.
+    // An old ACTIVE flag / expired timer from a previous round must NOT start (or end) our game.
+    if (phase !== 'WAITING' || tableStatus !== 'ACTIVE' || !roundStartTime || joinedAt === null) return
+    const startMs = new Date(roundStartTime).getTime()
+    const roundOver = Date.now() > startMs + roundDuration * 60000
+    if (startMs >= joinedAt && !roundOver) {
+      // Everyone must type the Pit Boss's passcode before the question opens
+      setIsUnlockedLocally(false)
       setPhase('GAME')
     }
-  }, [phase, tableStatus, roundStartTime])
+  }, [phase, tableStatus, roundStartTime, joinedAt, roundDuration])
 
   // --- DYNAMIC QUESTION LOADER ---
   useEffect(() => {
-    if (phase === 'GAME' && !dynamicConfig) {
+    if (phase === 'GAME' && isUnlockedLocally && !dynamicConfig) {
       const loadQuestion = async () => {
         const { fetchQuestionData } = await import('@/app/actions')
         let diff = difficulty || localStorage.getItem(`cs_diff_${gameId}`) || 'STANDARD'
@@ -594,15 +664,25 @@ export default function GamePage() {
           setCode(res.question.starter_code || (config ? config.starter : ""))
           setRevealedClues([])
         } else {
+          const reason = (res as any)?.error || 'unknown error'
           setDynamicConfig({
-            description: "⚠️ CONFIGURATION ERROR: Could not find '" + diff + "' question in the database. Ask the Pit Boss.",
+            description: "⚠️ CONFIGURATION ERROR: Could not load the '" + diff + "' question (" + reason + "). Ask the Pit Boss.",
             starter: "# Error 404: Question missing."
           })
+          // Retry shortly (e.g. the Pit Boss is still drawing questions)
+          setTimeout(() => setDynamicConfig(null), 3000)
         }
       }
-      loadQuestion()
+      loadQuestion().catch((e: any) => {
+        console.error('Question load failed', e)
+        setDynamicConfig({
+          description: "⚠️ CONFIGURATION ERROR: Question request failed (" + (e?.message || 'network error') + "). Retrying...",
+          starter: "# Error: question request failed."
+        })
+        setTimeout(() => setDynamicConfig(null), 3000)
+      })
     }
-  }, [phase, dynamicConfig, gameId, difficulty, config])
+  }, [phase, isUnlockedLocally, dynamicConfig, gameId, difficulty, config])
 
   // --- PRE-BET CLUES AUTO-BUY (COINFLIP) ---
   useEffect(() => {
@@ -647,7 +727,9 @@ export default function GamePage() {
       if (diff <= 0) {
         setTimeLeft("00:00")
         clearInterval(interval)
-        alert(`⏰ TIME OUT! The 15 minutes have expired. Your team lost this game.`)
+        alert(`⏰ TIME OUT! The round has expired. Your team lost this game.`)
+        localStorage.removeItem(`cs_diff_${gameId}`)
+        localStorage.removeItem(`cs_unlocked_${gameId}`)
         if (teamId) {
           import('@/app/actions').then(({ unlockPlayer }) => unlockPlayer(teamId))
         }
@@ -658,24 +740,24 @@ export default function GamePage() {
         setTimeLeft(`${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`)
 
         if (gameId === 'blackjack') {
-          const elapsed = Math.floor((now - start) / 1000)
-          const teammateIndex = Math.floor(elapsed / 300)
+          const elapsed = Math.max(0, Math.floor((now - start) / 1000) - 60) // first minute = passcode entry
+          const teammateIndex = Math.floor(elapsed / 200)
           
           if (teammateIndex > currentTeammate && teammateIndex < 3) {
             setCurrentTeammate(teammateIndex)
             alert(`Teammate ${teammateIndex}'s time is up! Pass the keyboard to Teammate ${teammateIndex + 1}!`)
           }
           
-          const newTimers = [300, 300, 300]
-          if (elapsed < 300) {
-             newTimers[0] = 300 - elapsed;
+          const newTimers = [200, 200, 200]
+          if (elapsed < 200) {
+             newTimers[0] = 200 - elapsed;
+          } else if (elapsed < 400) {
+             newTimers[0] = 0;
+             newTimers[1] = 400 - elapsed;
           } else if (elapsed < 600) {
              newTimers[0] = 0;
-             newTimers[1] = 600 - elapsed;
-          } else if (elapsed < 900) {
-             newTimers[0] = 0;
              newTimers[1] = 0;
-             newTimers[2] = 900 - elapsed;
+             newTimers[2] = 600 - elapsed;
           } else {
              newTimers[0] = 0;
              newTimers[1] = 0;
@@ -694,10 +776,6 @@ export default function GamePage() {
 
   const handleBet = async () => {
     if (!selectedBet) return
-    if (tableStatus !== 'ACTIVE') {
-      setShowAdminWaitModal(true)
-      return
-    }
     if (!teamId) return alert("System Error: Team ID not found")
     setIsBetting(true)
     const betAmount = selectedBet === 'STANDARD' ? 100 : 200
@@ -717,7 +795,11 @@ export default function GamePage() {
     const res = await placeBet(teamId, betAmount, gameId)
 
     if (res.error) {
-      alert(res.error)
+      if (res.error === 'NOT_ACTIVE') {
+        setShowAdminWaitModal(true)
+      } else {
+        alert(res.error)
+      }
       setIsBetting(false)
       return
     }
@@ -726,6 +808,7 @@ export default function GamePage() {
       setWalletBalance(res.newBalance)
       setDifficulty(selectedBet)
       localStorage.setItem(`cs_diff_${gameId}`, selectedBet)
+      setJoinedAt(typeof res.joinedAt === 'number' ? res.joinedAt : Date.now())
 
       setPhase('WAITING')
     }
@@ -762,6 +845,41 @@ export default function GamePage() {
     setIsBuyingClue(false)
   }
 
+  // Any question that comes with answer options is multiple-choice (Baccarat today)
+  const isMcqQuestion = gameId === 'baccarat' || (dynamicConfig?.options?.length ?? 0) > 0
+
+  // Win handler for code / output-prediction tables: server releases the seat, stamps the badge
+  // and credits base prize x wheel multiplier (Standard bet only).
+  const autoWin = async (prefix: string) => {
+    if (!teamId) {
+      setOutput(`${prefix}\n\n❌ ERROR: Team not found. Please log in again.`)
+      setHasError(true)
+      return
+    }
+    try {
+      const { winGame } = await import('@/app/actions')
+      const res = await winGame(teamId, gameId)
+      if ('error' in res && res.error) {
+        setOutput(`${prefix}\n\n❌ ${res.error}`)
+        setHasError(true)
+        return
+      }
+      if (!('success' in res)) return
+      localStorage.removeItem(`cs_diff_${gameId}`)
+      localStorage.removeItem(`cs_unlocked_${gameId}`)
+      setOutput(`${prefix}\n\n🏆 BADGE EARNED! $${res.payout} has been credited to your wallet${res.multiplier && res.multiplier !== 1 ? ` (wheel ${res.multiplier}x applied)` : ''}.`)
+      setHasError(false)
+      setAwardedPayout(res.payout ?? null)
+      if (typeof res.newBalance === 'number') setWalletBalance(res.newBalance)
+      setRewardClaimed(true)
+      setShowTestPassedModal(false)
+      setShowSuccessModal(true)
+    } catch (err: any) {
+      setOutput(`${prefix}\n\n❌ SYSTEM ERROR: ${err?.message || 'Could not process your win.'}`)
+      setHasError(true)
+    }
+  }
+
   // --- SUBMIT HANDLER (WEB WORKER ENGINE) ---
   const handleSubmit = async (isSubmit: boolean = true) => {
     setIsRunning(true)
@@ -779,9 +897,9 @@ export default function GamePage() {
         }
 
         if (textInput.trim() === dynamicConfig.expected_output.trim()) {
-          setOutput("✅ CORRECT OUTPUT PREDICTION!\n\n⚠️ Please call the Dealer / Pit Boss to verify and award your win from the Admin Panel.")
+          setOutput("✅ CORRECT OUTPUT PREDICTION!")
           setHasError(false)
-          setShowTestPassedModal(true)
+          autoWin("✅ CORRECT OUTPUT PREDICTION!")
         } else {
           setOutput("❌ WRONG ANSWER. Please try again.")
           setHasError(true)
@@ -793,28 +911,59 @@ export default function GamePage() {
       return
     }
 
-    // --- LOGIC A2: BACCARAT (MCQ) ---
-    if (gameId === 'baccarat') {
-      setTimeout(() => {
-        if (!dynamicConfig?.expected_output) {
-          setOutput("❌ ERROR: No answer key found for this question.")
+    // --- LOGIC A2: MULTIPLE CHOICE (checked on the SERVER; only tells correct / wrong) ---
+    if (isMcqQuestion) {
+      if (!selectedMcqOption) {
+        setOutput("⚠️ Pick one of the options first.")
+        setHasError(true)
+        setIsRunning(false)
+        return
+      }
+      if (!teamId) {
+        setOutput("❌ ERROR: Team not found. Please log in again.")
+        setHasError(true)
+        setIsRunning(false)
+        return
+      }
+
+      try {
+        const { submitMcqAnswer } = await import('@/app/actions')
+        const diff = difficulty || localStorage.getItem(`cs_diff_${gameId}`) || 'STANDARD'
+        const res = await submitMcqAnswer(teamId, gameId, diff as string, selectedMcqOption)
+
+        if (res.error) {
+          setOutput(`❌ ERROR: ${res.error}`)
           setHasError(true)
           setIsRunning(false)
           return
         }
 
-        if (selectedMcqOption.trim() === dynamicConfig.expected_output.trim()) {
-          setOutput("✅ CORRECT QUERY SELECTED!\n\n⚠️ Please call the Dealer / Pit Boss to verify and award your win from the Admin Panel.")
+        localStorage.removeItem(`cs_diff_${gameId}`)
+        localStorage.removeItem(`cs_unlocked_${gameId}`)
+
+        if (res.correct) {
+          setOutput("✅ CORRECT ANSWER!\n\nYour badge has been earned and your prize has been credited.")
           setHasError(false)
-          setShowTestPassedModal(true)
+          if (typeof res.newBalance === 'number') setWalletBalance(res.newBalance)
+          if (typeof res.payout === 'number') setAwardedPayout(res.payout)
+          setRewardClaimed(true) // prize already credited by the server — don't claim twice
+          setShowSuccessModal(true)
+          // leave isRunning=true so the answer can't be re-submitted
         } else {
-          setOutput("❌ WRONG ANSWER. Please try again.")
+          setOutput("❌ WRONG ANSWER.\n\nYou have lost this table and your bet.")
           setHasError(true)
           setShowBustEffect(true)
-          setTimeout(() => setShowBustEffect(false), 500)
+          setTimeout(() => {
+            alert("❌ WRONG ANSWER! You have lost this table and your bet.")
+            router.push('/map')
+          }, 900)
+          // leave isRunning=true so the answer can't be re-submitted
         }
+      } catch (err: any) {
+        setOutput(`❌ SYSTEM ERROR:\n${err?.message || 'Could not submit your answer.'}`)
+        setHasError(true)
         setIsRunning(false)
-      }, 500)
+      }
       return
     }
 
@@ -910,6 +1059,7 @@ export default function GamePage() {
         const evalResult = result.evalResult
 
         let displayOutput = ''
+        let wonByTests = false
 
         if (stdout.trim()) {
           displayOutput += `> OUTPUT:\n${stdout.trim()}\n\n`
@@ -934,9 +1084,8 @@ export default function GamePage() {
           if (result.allPassed) {
             displayOutput += `🎉 ALL TEST CASES PASSED!\n`
             if (isSubmit) {
-              displayOutput += `\n⚠️ Please call the Dealer / Pit Boss to verify your solution and award your win from the Admin Panel.`
+              wonByTests = true
               setHasError(false)
-              setShowTestPassedModal(true)
             } else {
               displayOutput += `\n💡 Click "SUBMIT CODE" below to submit for Pit Boss verification!`
               setHasError(false)
@@ -967,6 +1116,7 @@ export default function GamePage() {
         }
 
         setOutput(displayOutput)
+        if (wonByTests) await autoWin(displayOutput)
       }
 
     } catch (err: any) {
@@ -1010,9 +1160,123 @@ export default function GamePage() {
   }
 
   // ============================================================
-  // PHASE 3: THE GAME (AND WAITING ROOM)
+  // PHASE 2.5: WAITING ROOM — who has joined this table and what they bet.
+  // The Pit Boss starts the round (from admin) once the table is ready.
   // ============================================================
-  if (phase === 'GAME' || phase === 'WAITING') {
+  if (phase === 'WAITING') {
+    const seats: (LobbyMember | null)[] = Array.from({ length: lobbyCapacity }, (_, i) => lobby[i] || null)
+    const readyCount = lobby.filter(m => m.hasBet).length
+    const allReady = readyCount >= lobbyCapacity
+    const startMs = roundStartTime ? new Date(roundStartTime).getTime() : 0
+    const roundInProgress =
+      tableStatus === 'ACTIVE' && startMs > 0 &&
+      Date.now() <= startMs + roundDuration * 60000 &&
+      joinedAt !== null && startMs < joinedAt
+    const paused = isPaused || tableStatus === 'PAUSED'
+
+    return (
+      <div className={`min-h-screen bg-casino-void text-white p-4 flex flex-col items-center justify-center ${isWarning ? 'animate-bust-shake' : ''}`}>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-4xl bg-[#5C4520] border-[3px] border-retro-brass/40 p-6 md:p-8 rounded-3xl shadow-2xl text-center"
+        >
+          <h1 className={`text-2xl md:text-4xl font-pixel mb-1 ${config.color} ${config.neonClass} crt-text`}>{config.title}</h1>
+          <p className="text-retro-cream/70 font-mono text-xs md:text-sm tracking-widest mb-5">— WAITING ROOM —</p>
+
+          <div className="flex flex-wrap justify-center gap-3 mb-6 font-mono text-sm">
+            {walletBalance !== null && (
+              <div className="px-3 py-1.5 bg-casino-surface rounded-lg border border-retro-gold/30 text-retro-gold flex items-center gap-2">
+                <span>🪙</span> <span className="font-hud font-bold">${walletBalance}</span>
+              </div>
+            )}
+            <div className={`px-3 py-1.5 rounded-lg border font-pixel text-[10px] tracking-wider
+              ${difficulty === 'HIGH'
+                ? 'bg-red-900/40 border-neon-red/50 text-neon-red'
+                : 'bg-green-900/40 border-neon-green/50 text-neon-green'}`}>
+              YOUR BET: {difficulty === 'HIGH' ? 'HIGH ROLLER' : 'STANDARD'}
+            </div>
+            {wheelMultiplier > 0 && (
+              <div className="px-3 py-1.5 rounded-lg border border-yellow-500/50 bg-yellow-900/30 text-yellow-300 font-pixel text-[10px] tracking-wider">
+                🎡 WHEEL: {wheelMultiplier}x
+              </div>
+            )}
+          </div>
+
+          {/* TABLE SEATS */}
+          <div className="flex flex-wrap justify-center gap-4 mb-6">
+            {seats.map((m, i) => {
+              if (!m) {
+                return (
+                  <div key={`open-${i}`} className="flex-1 min-w-[200px] max-w-[260px] border-2 border-dashed border-gray-500/50 bg-black/30 rounded-2xl p-5 flex flex-col items-center justify-center min-h-[150px]">
+                    <div className="text-3xl mb-2 opacity-40">💺</div>
+                    <div className="font-pixel text-[10px] text-gray-400 tracking-widest">OPEN SEAT</div>
+                    <div className="font-mono text-[10px] text-gray-500 mt-1">Waiting for a team...</div>
+                  </div>
+                )
+              }
+              const isMe = m.teamId === teamId
+              const isHigh = m.difficulty === 'HIGH'
+              return (
+                <div
+                  key={m.teamId}
+                  className={`flex-1 min-w-[200px] max-w-[260px] rounded-2xl p-5 flex flex-col items-center justify-center min-h-[150px] border-[3px] transition-all
+                    ${isMe ? 'border-retro-gold shadow-neon-gold bg-black/50' : 'border-white/20 bg-black/40'}`}
+                >
+                  <div className="font-pixel text-xs text-white uppercase tracking-wider break-all">{m.name}</div>
+                  {isMe && <div className="font-pixel text-[9px] text-retro-gold mt-1 tracking-widest">★ YOU</div>}
+                  {m.hasBet ? (
+                    <>
+                      <div className={`mt-3 px-3 py-1 rounded-lg border font-pixel text-[10px] tracking-wider
+                        ${isHigh ? 'bg-red-900/40 border-neon-red/50 text-neon-red' : 'bg-green-900/40 border-neon-green/50 text-neon-green'}`}>
+                        {isHigh ? 'HIGH ROLLER' : 'STANDARD'}
+                      </div>
+                      <div className="mt-2 font-hud font-bold text-2xl text-retro-gold">${m.amount}</div>
+                      <div className="font-mono text-[10px] text-green-400 mt-1">✔ BET PLACED</div>
+                    </>
+                  ) : (
+                    <div className="mt-4 font-mono text-xs text-yellow-300 animate-pulse">Choosing bet...</div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+
+          {/* STATUS */}
+          <div className="bg-black/50 border border-white/10 rounded-xl p-4 font-mono text-sm">
+            <div className="font-hud font-bold text-lg text-retro-gold mb-1">
+              {readyCount}/{lobbyCapacity} TEAMS READY
+            </div>
+            {paused ? (
+              <div className="text-red-400 animate-pulse">⏸ The Pit Boss has paused this table.</div>
+            ) : roundInProgress ? (
+              <div className="text-yellow-300">
+                A round is already in progress at this table. You&apos;ve paid in — you will play in the NEXT round when the Pit Boss starts the table again.
+              </div>
+            ) : allReady ? (
+              <div className="text-green-400 animate-pulse">All teams are ready — waiting for the Pit Boss to start the table...</div>
+            ) : (
+              <div className="text-gray-300 animate-pulse">Waiting for more teams to join and place their bets...</div>
+            )}
+          </div>
+        </motion.div>
+
+        {broadcastMessage && broadcastMessage.trim() !== '' && (
+          <div className="fixed bottom-4 right-4 z-[99] max-w-[280px] bg-casino-panel/90 backdrop-blur text-white p-3 rounded-lg border-l-4 border-yellow-500 shadow-lg pointer-events-none">
+            <h3 className="font-bold text-yellow-500 font-pixel uppercase text-[10px] mb-1">⚠️ Pit Boss</h3>
+            <p className="font-mono text-xs leading-relaxed text-gray-200">{broadcastMessage}</p>
+          </div>
+        )}
+
+        {teamId && <LogoutButton teamId={teamId} />}
+      </div>
+    )
+  }
+
+  // ============================================================
+  // PHASE 3: THE GAME
+  // ============================================================
+  if (phase === 'GAME') {
     return (
       <div className={`min-h-screen bg-casino-void text-white p-4 flex flex-col items-center ${isWarning ? 'animate-bust-shake' : ''}`}>
 
@@ -1086,13 +1350,15 @@ export default function GamePage() {
                     🎰 JACKPOT! 🎰
                   </h1>
                   <p className="text-xl text-gray-300 font-mono mt-4">
-                    The Pit Boss has validated your script! Please claim your chips from the Vault.
+                    {isMcqQuestion
+                      ? 'Correct answer! Your badge has been earned and your prize has been credited to your wallet.'
+                      : 'The Pit Boss has validated your script! Please claim your chips from the Vault.'}
                   </p>
                   
                   <div className="bg-black/50 p-6 rounded-2xl border-2 border-retro-brass shadow-inner my-6">
                     <p className="text-gray-400 font-mono text-sm mb-2 uppercase tracking-widest">Expected Payout</p>
                     <p className="text-4xl font-hud text-neon-green">
-                      ${difficulty === 'HIGH' ? 400 : 150}
+                      ${awardedPayout ?? (difficulty === 'HIGH' ? 600 : Math.round(100 * (wheelMultiplier || 1)))}
                     </p>
                   </div>
 
@@ -1212,7 +1478,7 @@ export default function GamePage() {
                   )}
 
                   {/* TEST CASES VISUALIZER */}
-                  {dynamicConfig?.test_cases && dynamicConfig.test_cases.length > 0 && gameId !== 'roulette' && (
+                  {dynamicConfig?.test_cases && dynamicConfig.test_cases.length > 0 && gameId !== 'roulette' && !isMcqQuestion && (
                     <div className="mt-4 border-t border-white/10 pt-4 relative z-10">
                       <h3 className="text-sm font-bold text-gray-400 mb-3 uppercase tracking-wider font-pixel text-[10px]">Test Cases</h3>
                       <div className="space-y-3">
@@ -1306,8 +1572,8 @@ export default function GamePage() {
                 </AnimatePresence>
 
                 {/* EDITOR OR BACCARAT MCQ */}
-                {gameId === 'baccarat' ? (
-                  <div className="flex-grow flex flex-col items-center justify-center p-10 gap-6 relative z-10 bg-black machine-bezel crt-screen">
+                {isMcqQuestion ? (
+                  <div className="flex-grow min-h-0 overflow-y-auto flex flex-col items-center p-6 gap-4 relative z-10 bg-black machine-bezel crt-screen">
                     <h3 className="text-3xl font-pixel text-retro-gold mb-2 tracking-widest neon-text-gold">SELECT OPTION</h3>
                     <div className="w-full max-w-lg space-y-4">
                       {(dynamicConfig?.options || ['Option A', 'Option B', 'Option C', 'Option D']).map((opt: string, i: number) => (
@@ -1319,7 +1585,7 @@ export default function GamePage() {
                               ? 'bg-retro-gold/20 border-retro-gold text-retro-gold shadow-neon-gold' 
                               : 'bg-black border-gray-700 text-gray-300 hover:border-gray-500'}`}
                         >
-                          <span className="font-bold mr-4">{String.fromCharCode(65 + i)}.</span>
+                          {/^\s*[A-Da-d][).:]/.test(opt) ? null : <span className="font-bold mr-4">{String.fromCharCode(65 + i)}.</span>}
                           {opt}
                         </button>
                       ))}
@@ -1485,7 +1751,7 @@ export default function GamePage() {
                     <div className="relative z-10">
                       <h3 className="text-2xl text-white font-bold mb-1 font-pixel">STANDARD</h3>
                       <div className="text-4xl font-hud font-bold text-neon-green mb-2 neon-text-green">$100</div>
-                      <div className="text-base font-hud font-bold text-green-300 mb-3">Returns $150</div>
+                      <div className="text-base font-hud font-bold text-green-300 mb-3">Returns $100 <span className="text-green-500/80">(× wheel if spun)</span></div>
                       <p className="text-gray-400 text-sm font-mono">{gameId === 'roulette' ? 'Multiple Choice' : 'Normal Difficulty'}</p>
                       <div className="mt-3 text-[9px] font-pixel text-green-600/60 uppercase tracking-widest">SAFE BET</div>
                     </div>
@@ -1502,13 +1768,15 @@ export default function GamePage() {
                         teamId={teamId || ''} 
                         gameId={gameId}
                         onSpinStart={() => setIsSpinningWheel(true)}
-                        onSpinComplete={(multiplier, newBalance) => {
+                        onSpinError={() => setIsSpinningWheel(false)}
+                        onSpinComplete={(multiplier: number, newBalance: number, spunAt?: number) => {
                           setIsSpinningWheel(false)
                           setIsBetting(true)
                           setWheelMultiplier(multiplier)
                           setWalletBalance(newBalance)
                           setDifficulty('STANDARD')
                           localStorage.setItem(`cs_diff_${gameId}`, 'STANDARD')
+                          setJoinedAt(typeof spunAt === 'number' ? spunAt : Date.now())
                           setTimeout(() => {
                             setPhase('WAITING')
                             setIsBetting(false)
@@ -1529,7 +1797,7 @@ export default function GamePage() {
                       <div className="relative z-10">
                         <h3 className="text-2xl text-white font-bold mb-1 font-pixel">HIGH ROLLER</h3>
                         <div className="text-4xl font-hud font-bold text-neon-red mb-2 neon-text-red">$200</div>
-                        <div className="text-base font-hud font-bold text-red-300 mb-3">Returns $400</div>
+                        <div className="text-base font-hud font-bold text-red-300 mb-3">Returns $600</div>
                         <p className="text-gray-400 text-sm font-mono">{gameId === 'roulette' ? 'Exact Match Input' : 'Extreme Difficulty'}</p>
                         <div className="mt-3 text-[9px] font-pixel text-red-600/60 uppercase tracking-widest">HIGH RISK • HIGH REWARD</div>
                       </div>
@@ -1616,7 +1884,10 @@ export default function GamePage() {
           <div className="flex gap-4">
             <button onClick={() => router.back()} className="flex-1 px-4 py-3 border border-gray-600/50 text-gray-400 hover:bg-gray-800 font-bold rounded-xl uppercase text-sm font-pixel text-[10px] transition-colors">Cancel</button>
             <button onClick={() => {
-              if (gameId === 'final') {
+              setRulesAccepted(true)
+              if (resumePhase) {
+                setPhase(resumePhase)
+              } else if (gameId === 'final') {
                 setDifficulty('STANDARD')
                 localStorage.setItem(`cs_diff_${gameId}`, 'STANDARD')
                 setPhase('WAITING')

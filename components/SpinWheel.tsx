@@ -4,18 +4,19 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { spinWheel } from '@/app/actions'
 
-const MULTIPLIERS = [1, 1.25, 1.5, 1, 1.75, 1, 2, 1] // Added 1x as the 8th to complete 8 slices
+import { WHEEL_MULTIPLIERS as MULTIPLIERS } from '@/lib/wheel'
 const SLICE_ANGLE = 360 / MULTIPLIERS.length
 
 interface SpinWheelProps {
   teamId: string
   gameId: string
   onSpinStart?: () => void
-  onSpinComplete: (multiplier: number, newBalance: number) => void
+  onSpinError?: () => void
+  onSpinComplete: (multiplier: number, newBalance: number, joinedAt?: number) => void
   disabled?: boolean
 }
 
-export default function SpinWheel({ teamId, gameId, onSpinStart, onSpinComplete, disabled = false }: SpinWheelProps) {
+export default function SpinWheel({ teamId, gameId, onSpinStart, onSpinError, onSpinComplete, disabled = false }: SpinWheelProps) {
   const [isSpinning, setIsSpinning] = useState(false)
   const [hasSpun, setHasSpun] = useState(false)
   const [rotation, setRotation] = useState(0)
@@ -27,18 +28,19 @@ export default function SpinWheel({ teamId, gameId, onSpinStart, onSpinComplete,
     setIsSpinning(true)
     onSpinStart?.()
 
-    // Call server to deduct 150 coins and enter game
+    // Call server to deduct the 100-credit Standard stake and enter game
     const res = await spinWheel(teamId, gameId)
     if (res.error) {
       alert(res.error)
       setSpinError(res.error)
       setIsSpinning(false)
+      onSpinError?.()
       return
     }
 
-    // Determine winning slice
-    const winIndex = Math.floor(Math.random() * MULTIPLIERS.length)
-    const winningMultiplier = MULTIPLIERS[winIndex]
+    // Winning slice is decided by the server (and recorded with the bet)
+    const winIndex = typeof res.winIndex === 'number' ? res.winIndex : 0
+    const winningMultiplier = typeof res.multiplier === 'number' ? res.multiplier : MULTIPLIERS[winIndex]
 
     // Calculate rotation (target the center of the slice)
     const baseRotations = 5 * 360
@@ -53,7 +55,7 @@ export default function SpinWheel({ teamId, gameId, onSpinStart, onSpinComplete,
     setTimeout(() => {
       setIsSpinning(false)
       setHasSpun(true)
-      onSpinComplete(winningMultiplier, res.newBalance ?? 0)
+      onSpinComplete(winningMultiplier, res.newBalance ?? 0, res.joinedAt)
     }, 4000)
   }
 
@@ -117,7 +119,7 @@ export default function SpinWheel({ teamId, gameId, onSpinStart, onSpinComplete,
             ) : (
               <>
                 <span className="block font-bold">SPIN</span>
-                <span className="block text-[8px] opacity-70 tracking-tight leading-none mt-1">(50 Coins)</span>
+                <span className="block text-[8px] opacity-70 tracking-tight leading-none mt-1">(100 Credits)</span>
               </>
             )}
           </button>

@@ -24,7 +24,7 @@ export async function POST(req: Request) {
       // @ts-expect-error: Next.js/Supabase inference bug
       .update({ current_locked_table: null } as any)
       .eq('id', teamId)
-      .neq('current_locked_table', 'BANNED')
+      .or('current_locked_table.is.null,current_locked_table.neq.BANNED')
 
     return NextResponse.json({ success: true })
   } catch (err: any) {

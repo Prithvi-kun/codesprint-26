@@ -131,6 +131,47 @@ export default function AdminLoginPage() {
               </div>
             )}
           </form>
+
+          {/* DEALER CODES CHEAT-SHEET */}
+          <div className="mt-6 pt-4 border-t border-red-900/20 text-center">
+            <span className="text-[9px] font-pixel text-gray-500 uppercase tracking-widest block mb-2">
+              Dedicated Dealer Access Roster
+            </span>
+            <div className="flex flex-wrap gap-1.5 justify-center">
+              <button
+                type="button"
+                onClick={() => setCode('PITBOSS-ALPHA')}
+                className="text-[9px] font-mono px-2 py-0.5 rounded bg-red-900/40 text-red-300 border border-red-500/40 hover:bg-red-800/60 transition-colors"
+                title="Master Pit Boss Alpha (Final Round & All Tables)"
+              >
+                👑 PITBOSS-ALPHA
+              </button>
+              {[
+                { name: 'SLOTS', code: 'DEALER-SLOTS' },
+                { name: 'ROULETTE', code: 'DEALER-ROULETTE' },
+                { name: 'BLACKJACK', code: 'DEALER-BLACKJACK' },
+                { name: 'CRAPS', code: 'DEALER-CRAPS' },
+                { name: 'POKER', code: 'DEALER-POKER' },
+                { name: 'BACCARAT', code: 'DEALER-BACCARAT' },
+                { name: 'DICE', code: 'DEALER-DICE' },
+                { name: 'HIGHCARD', code: 'DEALER-HIGHCARD' },
+                { name: 'COINFLIP', code: 'DEALER-COINFLIP' },
+                { name: 'VAULT', code: 'DEALER-VAULT' },
+              ].map(d => (
+                <button
+                  key={d.code}
+                  type="button"
+                  onClick={() => setCode(d.code)}
+                  className="text-[9px] font-mono px-2 py-0.5 rounded bg-black/40 text-gray-400 border border-white/10 hover:border-red-500/50 hover:text-white transition-colors"
+                >
+                  {d.name}
+                </button>
+              ))}
+            </div>
+            <p className="text-[8px] text-gray-600 font-mono mt-2">
+              Click any table to fill code, or enter your assigned dealer passcode.
+            </p>
+          </div>
         </div>
 
         <p className="text-red-900/40 text-[10px] font-pixel tracking-widest">
