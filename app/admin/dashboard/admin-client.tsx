@@ -2080,11 +2080,9 @@ function TheEye() {
 
     const maxBalance = leaderboard[0]?.wallet_balance || 1
     const badgeCount = (t: any) => Object.values((t.stamps as Record<string, boolean>) || {}).filter(Boolean).length
-    // Badge leaderboard: most badges first, credits break ties
-    const byBadges = [...leaderboard].sort((a, b) => badgeCount(b) - badgeCount(a) || (b.wallet_balance || 0) - (a.wallet_balance || 0))
-    // Final scoreboard: score = credits + 250 per badge; equal scores -> more badges first
-    const scoreOf = (t: any) => (t.wallet_balance || 0) + badgeCount(t) * 250
-    const byScore = [...leaderboard].sort((a, b) => scoreOf(b) - scoreOf(a) || badgeCount(b) - badgeCount(a))
+    // 2nd leaderboard: Total = (badges x 250) + credits; equal totals -> more badges first
+    const totalOf = (t: any) => badgeCount(t) * 250 + (t.wallet_balance || 0)
+    const byTotal = [...leaderboard].sort((a, b) => totalOf(b) - totalOf(a) || badgeCount(b) - badgeCount(a))
 
     return (
         <div className="space-y-6">
@@ -2145,77 +2143,43 @@ function TheEye() {
                 </div>
             </div>
 
-            {/* Leaderboard Table */}
-            <div className="bg-[#12121a] rounded-xl border border-white/10 overflow-hidden">
-                <div className="px-4 py-3 bg-black/30 border-b border-white/5 flex items-center gap-2">
-                    <Trophy className="w-4 h-4 text-yellow-400" />
-                    <span className="text-xs font-pixel text-gray-400 tracking-widest">BADGE LEADERBOARD (MOST BADGES FIRST)</span>
-                </div>
-                <div className="max-h-[40vh] overflow-y-auto">
-                    {leaderboard.length === 0 ? (
-                        <p className="text-xs text-gray-500 font-mono py-6 text-center">No teams have logged in or played yet.</p>
-                    ) : (
-                        byBadges.map((team, i) => {
-                            const stamps = (team.stamps as Record<string, boolean>) || {}
-                            const stampCount = Object.values(stamps).filter(Boolean).length
-
-                        return (
-                            <div key={team.id} className={`flex items-center justify-between px-4 py-3 border-b border-white/5
-                ${i < 3 ? 'bg-yellow-900/5' : ''}`}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <span className={`text-sm font-mono w-8 ${i === 0 ? 'text-yellow-400' : i === 1 ? 'text-gray-300' : i === 2 ? 'text-orange-400' : 'text-gray-600'
-                                        }`}>
-                                        {i < 3 ? ['🥇', '🥈', '🥉'][i] : `#${i + 1}`}
-                                    </span>
-                                    <span className="font-mono text-sm text-white">{team.access_code}</span>
-                                </div>
-                                <div className="flex items-center gap-4">
-                                    <div className="flex gap-1">
-                                        {GAME_TYPES.map(g => (
-                                            <span key={g} className={`w-4 h-4 text-[8px] flex items-center justify-center rounded
-                        ${stamps[g] ? 'bg-yellow-500 text-black' : 'bg-white/5 text-gray-700'}`}>
-                                                {stamps[g] ? '★' : '○'}
-                                            </span>
-                                        ))}
-                                    </div>
-                                    <span className="text-xs text-gray-500 font-mono">{stampCount}/10</span>
-                                    <span className="font-mono text-sm font-bold text-yellow-400 w-20 text-right">${team.wallet_balance}</span>
-                                </div>
-                            </div>
-                        )
-                    })
-                )}
-                </div>
-            </div>
-
-            {/* FINAL SCOREBOARD: score = credits + (badges x 250) */}
+            {/* 2nd LEADERBOARD: Total = (badges x 250) + credits */}
             <div className="bg-[#12121a] rounded-xl border border-yellow-500/30 overflow-hidden">
                 <div className="px-4 py-3 bg-black/30 border-b border-white/5 flex items-center justify-between gap-2">
                     <span className="flex items-center gap-2 text-xs font-pixel text-yellow-400 tracking-widest">
-                        <Trophy className="w-4 h-4" /> FINAL SCOREBOARD
+                        <Trophy className="w-4 h-4" /> TOTAL LEADERBOARD
                     </span>
-                    <span className="text-[10px] font-mono text-gray-500">Score = Credits + (Badges × 250)</span>
+                    <span className="text-[10px] font-mono text-gray-500">Total = (Badges × 250) + Credits</span>
                 </div>
                 <div className="max-h-[40vh] overflow-y-auto">
-                    {byScore.length === 0 ? (
+                    {byTotal.length === 0 ? (
                         <p className="text-xs text-gray-500 font-mono py-6 text-center">No teams have logged in or played yet.</p>
                     ) : (
                         <>
-                            <div className="grid grid-cols-[3rem_1fr_5rem_4rem_6rem] gap-2 px-4 py-2 text-[10px] font-mono uppercase tracking-widest text-gray-600 border-b border-white/5">
-                                <span>#</span><span>Team</span><span className="text-right">Credits</span><span className="text-right">Badges</span><span className="text-right">Score</span>
+                            <div className="grid grid-cols-[3rem_1fr_auto_4rem_5rem_6rem] gap-3 px-4 py-2 text-[10px] font-mono uppercase tracking-widest text-gray-600 border-b border-white/5">
+                                <span>#</span><span>Team</span><span>Badges</span><span className="text-right">Count</span><span className="text-right">Credits</span><span className="text-right">Total</span>
                             </div>
-                            {byScore.map((team, i) => (
-                                <div key={team.id} className={`grid grid-cols-[3rem_1fr_5rem_4rem_6rem] items-center gap-2 px-4 py-3 border-b border-white/5 text-sm font-mono ${i < 3 ? 'bg-yellow-900/5' : ''}`}>
-                                    <span className={i === 0 ? 'text-yellow-400' : i === 1 ? 'text-gray-300' : i === 2 ? 'text-orange-400' : 'text-gray-600'}>
-                                        {i < 3 ? ['🥇', '🥈', '🥉'][i] : `#${i + 1}`}
-                                    </span>
-                                    <span className="text-white truncate">{team.access_code}</span>
-                                    <span className="text-right text-gray-300">${team.wallet_balance}</span>
-                                    <span className="text-right text-gray-300">🏅 {badgeCount(team)}</span>
-                                    <span className="text-right font-bold text-green-400">{scoreOf(team)}</span>
-                                </div>
-                            ))}
+                            {byTotal.map((team, i) => {
+                                const stamps = (team.stamps as Record<string, boolean>) || {}
+                                return (
+                                    <div key={team.id} className={`grid grid-cols-[3rem_1fr_auto_4rem_5rem_6rem] items-center gap-3 px-4 py-3 border-b border-white/5 text-sm font-mono ${i < 3 ? 'bg-yellow-900/5' : ''}`}>
+                                        <span className={i === 0 ? 'text-yellow-400' : i === 1 ? 'text-gray-300' : i === 2 ? 'text-orange-400' : 'text-gray-600'}>
+                                            {i < 3 ? ['🥇', '🥈', '🥉'][i] : `#${i + 1}`}
+                                        </span>
+                                        <span className="text-white truncate">{team.access_code}</span>
+                                        <div className="hidden sm:flex gap-1">
+                                            {GAME_TYPES.map(g => (
+                                                <span key={g} className={`w-4 h-4 text-[8px] flex items-center justify-center rounded ${stamps[g] ? 'bg-yellow-500 text-black' : 'bg-white/5 text-gray-700'}`}>
+                                                    {stamps[g] ? '★' : '○'}
+                                                </span>
+                                            ))}
+                                        </div>
+                                        <span className="text-right text-gray-300">🏅 {badgeCount(team)}</span>
+                                        <span className="text-right text-gray-300">${team.wallet_balance}</span>
+                                        <span className="text-right font-bold text-green-400">{totalOf(team)}</span>
+                                    </div>
+                                )
+                            })}
                         </>
                     )}
                 </div>
