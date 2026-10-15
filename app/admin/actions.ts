@@ -823,12 +823,20 @@ export async function getLeaderboard() {
     const { data, error } = await supabaseAdmin
         .from('teams')
         .select('id, access_code, wallet_balance, stamps, avatar_id, is_logged_in')
-        .eq('is_logged_in', true)
         .order('wallet_balance', { ascending: false })
-        .limit(50)
 
     if (error) return { error: error.message }
-    return { leaderboard: data }
+
+    // Show every team that is logged in OR has actually played (earned a badge / changed its
+    // balance). A team that logged out or closed its tab keeps its score on the board; only
+    // never-played logged-out teams are hidden.
+    const START_BALANCE = 1000
+    const leaderboard = ((data || []) as any[]).filter(t => {
+        const badges = Object.values((t.stamps as Record<string, boolean>) || {}).filter(Boolean).length
+        if (/^TEST/i.test(String(t.access_code || ''))) return false
+        return t.is_logged_in || badges > 0 || t.wallet_balance !== START_BALANCE
+    })
+    return { leaderboard }
 }
 
 export async function getAnalytics() {

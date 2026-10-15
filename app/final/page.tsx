@@ -133,11 +133,11 @@ function WinnerCard({ w, revealed }: { w: Winner; revealed: boolean }) {
       )}
 
       <div className="relative z-10 mt-4 w-full max-w-[260px] rounded-xl bg-black/50 border border-white/10 py-3 px-4">
-        <div className="font-mono text-[10px] uppercase tracking-widest text-gray-500">Final Credits</div>
+        <div className="font-mono text-[10px] uppercase tracking-widest text-gray-500">Final Score</div>
         <div className={`font-hud font-bold ${isFirst ? 'text-4xl md:text-5xl' : 'text-3xl md:text-4xl'} text-green-400 tabular-nums`}>
-          $<CountUp to={w.credits} run={revealed} />
+          <CountUp to={w.score} run={revealed} />
         </div>
-        <div className="font-mono text-[11px] text-yellow-300/80 mt-1">🏅 {w.badges} badge{w.badges === 1 ? '' : 's'}</div>
+        <div className="font-mono text-[11px] text-yellow-300/80 mt-1">${w.credits} + 🏅 {w.badges} × 250 = {w.badges * 250}</div>
       </div>
     </motion.div>
   )
@@ -325,20 +325,22 @@ export default function FinalAnnouncementPage() {
             {stage === 'done' && (
               <motion.div initial={{ opacity: 0, scale: 0.6, y: 30 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ type: 'spring', stiffness: 160, damping: 12 }}
                 className="flex w-full flex-col items-center gap-4">
-                {/* FINAL SCOREBOARD - every logged-in team, ranked by credits then badges */}
+                {/* FINAL SCOREBOARD - logged-in teams ranked by score = credits + 250 x badges */}
                 <div className="w-full max-w-2xl rounded-2xl border border-yellow-500/30 bg-black/50 p-4 backdrop-blur">
-                  <div className="mb-3 text-center font-pixel text-[11px] tracking-[0.3em] text-yellow-300">FINAL SCOREBOARD</div>
+                  <div className="mb-1 text-center font-pixel text-[11px] tracking-[0.3em] text-yellow-300">FINAL SCOREBOARD</div>
+                  <div className="mb-3 text-center font-mono text-[10px] text-gray-500">Score = Credits + (Badges × 250)</div>
                   <div className="max-h-[40vh] overflow-y-auto">
-                    <div className="grid grid-cols-[3rem_1fr_5rem_4rem] gap-2 px-2 pb-1 font-mono text-[10px] uppercase tracking-widest text-gray-500">
-                      <span>#</span><span>Team</span><span className="text-right">Credits</span><span className="text-right">Badges</span>
+                    <div className="grid grid-cols-[2.5rem_1fr_4.5rem_3.5rem_5rem] gap-2 px-2 pb-1 font-mono text-[10px] uppercase tracking-widest text-gray-500">
+                      <span>#</span><span>Team</span><span className="text-right">Credits</span><span className="text-right">Badges</span><span className="text-right">Score</span>
                     </div>
                     {scoreboard.map(r => (
                       <div key={`${r.rank}-${r.name}`}
-                        className={`grid grid-cols-[3rem_1fr_5rem_4rem] items-center gap-2 rounded px-2 py-1.5 font-mono text-xs ${r.rank === 1 ? 'bg-yellow-500/15 text-yellow-200' : r.rank === 2 ? 'bg-gray-300/10 text-gray-200' : r.rank === 3 ? 'bg-orange-500/10 text-orange-200' : 'text-gray-400'}`}>
+                        className={`grid grid-cols-[2.5rem_1fr_4.5rem_3.5rem_5rem] items-center gap-2 rounded px-2 py-1.5 font-mono text-xs ${r.rank === 1 ? 'bg-yellow-500/15 text-yellow-200' : r.rank === 2 ? 'bg-gray-300/10 text-gray-200' : r.rank === 3 ? 'bg-orange-500/10 text-orange-200' : 'text-gray-400'}`}>
                         <span className="font-bold">{r.rank <= 3 ? ['🥇', '🥈', '🥉'][r.rank - 1] : `#${r.rank}`}</span>
                         <span className="truncate uppercase">{r.teamNum != null ? `T${r.teamNum} · ` : ''}{r.name}</span>
-                        <span className="text-right font-bold">${r.credits}</span>
+                        <span className="text-right">${r.credits}</span>
                         <span className="text-right">🏅 {r.badges}</span>
+                        <span className="text-right font-bold text-green-400">{r.score}</span>
                       </div>
                     ))}
                   </div>

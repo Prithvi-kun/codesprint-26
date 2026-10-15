@@ -2079,6 +2079,12 @@ function TheEye() {
     }, [refresh])
 
     const maxBalance = leaderboard[0]?.wallet_balance || 1
+    const badgeCount = (t: any) => Object.values((t.stamps as Record<string, boolean>) || {}).filter(Boolean).length
+    // Badge leaderboard: most badges first, credits break ties
+    const byBadges = [...leaderboard].sort((a, b) => badgeCount(b) - badgeCount(a) || (b.wallet_balance || 0) - (a.wallet_balance || 0))
+    // Final scoreboard: score = credits + 250 per badge; equal scores -> more badges first
+    const scoreOf = (t: any) => (t.wallet_balance || 0) + badgeCount(t) * 250
+    const byScore = [...leaderboard].sort((a, b) => scoreOf(b) - scoreOf(a) || badgeCount(b) - badgeCount(a))
 
     return (
         <div className="space-y-6">
@@ -2102,7 +2108,7 @@ function TheEye() {
             <div className="bg-[#12121a] rounded-xl border border-white/10 p-6">
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-xs font-pixel text-gray-400 tracking-widest uppercase flex items-center gap-2">
-                        <BarChart3 className="w-4 h-4" /> Wallet Distribution (Logged In)
+                        <BarChart3 className="w-4 h-4" /> Credits Leaderboard (Most Credits First)
                     </h3>
                     <button onClick={refresh} className="text-gray-600 hover:text-white transition-colors">
                         <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
@@ -2110,7 +2116,7 @@ function TheEye() {
                 </div>
                 <div className="space-y-2 max-h-[40vh] overflow-y-auto">
                     {leaderboard.length === 0 ? (
-                        <p className="text-xs text-gray-500 font-mono py-4 text-center">No active teams currently logged in.</p>
+                        <p className="text-xs text-gray-500 font-mono py-4 text-center">No teams have logged in or played yet.</p>
                     ) : (
                         leaderboard.map((team, i) => {
                             const pct = maxBalance > 0 ? (team.wallet_balance / maxBalance) * 100 : 0
@@ -2143,13 +2149,13 @@ function TheEye() {
             <div className="bg-[#12121a] rounded-xl border border-white/10 overflow-hidden">
                 <div className="px-4 py-3 bg-black/30 border-b border-white/5 flex items-center gap-2">
                     <Trophy className="w-4 h-4 text-yellow-400" />
-                    <span className="text-xs font-pixel text-gray-400 tracking-widest">ACTIVE LEADERBOARD (LOGGED IN ONLY)</span>
+                    <span className="text-xs font-pixel text-gray-400 tracking-widest">BADGE LEADERBOARD (MOST BADGES FIRST)</span>
                 </div>
                 <div className="max-h-[40vh] overflow-y-auto">
                     {leaderboard.length === 0 ? (
-                        <p className="text-xs text-gray-500 font-mono py-6 text-center">No active teams currently logged in.</p>
+                        <p className="text-xs text-gray-500 font-mono py-6 text-center">No teams have logged in or played yet.</p>
                     ) : (
-                        leaderboard.map((team, i) => {
+                        byBadges.map((team, i) => {
                             const stamps = (team.stamps as Record<string, boolean>) || {}
                             const stampCount = Object.values(stamps).filter(Boolean).length
 
@@ -2180,6 +2186,38 @@ function TheEye() {
                         )
                     })
                 )}
+                </div>
+            </div>
+
+            {/* FINAL SCOREBOARD: score = credits + (badges x 250) */}
+            <div className="bg-[#12121a] rounded-xl border border-yellow-500/30 overflow-hidden">
+                <div className="px-4 py-3 bg-black/30 border-b border-white/5 flex items-center justify-between gap-2">
+                    <span className="flex items-center gap-2 text-xs font-pixel text-yellow-400 tracking-widest">
+                        <Trophy className="w-4 h-4" /> FINAL SCOREBOARD
+                    </span>
+                    <span className="text-[10px] font-mono text-gray-500">Score = Credits + (Badges × 250)</span>
+                </div>
+                <div className="max-h-[40vh] overflow-y-auto">
+                    {byScore.length === 0 ? (
+                        <p className="text-xs text-gray-500 font-mono py-6 text-center">No teams have logged in or played yet.</p>
+                    ) : (
+                        <>
+                            <div className="grid grid-cols-[3rem_1fr_5rem_4rem_6rem] gap-2 px-4 py-2 text-[10px] font-mono uppercase tracking-widest text-gray-600 border-b border-white/5">
+                                <span>#</span><span>Team</span><span className="text-right">Credits</span><span className="text-right">Badges</span><span className="text-right">Score</span>
+                            </div>
+                            {byScore.map((team, i) => (
+                                <div key={team.id} className={`grid grid-cols-[3rem_1fr_5rem_4rem_6rem] items-center gap-2 px-4 py-3 border-b border-white/5 text-sm font-mono ${i < 3 ? 'bg-yellow-900/5' : ''}`}>
+                                    <span className={i === 0 ? 'text-yellow-400' : i === 1 ? 'text-gray-300' : i === 2 ? 'text-orange-400' : 'text-gray-600'}>
+                                        {i < 3 ? ['🥇', '🥈', '🥉'][i] : `#${i + 1}`}
+                                    </span>
+                                    <span className="text-white truncate">{team.access_code}</span>
+                                    <span className="text-right text-gray-300">${team.wallet_balance}</span>
+                                    <span className="text-right text-gray-300">🏅 {badgeCount(team)}</span>
+                                    <span className="text-right font-bold text-green-400">{scoreOf(team)}</span>
+                                </div>
+                            ))}
+                        </>
+                    )}
                 </div>
             </div>
         </div>
