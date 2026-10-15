@@ -865,14 +865,10 @@ export default function FinalRoundPage() {
               <span className="text-gray-500 text-xs font-mono ml-2">solution.py</span>
             </div>
             <div className="flex items-center gap-2">
-              <select value={language} onChange={e => setLanguage(e.target.value)}
-                className="bg-[#21262d] border border-[#30363d] text-gray-300 text-xs font-mono rounded px-2 py-1 outline-none">
-                <option value="python">Python</option>
-                <option value="javascript">JavaScript</option>
-                <option value="c">C</option>
-                <option value="cpp">C++</option>
-                <option value="java">Java</option>
-              </select>
+              {/* Python only - no language dropdown */}
+              <span className="bg-[#21262d] border border-[#30363d] text-gray-300 text-xs font-mono rounded px-2 py-1 select-none" title="Python is the only supported language">
+                🐍 Python
+              </span>
             </div>
           </div>
 

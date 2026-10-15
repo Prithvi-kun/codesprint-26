@@ -29,7 +29,9 @@ export default function CodeEditor({ starterCode, onChange, readOnly = false, is
   // FIX: Added <any> so it can hold the Editor object
   const editorRef = useRef<any>(null)
 
-  const currentLang = LANG_OPTIONS.find(l => l.id === language) || LANG_OPTIONS[0]
+  // Only Python is supported (runs in-browser via Pyodide) - the editor is locked to it
+  const currentLang = LANG_OPTIONS[0]
+  void language; void onLanguageChange
 
   function handleEditorDidMount(editor: any) {
     editorRef.current = editor
@@ -76,20 +78,14 @@ export default function CodeEditor({ starterCode, onChange, readOnly = false, is
           )}
         </div>
 
-        {/* Language Selector — Retro dropdown */}
+        {/* Language: Python only (fixed, no dropdown) */}
         <div className="flex items-center gap-2">
-          <select
-            value={language}
-            onChange={(e) => onLanguageChange && onLanguageChange(e.target.value)}
-            className="bg-black/60 border border-white/20 text-yellow-400 text-[11px] font-pixel px-3 py-1.5 rounded cursor-pointer outline-none hover:border-yellow-500/50 transition-colors appearance-none"
-            style={{ backgroundImage: 'none' }}
+          <span
+            className="bg-black/60 border border-white/20 text-yellow-400 text-[11px] font-pixel px-3 py-1.5 rounded select-none"
+            title="Python is the only supported language"
           >
-            {LANG_OPTIONS.map((lang) => (
-              <option key={lang.id} value={lang.id} className="bg-[#1a1a2e] text-yellow-400">
-                {lang.icon} {lang.label}
-              </option>
-            ))}
-          </select>
+            {currentLang.icon} {currentLang.label}
+          </span>
 
           {/* File label plate */}
           <div className="bg-black/30 px-3 py-1 rounded border border-white/10">

@@ -822,7 +822,8 @@ export async function getLeaderboard() {
 
     const { data, error } = await supabaseAdmin
         .from('teams')
-        .select('id, access_code, wallet_balance, stamps, avatar_id')
+        .select('id, access_code, wallet_balance, stamps, avatar_id, is_logged_in')
+        .eq('is_logged_in', true)
         .order('wallet_balance', { ascending: false })
         .limit(50)
 

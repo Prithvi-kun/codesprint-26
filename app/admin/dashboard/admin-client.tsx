@@ -2073,6 +2073,11 @@ function TheEye() {
 
     useEffect(() => { refresh() }, [refresh])
 
+    useEffect(() => {
+        const poll = setInterval(() => { refresh() }, 5000)
+        return () => clearInterval(poll)
+    }, [refresh])
+
     const maxBalance = leaderboard[0]?.wallet_balance || 1
 
     return (
@@ -2097,36 +2102,40 @@ function TheEye() {
             <div className="bg-[#12121a] rounded-xl border border-white/10 p-6">
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-xs font-pixel text-gray-400 tracking-widest uppercase flex items-center gap-2">
-                        <BarChart3 className="w-4 h-4" /> Wallet Distribution
+                        <BarChart3 className="w-4 h-4" /> Wallet Distribution (Logged In)
                     </h3>
                     <button onClick={refresh} className="text-gray-600 hover:text-white transition-colors">
                         <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
                     </button>
                 </div>
                 <div className="space-y-2 max-h-[40vh] overflow-y-auto">
-                    {leaderboard.map((team, i) => {
-                        const pct = maxBalance > 0 ? (team.wallet_balance / maxBalance) * 100 : 0
-                        return (
-                            <div key={team.id} className="flex items-center gap-3">
-                                <span className={`w-6 text-right text-xs font-mono shrink-0
-                  ${i === 0 ? 'text-yellow-400' : i === 1 ? 'text-gray-300' : i === 2 ? 'text-orange-400' : 'text-gray-600'}`}>
-                                    {i < 3 ? ['🥇', '🥈', '🥉'][i] : `#${i + 1}`}
-                                </span>
-                                <span className="w-24 text-xs font-mono text-gray-400 truncate shrink-0">{team.access_code}</span>
-                                <div className="flex-grow bg-black/30 rounded-full h-5 overflow-hidden relative">
-                                    <div
-                                        className={`h-full rounded-full transition-all duration-500 ${i === 0 ? 'bg-gradient-to-r from-yellow-600 to-yellow-400' :
-                                            i === 1 ? 'bg-gradient-to-r from-gray-500 to-gray-300' :
-                                                i === 2 ? 'bg-gradient-to-r from-orange-700 to-orange-400' :
-                                                    'bg-gradient-to-r from-blue-900 to-blue-600'
-                                            }`}
-                                        style={{ width: `${Math.max(pct, 2)}%` }}
-                                    />
+                    {leaderboard.length === 0 ? (
+                        <p className="text-xs text-gray-500 font-mono py-4 text-center">No active teams currently logged in.</p>
+                    ) : (
+                        leaderboard.map((team, i) => {
+                            const pct = maxBalance > 0 ? (team.wallet_balance / maxBalance) * 100 : 0
+                            return (
+                                <div key={team.id} className="flex items-center gap-3">
+                                    <span className={`w-6 text-right text-xs font-mono shrink-0
+                      ${i === 0 ? 'text-yellow-400' : i === 1 ? 'text-gray-300' : i === 2 ? 'text-orange-400' : 'text-gray-600'}`}>
+                                        {i < 3 ? ['🥇', '🥈', '🥉'][i] : `#${i + 1}`}
+                                    </span>
+                                    <span className="w-24 text-xs font-mono text-gray-400 truncate shrink-0">{team.access_code}</span>
+                                    <div className="flex-grow bg-black/30 rounded-full h-5 overflow-hidden relative">
+                                        <div
+                                            className={`h-full rounded-full transition-all duration-500 ${i === 0 ? 'bg-gradient-to-r from-yellow-600 to-yellow-400' :
+                                                i === 1 ? 'bg-gradient-to-r from-gray-500 to-gray-300' :
+                                                    i === 2 ? 'bg-gradient-to-r from-orange-700 to-orange-400' :
+                                                        'bg-gradient-to-r from-blue-900 to-blue-600'
+                                                }`}
+                                            style={{ width: `${Math.max(pct, 2)}%` }}
+                                        />
+                                    </div>
+                                    <span className="w-16 text-right text-xs font-mono text-white shrink-0 font-bold">${team.wallet_balance}</span>
                                 </div>
-                                <span className="w-16 text-right text-xs font-mono text-white shrink-0 font-bold">${team.wallet_balance}</span>
-                            </div>
-                        )
-                    })}
+                            )
+                        })
+                    )}
                 </div>
             </div>
 
@@ -2134,12 +2143,15 @@ function TheEye() {
             <div className="bg-[#12121a] rounded-xl border border-white/10 overflow-hidden">
                 <div className="px-4 py-3 bg-black/30 border-b border-white/5 flex items-center gap-2">
                     <Trophy className="w-4 h-4 text-yellow-400" />
-                    <span className="text-xs font-pixel text-gray-400 tracking-widest">FULL LEADERBOARD</span>
+                    <span className="text-xs font-pixel text-gray-400 tracking-widest">ACTIVE LEADERBOARD (LOGGED IN ONLY)</span>
                 </div>
                 <div className="max-h-[40vh] overflow-y-auto">
-                    {leaderboard.map((team, i) => {
-                        const stamps = (team.stamps as Record<string, boolean>) || {}
-                        const stampCount = Object.values(stamps).filter(Boolean).length
+                    {leaderboard.length === 0 ? (
+                        <p className="text-xs text-gray-500 font-mono py-6 text-center">No active teams currently logged in.</p>
+                    ) : (
+                        leaderboard.map((team, i) => {
+                            const stamps = (team.stamps as Record<string, boolean>) || {}
+                            const stampCount = Object.values(stamps).filter(Boolean).length
 
                         return (
                             <div key={team.id} className={`flex items-center justify-between px-4 py-3 border-b border-white/5
@@ -2166,7 +2178,8 @@ function TheEye() {
                                 </div>
                             </div>
                         )
-                    })}
+                    })
+                )}
                 </div>
             </div>
         </div>
