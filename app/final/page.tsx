@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { getAvatarUrl } from '@/lib/avatars'
-import { getTopThree, type Winner } from './actions'
+import { getTopThree, type Winner, type ScoreRow } from './actions'
 
 const LAUNCH_URL = 'https://andropedia-rmp.vercel.app/'
 
@@ -146,6 +146,7 @@ function WinnerCard({ w, revealed }: { w: Winner; revealed: boolean }) {
 export default function FinalAnnouncementPage() {
   const [stage, setStage] = useState<Stage>('idle')
   const [winners, setWinners] = useState<Winner[]>([])
+  const [scoreboard, setScoreboard] = useState<ScoreRow[]>([])
   const [error, setError] = useState<string | null>(null)
   const [count, setCount] = useState(3)
   const [flash, setFlash] = useState(0)
@@ -166,10 +167,11 @@ export default function FinalAnnouncementPage() {
     const res = await getTopThree()
     if ('error' in res) { setError(res.error); setStage('idle'); busy.current = false; return }
     if (res.winners.length < 3) {
-      setError('Fewer than three playing teams found in the scorecard.')
+      setError(`Only ${res.winners.length} team${res.winners.length === 1 ? ' is' : 's are'} logged in right now - at least 3 logged-in teams are needed to announce winners.`)
       setStage('idle'); busy.current = false; return
     }
     setWinners(res.winners)
+    setScoreboard(res.scoreboard)
     setCount(3)
     setStage('countdown')
     busy.current = false
@@ -204,7 +206,7 @@ export default function FinalAnnouncementPage() {
     return () => window.removeEventListener('keydown', onKey)
   }, [next])
 
-  const reset = () => { setStage('idle'); setWinners([]); setCount(3) }
+  const reset = () => { setStage('idle'); setWinners([]); setScoreboard([]); setCount(3) }
 
   const nextLabel =
     stage === 'third' ? 'REVEAL 2ND PLACE →' :
@@ -323,6 +325,24 @@ export default function FinalAnnouncementPage() {
             {stage === 'done' && (
               <motion.div initial={{ opacity: 0, scale: 0.6, y: 30 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ type: 'spring', stiffness: 160, damping: 12 }}
                 className="flex w-full flex-col items-center gap-4">
+                {/* FINAL SCOREBOARD - every logged-in team, ranked by credits then badges */}
+                <div className="w-full max-w-2xl rounded-2xl border border-yellow-500/30 bg-black/50 p-4 backdrop-blur">
+                  <div className="mb-3 text-center font-pixel text-[11px] tracking-[0.3em] text-yellow-300">FINAL SCOREBOARD</div>
+                  <div className="max-h-[40vh] overflow-y-auto">
+                    <div className="grid grid-cols-[3rem_1fr_5rem_4rem] gap-2 px-2 pb-1 font-mono text-[10px] uppercase tracking-widest text-gray-500">
+                      <span>#</span><span>Team</span><span className="text-right">Credits</span><span className="text-right">Badges</span>
+                    </div>
+                    {scoreboard.map(r => (
+                      <div key={`${r.rank}-${r.name}`}
+                        className={`grid grid-cols-[3rem_1fr_5rem_4rem] items-center gap-2 rounded px-2 py-1.5 font-mono text-xs ${r.rank === 1 ? 'bg-yellow-500/15 text-yellow-200' : r.rank === 2 ? 'bg-gray-300/10 text-gray-200' : r.rank === 3 ? 'bg-orange-500/10 text-orange-200' : 'text-gray-400'}`}>
+                        <span className="font-bold">{r.rank <= 3 ? ['🥇', '🥈', '🥉'][r.rank - 1] : `#${r.rank}`}</span>
+                        <span className="truncate uppercase">{r.teamNum != null ? `T${r.teamNum} · ` : ''}{r.name}</span>
+                        <span className="text-right font-bold">${r.credits}</span>
+                        <span className="text-right">🏅 {r.badges}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
                 <div className="font-mono text-xs md:text-sm uppercase tracking-[0.35em] text-gray-400">And now, the moment you&apos;ve been waiting for…</div>
                 <a
                   id="launch-btn"
