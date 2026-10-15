@@ -78,10 +78,6 @@ export default function FinalRoundPage() {
   const [hasError, setHasError]     = useState(false)
   const [showBust, setShowBust]     = useState(false)
 
-  // ── Spin Wheel (now embedded in betting phase) ───────────────────────────────
-  const [spinState, setSpinState]   = useState<'IDLE' | 'SPINNING' | 'DONE'>('IDLE')
-  const [spinRotation, setSpinRotation] = useState(0)
-  const [wheelMultiplier, setWheelMultiplier] = useState(0)
   const [isBetting, setIsBetting]   = useState(false)
   const [betAmount, setBetAmount]   = useState<number | ''>('')
 
@@ -94,10 +90,6 @@ export default function FinalRoundPage() {
   const [activeTab, setActiveTab]   = useState<Tab>('description')
   const [broadcast, setBroadcast]   = useState<string | null>(null)
   const [isWarning, setIsWarning]   = useState(false)
-
-  // ── SPIN WHEEL CONFIG ────────────────────────────────────────────────────────
-  const MULTIPLIERS = [1, 1.25, 1.5, 1, 1.75, 1, 2, 1]
-  const SLICE_ANGLE = 360 / MULTIPLIERS.length
 
   // ─────────────────────────────────────────────────────────────────────────────
   // INIT: Load team data and check eligibility
@@ -322,33 +314,12 @@ export default function FinalRoundPage() {
     if (!showSuccess || rewardClaimed || !teamId) return
     setRewardClaimed(true)
     const baseWager = typeof betAmount === 'number' && betAmount >= 500 ? betAmount : 500
-    const mult = wheelMultiplier > 0 ? wheelMultiplier : 1
-    const payout = Math.floor(baseWager * 2 * mult)
+    const payout = Math.floor(baseWager * 2)
     import('@/app/actions').then(({ claimAutomatedReward }) =>
       claimAutomatedReward(teamId, payout, 'final')
         .then(res => { if (res.success && res.newBalance !== undefined) setWallet(res.newBalance) })
     )
-  }, [showSuccess, rewardClaimed, teamId, wheelMultiplier, betAmount])
-
-  // ─────────────────────────────────────────────────────────────────────────────
-  // SPIN WHEEL HANDLER
-  // ─────────────────────────────────────────────────────────────────────────────
-  const handleSpin = async () => {
-    if (spinState !== 'IDLE' || !teamId) return
-    setSpinState('SPINNING')
-    const { spinWheel } = await import('@/app/actions')
-    const res = await spinWheel(teamId, 'final')
-    if (res.error) { alert(res.error); setSpinState('IDLE'); return }
-    const winIdx = Math.floor(Math.random() * MULTIPLIERS.length)
-    const mult   = MULTIPLIERS[winIdx]
-    const finalRot = spinRotation + 5 * 360 + (360 - (winIdx * SLICE_ANGLE + SLICE_ANGLE / 2)) + (Math.random() - 0.5) * SLICE_ANGLE * 0.8
-    setSpinRotation(finalRot)
-    setTimeout(() => {
-      setSpinState('DONE')
-      setWheelMultiplier(mult)
-      if (res.newBalance !== undefined) setWallet(res.newBalance)
-    }, 4000)
-  }
+  }, [showSuccess, rewardClaimed, teamId, betAmount])
 
   // ─────────────────────────────────────────────────────────────────────────────
   // BET HANDLER
@@ -547,50 +518,11 @@ export default function FinalRoundPage() {
               </button>
             </div>
 
-            {/* RIGHT: Spin Wheel */}
-            <div className="flex flex-col items-center justify-start bg-[#0d1117] border border-[#30363d] rounded-xl p-6 gap-4">
-              <div className="text-center">
-                <h3 className="text-yellow-400 font-mono font-bold text-sm tracking-widest">🎡 BONUS WHEEL</h3>
-                <p className="text-gray-500 text-xs font-mono mt-1">Spin for a victory multiplier! <span className="text-green-400 font-bold">FREE FINALIST BONUS</span></p>
-              </div>
-
-              {/* Pointer */}
-              <div className="relative z-10 w-0 h-0 border-l-[10px] border-r-[10px] border-t-[20px] border-l-transparent border-r-transparent border-t-red-500 mb-[-10px]" />
-
-              {/* Wheel */}
-              <div className="relative w-44 h-44 rounded-full border-4 border-yellow-700/60 overflow-hidden shadow-[0_0_30px_rgba(234,179,8,0.15)] bg-black">
-                <motion.div animate={{ rotate: spinRotation }} transition={{ duration: 4, ease: [0.2, 0.8, 0.2, 1] }}
-                  className="w-full h-full rounded-full relative" style={{ transformOrigin: 'center center' }}>
-                  {MULTIPLIERS.map((mult, idx) => {
-                    const angle = idx * SLICE_ANGLE
-                    const color = idx % 2 === 0 ? '#111111' : '#7f1d1d'
-                    return (
-                      <div key={idx} className="absolute top-0 left-0 w-full h-full flex items-start justify-center"
-                        style={{ transform: `rotate(${angle}deg)`, transformOrigin: '50% 50%' }}>
-                        <svg viewBox="0 0 100 100" className="absolute top-0 left-0 w-full h-full">
-                          <path d="M 50 50 L 50 0 A 50 50 0 0 1 85.3553 14.6447 Z" fill={color} />
-                        </svg>
-                        <div className="absolute inset-0 flex items-start justify-center pt-2" style={{ transform: 'rotate(22.5deg)' }}>
-                          <span className="font-bold text-xs text-white">{mult}x</span>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </motion.div>
-              </div>
-
-              {spinState === 'DONE' ? (
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-green-400 font-mono">{wheelMultiplier}x MULTIPLIER!</div>
-                  <p className="text-gray-500 text-xs font-mono mt-1">Applied to your final victory payout.</p>
-                </div>
-              ) : (
-                <button onClick={handleSpin} disabled={spinState === 'SPINNING' || isBetting}
-                  className="w-full max-w-[200px] py-2 bg-yellow-600 hover:bg-yellow-500 disabled:bg-gray-700 disabled:text-gray-500 text-black font-bold font-mono text-sm rounded-xl transition-all hover:-translate-y-0.5 shadow-[0_0_15px_rgba(234,179,8,0.2)]">
-                  {spinState === 'SPINNING' ? 'SPINNING...' : '🎡 SPIN BONUS WHEEL'}
-                </button>
-              )}
-              <p className="text-gray-600 text-[10px] font-mono text-center">Included for all finalists.</p>
+            {/* RIGHT: Payout info (bonus wheel removed) */}
+            <div className="flex flex-col items-center justify-center bg-[#0d1117] border border-[#30363d] rounded-xl p-6 gap-3 text-center">
+              <h3 className="text-yellow-400 font-mono font-bold text-sm tracking-widest">WIN = WAGER DOUBLED</h3>
+              <div className="text-5xl font-bold text-green-400 font-mono">2x</div>
+              <p className="text-gray-400 text-xs font-mono">Win and your wager pays back <span className="text-green-400 font-bold">${(Number(betAmount) || 0) * 2}</span>.</p>
             </div>
           </div>
         </motion.div>
@@ -638,7 +570,6 @@ export default function FinalRoundPage() {
 
           <div className="flex items-center gap-4 text-xs text-gray-500 font-mono justify-center">
             <span>Balance: <strong className="text-yellow-400">${wallet}</strong></span>
-            {wheelMultiplier > 0 && <span>Wheel: <strong className="text-green-400">{wheelMultiplier}x</strong></span>}
           </div>
         </motion.div>
       </div>
@@ -685,10 +616,7 @@ export default function FinalRoundPage() {
                 <div className="bg-[#0d1117] p-6 rounded-2xl border border-yellow-700/40">
                   <p className="text-gray-400 font-mono text-sm mb-2">Payout</p>
                   <p className="text-4xl font-bold text-green-400 font-mono">
-                    ${Math.floor((typeof betAmount === 'number' && betAmount >= 500 ? betAmount : 500) * 2 * (wheelMultiplier > 0 ? wheelMultiplier : 1))}
-                    {wheelMultiplier > 0 && wheelMultiplier !== 1 && (
-                      <span className="text-yellow-400 text-lg ml-2">({wheelMultiplier}x WHEEL!)</span>
-                    )}
+                    ${Math.floor((typeof betAmount === 'number' && betAmount >= 500 ? betAmount : 500) * 2)}
                   </p>
                 </div>
                 <p className="text-gray-500 text-sm font-mono">Returning to map in 12 seconds...</p>
@@ -724,11 +652,6 @@ export default function FinalRoundPage() {
           {wallet !== null && (
             <div className="flex items-center gap-1.5 text-yellow-400">
               <span>🪙</span><span className="font-bold">${wallet}</span>
-            </div>
-          )}
-          {wheelMultiplier > 0 && (
-            <div className="px-2 py-0.5 bg-green-900/40 border border-green-700/50 rounded text-green-400 text-[10px]">
-              WHEEL {wheelMultiplier}x
             </div>
           )}
           <div className={`px-2 py-0.5 rounded font-bold transition-all ${isTimerUrgent ? 'bg-red-900/60 text-red-400 animate-pulse' : 'bg-[#21262d] text-gray-300'}`}>

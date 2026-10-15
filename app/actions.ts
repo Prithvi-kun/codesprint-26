@@ -724,8 +724,17 @@ export async function claimAutomatedReward(teamId: string, payout: number, gameI
     }
 
     // Payout is decided HERE from the recorded bet (base prize x wheel multiplier) — never from the client
-    const computed = await computePayout(teamId, gameId.toLowerCase())
-    const finalPayout = computed ? computed.payout : Math.max(0, Math.min(Number(payout) || 0, PRIZE_HIGH))
+    let computed: { payout: number; multiplier?: number } | null = null
+    let finalPayout: number
+    if (gameId.toLowerCase() === 'final') {
+      // Final Showdown: win pays DOUBLE the recorded wager (no bonus wheel)
+      const { data: betRow } = await supabaseAdmin.from('teams').select('round_2_bet').eq('id', teamId).single()
+      const wager = Number((betRow as any)?.round_2_bet) || 0
+      finalPayout = wager * 2
+    } else {
+      computed = await computePayout(teamId, gameId.toLowerCase())
+      finalPayout = computed ? computed.payout : Math.max(0, Math.min(Number(payout) || 0, PRIZE_HIGH))
+    }
 
     const newBalance = teamData.wallet_balance + finalPayout
     const stamps = (teamData.stamps as Record<string, boolean>) || {}
