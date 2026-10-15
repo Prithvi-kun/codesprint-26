@@ -165,7 +165,8 @@ function ThePit({ adminRole = 'pitboss', adminLabel = 'Pit Boss Alpha' }: { admi
 
     // Waiting-room readiness per table (at least one team seated + everyone seated has bet)
     const [readiness, setReadiness] = useState<Record<string, TableReadiness>>({})
-    const canStart = (g: string) => g === 'final' || !!readiness[g]?.ready
+    // The Pit Boss may start any table at any time (even with 0 teams) - the waiting-room panel is informational only
+    const canStart = (_g: string) => true
 
     const refresh = useCallback(async () => {
         setLoading(true)

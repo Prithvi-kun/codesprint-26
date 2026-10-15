@@ -222,12 +222,7 @@ export async function startTableRound(gameId: string, durationMins: number = 16)
 
     const normGame = gameId.toLowerCase()
 
-    // A table may only start once EVERY seat is filled and EVERY team has placed its bet.
-    // (The final round has its own betting flow and is exempt.)
-    if (normGame !== 'final') {
-        const r = await tableReadiness(normGame)
-        if (!r.ready) return { error: r.reason }
-    }
+    // No readiness gate: the Pit Boss can start any table at any time, even with 0 teams seated.
 
     const now = new Date().toISOString()
     const pin = Math.floor(1000 + Math.random() * 9000).toString()
