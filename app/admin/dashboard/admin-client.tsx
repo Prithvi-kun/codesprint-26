@@ -214,8 +214,8 @@ function ThePit({ adminRole = 'pitboss', adminLabel = 'Pit Boss Alpha' }: { admi
         setCurrentRoundState(round)
     }
 
-    // Total countdown: tables = 10 min play + 1 min passcode entry; final = 60 min
-    const roundMins = (key: string) => (key === 'final' ? 60 : 11)
+    // Total countdown: tables = 10 min play + 1 min passcode entry; final = 45 min
+    const roundMins = (key: string) => (key === 'final' ? 45 : 11)
 
     const handleStartRound = async () => {
         const startTime = tableTimers[currentRound]
