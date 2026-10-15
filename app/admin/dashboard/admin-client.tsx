@@ -45,12 +45,13 @@ export default function AdminDashboard({ adminRole = 'pitboss', adminLabel = 'Pi
     const isDealer = adminRole !== 'pitboss' && GAME_TYPES.includes(adminRole as any)
     const [activeTab, setActiveTab] = useState<Tab>('pit')
 
-    const tabs: { id: Tab; label: string; icon: React.ReactNode; color: string; badge?: string }[] = isDealer ? [
-        { id: 'pit', label: `${adminRole.toUpperCase()} STATION`, icon: <Zap className="w-4 h-4" />, color: 'text-yellow-400 border-yellow-500' },
-        { id: 'deck', label: '🃏 TABLE QUESTIONS', icon: <Flame className="w-4 h-4" />, color: 'text-blue-400 border-blue-500' },
-    ] : [
-        { id: 'pit', label: 'THE PIT (MASTER OPS)', icon: <Zap className="w-4 h-4" />, color: 'text-red-400 border-red-500' },
-        { id: 'vault', label: 'THE VAULT', icon: <DollarSign className="w-4 h-4" />, color: 'text-yellow-400 border-yellow-500' },
+    // Every admin login (Pit Boss AND every table dealer) gets the full toolset.
+    // Dealers only differ in that their station tab opens on their own table.
+    const tabs: { id: Tab; label: string; icon: React.ReactNode; color: string; badge?: string }[] = [
+        isDealer
+            ? { id: 'pit', label: `${adminRole.toUpperCase()} STATION`, icon: <Zap className="w-4 h-4" />, color: 'text-yellow-400 border-yellow-500' }
+            : { id: 'pit', label: 'THE PIT (MASTER OPS)', icon: <Zap className="w-4 h-4" />, color: 'text-red-400 border-red-500' },
+        { id: 'vault', label: 'THE VAULT (CREDITS & BADGES)', icon: <DollarSign className="w-4 h-4" />, color: 'text-yellow-400 border-yellow-500' },
         { id: 'deck', label: '🃏 QUESTION BANK & BULK PUSH', icon: <Flame className="w-4 h-4" />, color: 'text-blue-400 border-blue-500', badge: '201 Qs' },
         { id: 'eye', label: 'THE EYE', icon: <Eye className="w-4 h-4" />, color: 'text-purple-400 border-purple-500' },
     ]
@@ -71,13 +72,14 @@ export default function AdminDashboard({ adminRole = 'pitboss', adminLabel = 'Pi
                             </span>
                         </div>
                         <p className="text-[10px] text-gray-500 font-mono hidden sm:block">
-                            {isDealer ? `Assigned Table Station: ${adminRole.toUpperCase()} • Isolated Table Controls` : 'CodeSprint 2026 Master Casino Engine & Pit Boss Headquarters'}
+                            {isDealer ? `Assigned Table Station: ${adminRole.toUpperCase()} • Full admin tools enabled` : 'CodeSprint 2026 Master Casino Engine & Pit Boss Headquarters'}
                         </p>
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
-                    {/* Bulk push button for master pitboss */}
-                    {!isDealer && (
+                    {/* Bulk push button (available to every admin login) */}
+                    {(
+
                         <button
                             onClick={() => setActiveTab('deck')}
                             className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-pixel font-bold transition-all cursor-pointer ${
@@ -374,7 +376,7 @@ function ThePit({ adminRole = 'pitboss', adminLabel = 'Pit Boss Alpha' }: { admi
                         </h3>
                         {isDealer && (
                             <span className="text-[9px] font-mono bg-yellow-950/60 border border-yellow-500/30 text-yellow-300 px-2 py-0.5 rounded">
-                                LOCKED TO YOUR TABLE
+                                YOUR STATION: {adminRole.toUpperCase()}
                             </span>
                         )}
                     </div>
@@ -382,20 +384,19 @@ function ThePit({ adminRole = 'pitboss', adminLabel = 'Pit Boss Alpha' }: { admi
                     {/* Current Round Selector */}
                     <div className="mb-4">
                         <label className="text-[10px] text-gray-500 uppercase tracking-widest mb-2 block">
-                            {isDealer ? 'Active Assigned Station' : 'Select Active Round Table'}
+                            {isDealer ? 'Active Station (switch to control any table)' : 'Select Active Round Table'}
                         </label>
                         <div className="relative">
                             <select
                                 value={currentRound}
-                                disabled={isDealer}
                                 onChange={(e) => handleRoundChange(e.target.value)}
-                                className={`w-full bg-black/40 border border-white/10 rounded-lg p-3 text-sm font-mono text-white appearance-none ${isDealer ? 'opacity-85 cursor-not-allowed border-yellow-500/30' : 'cursor-pointer focus:border-red-500 focus:outline-none'}`}
+                                className={`w-full bg-black/40 border border-white/10 rounded-lg p-3 text-sm font-mono text-white appearance-none cursor-pointer focus:outline-none ${isDealer ? 'border-yellow-500/30 focus:border-yellow-500' : 'focus:border-red-500'}`}
                             >
                                 {GAME_TYPES.map(g => (
                                     <option key={g} value={g}>{GAME_LABELS[g]}</option>
                                 ))}
                             </select>
-                            {!isDealer && <ChevronDown className="w-4 h-4 text-gray-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />}
+                            <ChevronDown className="w-4 h-4 text-gray-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                         </div>
                     </div>
 
@@ -691,10 +692,15 @@ function TheVault() {
         t.id?.toLowerCase().includes(searchQuery.toLowerCase())
     )
 
-    const handleAdjust = async () => {
+    const handleAdjust = async (direction: 1 | -1 = 1) => {
         if (!selectedTeam || !adjustAmount) return
+        const value = Math.abs(parseFloat(adjustAmount))
+        if (!isFinite(value) || value === 0) return alert('Enter a valid amount.')
+        const signed = direction * value
+        if (!window.confirm(`${direction === 1 ? 'ADD' : 'DEDUCT'} $${value} ${direction === 1 ? 'to' : 'from'} ${selectedTeam.access_code}?`)) return
         setActionLoading('adjust')
-        await adjustWallet(selectedTeam.id, parseFloat(adjustAmount), adjustReason || 'Admin Adjustment')
+        const res = await adjustWallet(selectedTeam.id, signed, adjustReason || (direction === 1 ? 'Admin Credit' : 'Admin Deduction'))
+        if (res && 'error' in res && res.error) alert(`Error: ${res.error}`)
         setAdjustAmount('')
         setAdjustReason('')
         await refresh()
@@ -927,7 +933,7 @@ function TheVault() {
                                         type="number"
                                         value={adjustAmount}
                                         onChange={(e) => setAdjustAmount(e.target.value)}
-                                        placeholder="+100 or -50"
+                                        placeholder="Amount (e.g. 100)"
                                         className="flex-grow bg-black/40 border border-white/10 rounded-lg p-2 text-sm font-mono text-white
                       placeholder:text-gray-600 focus:border-yellow-500 focus:outline-none"
                                     />
@@ -940,14 +946,24 @@ function TheVault() {
                                     className="w-full bg-black/40 border border-white/10 rounded-lg p-2 text-sm font-mono text-white
                     placeholder:text-gray-600 focus:border-yellow-500/50 focus:outline-none"
                                 />
-                                <button
-                                    onClick={handleAdjust}
-                                    disabled={actionLoading === 'adjust' || !adjustAmount}
-                                    className="w-full py-2 bg-yellow-600 hover:bg-yellow-500 text-black font-pixel text-xs rounded-lg
+                                <div className="grid grid-cols-2 gap-2">
+                                    <button
+                                        onClick={() => handleAdjust(1)}
+                                        disabled={actionLoading === 'adjust' || !adjustAmount}
+                                        className="py-2 bg-green-600 hover:bg-green-500 text-black font-pixel text-xs rounded-lg
                     transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                                >
-                                    APPLY
-                                </button>
+                                    >
+                                        ➕ ADD CREDIT
+                                    </button>
+                                    <button
+                                        onClick={() => handleAdjust(-1)}
+                                        disabled={actionLoading === 'adjust' || !adjustAmount}
+                                        className="py-2 bg-red-700 hover:bg-red-600 text-white font-pixel text-xs rounded-lg
+                    transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                                    >
+                                        ➖ DEDUCT CREDIT
+                                    </button>
+                                </div>
                             </div>
 
                             {/* Badge Inspector */}
