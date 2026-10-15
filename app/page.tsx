@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 'use client'
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useFormState } from "react-dom"
 import { loginAction } from "./actions"
 import { Gamepad2, Shield, Sparkles } from "lucide-react"
@@ -14,6 +14,18 @@ const initialState = {
 export default function LoginPage() {
   const [state, formAction] = useFormState(loginAction, initialState)
   const [accessCode, setAccessCode] = useState("")
+
+  // A fresh login always starts in THE GRAND LOBBY - forget any saved wing/position
+  const resetMapPosition = () => {
+    try {
+      ;['cs_map_scene', 'cs_map_pos', 'cs_map_dir'].forEach(k => localStorage.removeItem(k))
+    } catch {}
+  }
+  useEffect(() => { resetMapPosition() }, [])
+  const submitLogin = (formData: FormData) => {
+    resetMapPosition()
+    formAction(formData)
+  }
 
   const handleSelectSyndicate = (code: string) => {
     setAccessCode(code)
@@ -64,7 +76,7 @@ export default function LoginPage() {
         <div className="absolute -bottom-2 -left-2 w-4 h-4 bg-[#161224] border-b-4 border-l-4 border-retro-gold" />
         <div className="absolute -bottom-2 -right-2 w-4 h-4 bg-[#161224] border-b-4 border-r-4 border-retro-gold" />
 
-        <form action={formAction} className="flex flex-col gap-6">
+        <form action={submitLogin} className="flex flex-col gap-6">
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <label htmlFor="access_code" className="text-xs uppercase tracking-widest text-retro-gold font-pixel">
