@@ -15,8 +15,9 @@ import {
     uploadQuestionsForTable, deleteQuestion, deleteAllQuestionsForTable,
     getLeaderboard, getAnalytics, broadcastMessage, forceWin, createTeam,
     startTableRound, setTableStatusState, awardWin, toggleRound2Portal,
-    resetAllTeamLogins
+    resetAllTeamLogins, getTablesReadiness
 } from '../actions'
+import type { TableReadiness } from '../actions'
 
 type Tab = 'pit' | 'vault' | 'deck' | 'eye'
 
@@ -162,9 +163,14 @@ function ThePit({ adminRole = 'pitboss', adminLabel = 'Pit Boss Alpha' }: { admi
         return () => clearInterval(interval)
     }, [])
 
+    // Waiting-room readiness per table (at least one team seated + everyone seated has bet)
+    const [readiness, setReadiness] = useState<Record<string, TableReadiness>>({})
+    const canStart = (g: string) => g === 'final' || !!readiness[g]?.ready
+
     const refresh = useCallback(async () => {
         setLoading(true)
-        const data = await getEventState()
+        const [data, rd] = await Promise.all([getEventState(), getTablesReadiness()])
+        if (rd && 'readiness' in rd) setReadiness(rd.readiness)
         if (data && !data.error) {
             setIsPaused(data.control?.is_paused || false)
             setIsRound2Open(data.control?.round_2_open || false)
@@ -244,7 +250,7 @@ function ThePit({ adminRole = 'pitboss', adminLabel = 'Pit Boss Alpha' }: { admi
             if (res.error) {
                 alert(`Error: ${res.error}`)
             } else {
-                alert(`✅ 15-Minute timer ${isLive ? 'RESTARTED' : 'STARTED'} for ${targetTable.toUpperCase()}!\n\nNew Table PIN: ${res.pin}`)
+                alert(`✅ ${roundMins(targetTable)}-Minute timer ${isLive ? 'RESTARTED' : 'STARTED'} for ${targetTable.toUpperCase()}!\n\nNew Table PIN: ${res.pin}`)
             }
         } catch (err: any) {
             alert(`Unhandled Server Error: ${err.message}`)
@@ -255,13 +261,13 @@ function ThePit({ adminRole = 'pitboss', adminLabel = 'Pit Boss Alpha' }: { admi
     }
 
     const handleAwardWin = async (teamId: string, teamName: string, gameId: string) => {
-        const confirmMsg = `Are you sure you want to PASS [${teamName}] for ${gameId.toUpperCase()}?\n\nThis will trigger the SUCCESS screen on their laptop and unlock them from the table.\n\n⚠️ DON'T FORGET to award their credits manually via the VAULT!`
+        const confirmMsg = `Have you VERIFIED [${teamName}]'s solution for ${gameId.toUpperCase()}?\n\nPASS will stamp their badge, credit the prize automatically and show the SUCCESS screen on their laptop.`
         if (!window.confirm(confirmMsg)) return;
 
         setActionLoading(`award-${teamId}`)
         const res = await awardWin(teamId, gameId)
         if (res.error) alert(`Error: ${res.error}`)
-        else alert(`✅ SUCCESS: ${teamName} has been unlocked from the table!`)
+        else alert(`✅ SUCCESS: ${teamName} passed! Badge stamped and $${res.payout ?? 0} credited.`)
         await refresh()
         setActionLoading(null)
     }
@@ -311,11 +317,12 @@ function ThePit({ adminRole = 'pitboss', adminLabel = 'Pit Boss Alpha' }: { admi
                         </div>
                         <button
                             onClick={handleStartRound}
-                            disabled={actionLoading === 'start-round'}
+                            disabled={actionLoading === 'start-round' || !canStart(currentRound)}
+                            title={canStart(currentRound) ? undefined : (readiness[currentRound]?.reason || 'Checking the waiting room…')}
                             className="px-5 py-3 rounded-xl bg-green-600 hover:bg-green-500 text-white font-pixel text-sm flex items-center gap-2 shadow-[0_0_20px_rgba(34,197,94,0.4)] transition-all hover:scale-105 disabled:opacity-50"
                         >
                             <Play className="w-4 h-4" />
-                            {tableTimers[currentRound] && tableTimers[`${currentRound}_status`] === 'ACTIVE' ? '🔄 RESTART 15M TIMER' : '▶ START 15M ROUND'}
+                            {tableTimers[currentRound] && tableTimers[`${currentRound}_status`] === 'ACTIVE' ? `🔄 RESTART ${roundMins(currentRound)}M TIMER` : `▶ START ${roundMins(currentRound)}M ROUND`}
                         </button>
                     </div>
                 </div>
@@ -403,7 +410,7 @@ function ThePit({ adminRole = 'pitboss', adminLabel = 'Pit Boss Alpha' }: { admi
                                     <div className="flex flex-col h-full">
                                         <button
                                             onClick={handleStartRound}
-                                            disabled={actionLoading === 'start-round'}
+                                            disabled={actionLoading === 'start-round' || !canStart(currentRound)}
                                             className={`w-full flex-1 flex flex-col items-center justify-center gap-1.5 p-4 border-2 rounded-xl font-pixel text-lg transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed
                                                 ${isActive 
                                                     ? 'bg-green-900/40 hover:bg-green-900/60 border-green-500 text-green-100 shadow-[0_0_20px_rgba(34,197,94,0.3)]' 
@@ -439,7 +446,7 @@ function ThePit({ adminRole = 'pitboss', adminLabel = 'Pit Boss Alpha' }: { admi
                                 )
                             })()}
                             <p className="text-center text-[10px] text-gray-500 mt-2 font-mono uppercase">
-                                Overwrites 15-minute countdown and regenerates PIN.
+                                {canStart(currentRound) ? `Overwrites the ${roundMins(currentRound)}-minute countdown and regenerates PIN.` : <span className="text-yellow-400">🔒 {readiness[currentRound]?.reason || 'Checking the waiting room…'}</span>}
                             </p>
                         </div>
                         <div>
@@ -513,11 +520,11 @@ function ThePit({ adminRole = 'pitboss', adminLabel = 'Pit Boss Alpha' }: { admi
                                         <div className="flex gap-2">
                                             <button
                                                 onClick={() => handleStartRoundForTable(g)}
-                                                disabled={actionLoading === `start-${g}`}
-                                                className="flex-1 py-1 rounded text-[10px] bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-300 border border-emerald-500/40 font-pixel transition-colors"
-                                                title="Restart 15-minute countdown from now and generate new PIN"
+                                                disabled={actionLoading === `start-${g}` || !canStart(g)}
+                                                className="flex-1 py-1 rounded text-[10px] bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-300 border border-emerald-500/40 font-pixel transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                                title={canStart(g) ? `Start the ${roundMins(g)}-minute round and generate a new PIN` : (readiness[g]?.reason || 'Checking the waiting room…')}
                                             >
-                                                🔄 RESTART
+                                                {(startTime && gameStatus === 'ACTIVE' && new Date(startTime).getTime() + roundMins(g) * 60000 - currentTime > 0) ? '🔄 RESTART' : '▶ START'}
                                             </button>
                                             <button
                                                 onClick={() => handleTableStatusChange(g, gameStatus === 'PAUSED' ? 'ACTIVE' : 'PAUSED')}
@@ -532,6 +539,29 @@ function ThePit({ adminRole = 'pitboss', adminLabel = 'Pit Boss Alpha' }: { admi
                                                 KILL
                                             </button>
                                         </div>
+                                        {/* Waiting room: who has joined and bet for the next round */}
+                                        {g !== 'final' && readiness[g] && (
+                                            <div className="mt-2 border-t border-white/10 pt-2">
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-[9px] text-gray-500 uppercase tracking-widest">Waiting Room</span>
+                                                    <span className={`text-[10px] font-pixel ${readiness[g].ready ? 'text-green-400' : 'text-yellow-400'}`}>
+                                                        {readiness[g].bet}/{readiness[g].joined} BET{' \u00b7 '}{readiness[g].joined}/{readiness[g].capacity} SEATS
+                                                    </span>
+                                                </div>
+                                                {readiness[g].members.length > 0 && (
+                                                    <div className="flex flex-col gap-1 mt-1">
+                                                        {readiness[g].members.map((m, i) => (
+                                                            <div key={i} className="flex justify-between gap-2 text-[10px] font-mono bg-black/40 px-2 py-1 rounded">
+                                                                <span className="text-white uppercase truncate">{m.name}</span>
+                                                                <span className={m.hasBet ? 'text-green-400' : 'text-yellow-300 animate-pulse'}>
+                                                                    {m.hasBet ? `${m.difficulty === 'HIGH' ? 'HIGH' : 'STD'} $${m.amount}` : 'choosing bet…'}
+                                                                </span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
                                         {/* Show Teams */}
                                         {playingTeams.length > 0 && (
                                             <div className="flex flex-col gap-2 mt-2 border-t border-white/10 pt-2">
@@ -543,6 +573,9 @@ function ThePit({ adminRole = 'pitboss', adminLabel = 'Pit Boss Alpha' }: { admi
                                                                 <span className="text-xs font-bold text-white uppercase">{t.team_name}</span>
                                                                 <span className="text-[10px] text-gray-400 font-mono">Code: {t.access_code}</span>
                                                             </div>
+                                                            {g === 'baccarat' ? (
+                                                                <span className="px-2 py-1 text-[9px] font-pixel text-gray-500 border border-white/10 rounded">AUTO (MCQ)</span>
+                                                            ) : (
                                                             <button
                                                                 onClick={() => handleAwardWin(t.id, t.team_name, g)}
                                                                 disabled={actionLoading === `award-${t.id}`}
@@ -550,6 +583,7 @@ function ThePit({ adminRole = 'pitboss', adminLabel = 'Pit Boss Alpha' }: { admi
                                                             >
                                                                 ✅ PASS
                                                             </button>
+                                                            )}
                                                         </div>
                                                     ))}
                                                 </div>

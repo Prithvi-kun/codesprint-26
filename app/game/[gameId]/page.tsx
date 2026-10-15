@@ -571,7 +571,7 @@ export default function GamePage() {
             console.error("Reward Error:", res.error)
           } else if (res.success && res.newBalance !== undefined) {
             setWalletBalance(res.newBalance)
-            if (typeof res.payout === 'number') setAwardedPayout(res.payout)
+            if (typeof res.payout === 'number' && res.payout > 0) setAwardedPayout(res.payout)
           }
         } catch (e) {
           console.error("System Error claiming reward:", e)
@@ -848,36 +848,13 @@ export default function GamePage() {
   // Any question that comes with answer options is multiple-choice (Baccarat today)
   const isMcqQuestion = gameId === 'baccarat' || (dynamicConfig?.options?.length ?? 0) > 0
 
-  // Win handler for code / output-prediction tables: server releases the seat, stamps the badge
-  // and credits base prize x wheel multiplier (Standard bet only).
-  const autoWin = async (prefix: string) => {
-    if (!teamId) {
-      setOutput(`${prefix}\n\n❌ ERROR: Team not found. Please log in again.`)
-      setHasError(true)
-      return
-    }
-    try {
-      const { winGame } = await import('@/app/actions')
-      const res = await winGame(teamId, gameId)
-      if ('error' in res && res.error) {
-        setOutput(`${prefix}\n\n❌ ${res.error}`)
-        setHasError(true)
-        return
-      }
-      if (!('success' in res)) return
-      localStorage.removeItem(`cs_diff_${gameId}`)
-      localStorage.removeItem(`cs_unlocked_${gameId}`)
-      setOutput(`${prefix}\n\n🏆 BADGE EARNED! $${res.payout} has been credited to your wallet${res.multiplier && res.multiplier !== 1 ? ` (wheel ${res.multiplier}x applied)` : ''}.`)
-      setHasError(false)
-      setAwardedPayout(res.payout ?? null)
-      if (typeof res.newBalance === 'number') setWalletBalance(res.newBalance)
-      setRewardClaimed(true)
-      setShowTestPassedModal(false)
-      setShowSuccessModal(true)
-    } catch (err: any) {
-      setOutput(`${prefix}\n\n❌ SYSTEM ERROR: ${err?.message || 'Could not process your win.'}`)
-      setHasError(true)
-    }
+  // Code / output-prediction tables are NOT auto-passed: a correct submission only tells the
+  // team to call the Dealer. The Pit Boss verifies and presses PASS in the admin panel, which
+  // stamps the badge, credits the prize and fires the success screen (WIN_ state).
+  const submitForDealer = (prefix: string) => {
+    setOutput(`${prefix}\n\n⏳ SUBMITTED! Call the Dealer to verify your solution. Your badge and prize unlock once they approve it.`)
+    setHasError(false)
+    setShowTestPassedModal(true)
   }
 
   // --- SUBMIT HANDLER (WEB WORKER ENGINE) ---
@@ -899,7 +876,7 @@ export default function GamePage() {
         if (textInput.trim() === dynamicConfig.expected_output.trim()) {
           setOutput("✅ CORRECT OUTPUT PREDICTION!")
           setHasError(false)
-          autoWin("✅ CORRECT OUTPUT PREDICTION!")
+          submitForDealer("✅ CORRECT OUTPUT PREDICTION!")
         } else {
           setOutput("❌ WRONG ANSWER. Please try again.")
           setHasError(true)
@@ -1116,7 +1093,7 @@ export default function GamePage() {
         }
 
         setOutput(displayOutput)
-        if (wonByTests) await autoWin(displayOutput)
+        if (wonByTests) submitForDealer(displayOutput)
       }
 
     } catch (err: any) {

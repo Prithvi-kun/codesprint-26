@@ -755,43 +755,6 @@ export async function claimAutomatedReward(teamId: string, payout: number, gameI
   }
 }
 
-// --- AUTO WIN for code / output-prediction tables (test cases already passed in the browser) ---
-export async function winGame(teamId: string, gameId: string) {
-  try {
-    const g = gameId.toLowerCase()
-    const { data: teamRaw } = await supabaseAdmin
-      .from('teams')
-      .select('stamps, current_locked_table')
-      .eq('id', teamId)
-      .maybeSingle()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const team = teamRaw as any
-    if (!team) return { error: 'Team not found.' }
-
-    const stamps = (team.stamps as Record<string, boolean>) || {}
-    if (stamps[g] || stamps[gameId]) return { error: 'Badge already claimed for this table.' }
-    if (String(team.current_locked_table || '').toLowerCase() !== g) {
-      return { error: 'You are not seated at this table (or you already won).' }
-    }
-
-    // Release the seat atomically so only ONE win is ever processed per visit
-    const { data: released } = await supabaseAdmin
-      .from('teams')
-      // @ts-expect-error: Next.js/Supabase inference bug
-      .update({ current_locked_table: null } as any)
-      .eq('id', teamId)
-      .eq('current_locked_table', team.current_locked_table)
-      .select('id')
-    if (!released || released.length === 0) return { error: 'Your win was already processed.' }
-
-    const reward = await claimAutomatedReward(teamId, 0, g)
-    if (reward.error) return { error: reward.error }
-    return { success: true as const, payout: reward.payout ?? 0, newBalance: reward.newBalance, multiplier: reward.multiplier ?? 1 }
-  } catch {
-    return { error: 'System error processing your win.' }
-  }
-}
-
 // --- MCQ ANSWER CHECK (server-side; the answer key never reaches the browser) ---
 export async function submitMcqAnswer(teamId: string, gameId: string, difficultyStr: string, selectedOption: string) {
   try {

@@ -3,6 +3,8 @@ import { cookies } from 'next/headers'
 import { unstable_noStore as noStore } from 'next/cache'
 import { supabaseAdminRaw as supabaseAdmin } from '@/lib/supabase/server'
 import { Json } from '@/lib/supabase/types'
+import { getTableLobby, claimAutomatedReward } from '@/app/actions'
+import { CASINO_EVENTS } from '@/lib/events'
 
 // --- AUTH CHECK ---
 function isAdminAuthenticated(): boolean {
@@ -168,11 +170,65 @@ export async function setCurrentRound(roundName: string) {
     return { success: true }
 }
 
+// ---------------------------------------------------------------------------
+// TABLE READINESS — has the table filled up, and has everyone placed their bet?
+// ---------------------------------------------------------------------------
+export type TableReadiness = {
+    joined: number
+    bet: number
+    capacity: number
+    ready: boolean
+    reason: string
+    members: { name: string; hasBet: boolean; difficulty: 'STANDARD' | 'HIGH' | null; amount: number }[]
+}
+
+async function tableReadiness(g: string): Promise<TableReadiness> {
+    const lobby = await getTableLobby(g)
+    const label = g.toUpperCase()
+    if (lobby.error) {
+        return { joined: 0, bet: 0, capacity: lobby.capacity, ready: false, members: [], reason: `Could not verify the ${label} waiting room (${lobby.error}). Try again.` }
+    }
+    const members = lobby.members
+    const capacity = lobby.capacity
+    const bet = members.filter(m => m.hasBet).length
+    // Fewer than a full table is fine - but someone must be seated and every team
+    // already in the waiting room must have finished betting.
+    const ready = members.length >= 1 && bet >= members.length
+
+    let reason = ''
+    if (!ready) {
+        if (members.length === 0) {
+            reason = `Cannot start ${label}: no teams are in the waiting room yet.`
+        } else {
+            reason = `Cannot start ${label}: ${members.length - bet} team(s) in the waiting room have not placed their bet yet (${bet}/${members.length} bets placed).`
+        }
+    }
+    return {
+        joined: members.length, bet, capacity, ready, reason,
+        members: members.map(m => ({ name: m.name, hasBet: m.hasBet, difficulty: m.difficulty, amount: m.amount }))
+    }
+}
+
+export async function getTablesReadiness(): Promise<{ readiness: Record<string, TableReadiness> } | { error: string }> {
+    if (!isAdminAuthenticated()) return { error: 'UNAUTHORIZED' }
+    const games = CASINO_EVENTS.map(e => e.route).filter(r => r !== 'final')
+    const entries = await Promise.all(games.map(async g => [g, await tableReadiness(g)] as const))
+    return { readiness: Object.fromEntries(entries) }
+}
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function startTableRound(gameId: string, durationMins: number = 16) {
     if (!isAdminAuthenticated()) return { error: 'UNAUTHORIZED' }
 
     const normGame = gameId.toLowerCase()
+
+    // A table may only start once EVERY seat is filled and EVERY team has placed its bet.
+    // (The final round has its own betting flow and is exempt.)
+    if (normGame !== 'final') {
+        const r = await tableReadiness(normGame)
+        if (!r.ready) return { error: r.reason }
+    }
+
     const now = new Date().toISOString()
     const pin = Math.floor(1000 + Math.random() * 9000).toString()
 
@@ -320,6 +376,14 @@ export async function awardWin(teamId: string, gameId: string) {
     if (!isAdminAuthenticated()) return { error: 'UNAUTHORIZED' }
 
     try {
+        const g = gameId.toLowerCase()
+        // Baccarat is multiple-choice: it is graded automatically, never passed by hand
+        if (g === 'baccarat') return { error: 'Baccarat is multiple-choice and is graded automatically.' }
+
+        // Credit the prize (base x wheel multiplier) and stamp the badge - idempotent per table
+        const reward = await claimAutomatedReward(teamId, 0, g)
+        if (reward.error) return { error: reward.error }
+
         const winState = `WIN_${gameId.toUpperCase()}`
 
         // Perform the State Flag update to trigger the Success Modal on the client
@@ -332,7 +396,7 @@ export async function awardWin(teamId: string, gameId: string) {
 
         if (updateError) throw updateError
 
-        return { success: true }
+        return { success: true, payout: reward.payout ?? 0 }
     } catch (err: any) {
         return { error: err.message || "Failed to award win." }
     }
